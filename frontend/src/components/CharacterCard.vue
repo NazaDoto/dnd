@@ -165,7 +165,7 @@ export default {
 
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(80, 70, 55)
-      doc.text(`${label}:`, x, y)
+      doc.text(`${label}: `, x, y)
 
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(35, 35, 35)
