@@ -637,14 +637,19 @@ export default {
         y += 2;
         y = this.addSection(doc, "Combate", y);
 
-        y = this.addStatCards(doc, [
-          { label: "PV", value: `${c.hit_points_current || 0}/${c.hit_points_max || 0}` },
-          { label: "PV temp.", value: c.hit_points_temp || 0 },
-          { label: "CA", value: c.armor_class || "-" },
-          { label: "Iniciativa", value: formatModifier(c.initiative || 0) },
-          { label: "Velocidad", value: `${c.speed || 0} ft` },
-          { label: "B. competencia", value: formatModifier(c.proficiency_bonus || 2) },
-        ]);
+        y = this.addStatCards(
+  doc,
+  [
+    { label: "PV", value: `${c.hit_points_current || 0}/${c.hit_points_max || 0}` },
+    { label: "PV temp.", value: c.hit_points_temp || 0 },
+    { label: "CA", value: c.armor_class || "-" },
+    { label: "Iniciativa", value: formatModifier(c.initiative || 0) },
+    { label: "Velocidad", value: `${c.speed || 0} ft` },
+    { label: "B. competencia", value: formatModifier(c.proficiency_bonus || 2) },
+  ],
+  y,
+  3
+);
 
         y = this.addSection(doc, "Atributos", y);
 
@@ -766,17 +771,17 @@ export default {
         y = this.addSection(doc, "Equipo", y);
 
         y = this.addStatCards(
-          doc,
-          [
-            { label: "PC", value: c.copper_pieces || 0 },
-            { label: "PP", value: c.silver_pieces || 0 },
-            { label: "PE", value: c.electrum_pieces || 0 },
-            { label: "PO", value: c.gold_pieces || 0 },
-            { label: "PPl", value: c.platinum_pieces || 0 },
-          ],
-          y,
-          5
-        );
+  doc,
+  [
+    { label: "PC", value: c.copper_pieces || 0 },
+    { label: "PP", value: c.silver_pieces || 0 },
+    { label: "PE", value: c.electrum_pieces || 0 },
+    { label: "PO", value: c.gold_pieces || 0 },
+    { label: "PPl", value: c.platinum_pieces || 0 },
+  ],
+  y,
+  5
+);
 
         const equipmentItems = equipment.length
           ? this.formatEquipmentItems(equipment)
