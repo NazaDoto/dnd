@@ -179,19 +179,17 @@
         </div>
       </div>
 
-      <div v-if="equipment.length" class="equipment-list">
-        <div v-for="(item, i) in equipment" :key="i" class="equipment-row">
-          <span class="equipment-name">
-            {{ typeof item === 'string' ? item : item.name }}
-          </span>
+      <div v-if="equipment.length" class="equipment-tags">
+  <span
+    v-for="(item, i) in equipment"
+    :key="i"
+    class="equipment-tag"
+  >
+    {{ equipmentLabel(item) }}
+  </span>
+</div>
 
-          <span v-if="typeof item === 'object' && item.qty" class="equipment-qty">
-            x{{ item.qty }}
-          </span>
-        </div>
-      </div>
-
-      <p v-else class="empty-text">Sin equipo registrado.</p>
+<p v-else class="empty-text">Sin equipo registrado.</p>
 
       <p v-if="character.treasure" class="treasure-text">
         {{ character.treasure }}
@@ -447,7 +445,16 @@ export default {
     fmtMod(v) {
       return formatModifier(v)
     },
+equipmentLabel(item) {
+  if (typeof item === 'string') return item
 
+  if (!item || typeof item !== 'object') return 'Objeto'
+
+  const name = item.name || 'Objeto'
+  const qty = item.qty ? ` x${item.qty}` : ''
+
+  return `${name}${qty}`
+},
     emptySpells() {
       return {
         cantrips: [],
@@ -888,30 +895,19 @@ export default {
   font-size: 0.52rem;
   color: var(--text-muted);
 }
-
-.equipment-list {
+.equipment-tags {
   display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
 
-.equipment-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid var(--bg-deep);
-}
-
-.equipment-name {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-}
-
-.equipment-qty {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.equipment-tag {
+  font-size: 0.78rem;
+  padding: 0.18rem 0.55rem;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid var(--purple);
+  border-radius: 999px;
+  color: #a78bfa;
 }
 
 .treasure-text {
