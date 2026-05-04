@@ -59,7 +59,100 @@
         <span class="cbox-lbl">B.Profic.</span>
       </div>
     </div>
+<!-- Combate detallado -->
+<div class="card detail-section">
+  <p class="section-title">Combate</p>
 
+  <div v-if="attacks.length" class="attacks-list">
+    <div v-for="(atk, i) in attacks" :key="i" class="attack-row">
+      <div class="attack-main">
+        <span class="attack-name">{{ atk.name || 'Ataque ' + (i + 1) }}</span>
+        <span v-if="atk.type" class="attack-type">{{ atk.type }}</span>
+      </div>
+
+      <span class="attack-bonus badge badge-gold">
+        {{ atk.bonus || '+0' }}
+      </span>
+
+      <span class="attack-damage">
+        {{ atk.damage || '—' }}
+      </span>
+    </div>
+  </div>
+
+  <p v-else class="empty-text">Sin ataques registrados.</p>
+
+  <div v-if="character.spellcasting_ability || character.spell_save_dc || character.spell_attack_bonus" class="spell-summary">
+    <div class="spell-box">
+      <span class="spell-val">{{ character.spell_save_dc || '—' }}</span>
+      <span class="spell-lbl">CD</span>
+    </div>
+
+    <div class="spell-box">
+      <span class="spell-val">
+        {{ character.spell_attack_bonus ? '+' + character.spell_attack_bonus : '—' }}
+      </span>
+      <span class="spell-lbl">Ataque</span>
+    </div>
+
+    <div class="spell-box">
+      <span class="spell-val small">{{ abilityLabel }}</span>
+      <span class="spell-lbl">Conjuro</span>
+    </div>
+  </div>
+
+  <p v-if="character.spells_notes" class="spell-notes">
+    {{ character.spells_notes }}
+  </p>
+</div>
+
+<!-- Equipamiento -->
+<div class="card detail-section">
+  <div class="section-head">
+    <p class="section-title" style="margin:0;border:none;padding:0">Equipamiento</p>
+  </div>
+
+  <div class="coins-row">
+    <div v-for="coin in coins" :key="coin.key" class="coin-pill">
+      <span class="coin-icon">{{ coin.icon }}</span>
+      <span class="coin-value">{{ character[coin.key] || 0 }}</span>
+      <span class="coin-label">{{ coin.label }}</span>
+    </div>
+  </div>
+
+  <div v-if="equipment.length" class="equipment-list">
+    <div v-for="(item, i) in equipment" :key="i" class="equipment-row">
+      <span class="equipment-name">
+        {{ typeof item === 'string' ? item : item.name }}
+      </span>
+
+      <span v-if="typeof item === 'object' && item.qty" class="equipment-qty">
+        x{{ item.qty }}
+      </span>
+    </div>
+  </div>
+
+  <p v-else class="empty-text">Sin equipo registrado.</p>
+
+  <p v-if="character.treasure" class="treasure-text">
+    {{ character.treasure }}
+  </p>
+</div>
+
+<!-- Competencias rápidas -->
+<div v-if="languages.length || otherProfs.length" class="card detail-section">
+  <p class="section-title">Idiomas & competencias</p>
+
+  <div class="tag-list">
+    <span v-for="lang in languages" :key="lang" class="badge badge-blue">
+      {{ lang }}
+    </span>
+
+    <span v-for="prof in otherProfs" :key="prof" class="badge badge-gold">
+      {{ prof }}
+    </span>
+  </div>
+</div>
     <!-- Atributos -->
     <div class="card">
       <p class="section-title">Atributos</p>
@@ -113,8 +206,7 @@
 <script>
 import StatsBlock from '../components/StatsBlock.vue'
 import { charactersAPI } from '../services/api.js'
-import { CLASSES, XP_BY_LEVEL, getModifier, formatModifier } from '../services/dndData.js'
-
+import { CLASSES, XP_BY_LEVEL, SPELLCASTING_ABILITIES, formatModifier } from '../services/dndData.js'
 export default {
   name: 'CharacterDetailView',
   components: { StatsBlock },
@@ -154,12 +246,53 @@ export default {
       const next = XP_BY_LEVEL[lvl] || 0
       const rem = next - (this.character?.experience_points || 0)
       return rem > 0 ? `${rem} XP para nivel ${lvl + 1}` : '¡Listo para subir!'
-    }
+    },
+    attacks() {
+  return Array.isArray(this.character?.attacks_spellcasting)
+    ? this.character.attacks_spellcasting
+    : []
+},
+
+equipment() {
+  return Array.isArray(this.character?.equipment)
+    ? this.character.equipment
+    : []
+},
+
+languages() {
+  return Array.isArray(this.character?.languages)
+    ? this.character.languages
+    : []
+},
+
+otherProfs() {
+  return Array.isArray(this.character?.other_proficiencies)
+    ? this.character.other_proficiencies
+    : []
+},
+
+abilityLabel() {
+  const ability = SPELLCASTING_ABILITIES.find(
+    a => a.value === this.character?.spellcasting_ability
+  )
+
+  return ability ? ability.label : '—'
+},
+
+coins() {
+  return [
+    { key: 'copper_pieces', label: 'PC', icon: '🟤' },
+    { key: 'silver_pieces', label: 'PP', icon: '⚪' },
+    { key: 'electrum_pieces', label: 'PE', icon: '🔵' },
+    { key: 'gold_pieces', label: 'PO', icon: '🟡' },
+    { key: 'platinum_pieces', label: 'PPl', icon: '⬜' }
+  ]
+}
   },
   async mounted() {
     try {
-      const { data } = await charactersAPI.getSummary(this.id)
-      this.character = data
+      const { data } = await charactersAPI.getFull(this.id)
+this.character = data
     } catch {
       this.showToast('Error al cargar personaje', 'error')
       this.$router.push('/home')
@@ -295,4 +428,210 @@ export default {
 .xp-bar-wrap { height: 6px; background: var(--bg-deep); border-radius: 3px; overflow: hidden; }
 .xp-bar { height: 100%; background: linear-gradient(to right, var(--purple), #a78bfa); border-radius: 3px; transition: width 0.5s; }
 .xp-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; text-align: right; }
+
+
+.detail-section {
+  margin-bottom: 0.65rem;
+}
+
+/* Combate detallado */
+.attacks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.attack-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--bg-deep);
+}
+
+.attack-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.attack-name {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.attack-type {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.05rem;
+}
+
+.attack-bonus {
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.attack-damage {
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Magia rápida */
+.spell-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.spell-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.spell-val {
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold-light);
+  text-align: center;
+}
+
+.spell-val.small {
+  font-size: 0.75rem;
+}
+
+.spell-lbl {
+  font-family: var(--font-title);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-top: 0.1rem;
+}
+
+.spell-notes {
+  margin-top: 0.6rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* Equipamiento */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.coins-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.coin-pill {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.coin-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.coin-value {
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.coin-label {
+  font-family: var(--font-title);
+  font-size: 0.52rem;
+  color: var(--text-muted);
+}
+
+.equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.equipment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--bg-deep);
+}
+
+.equipment-name {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.equipment-qty {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.treasure-text {
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  white-space: pre-line;
+  line-height: 1.5;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--bg-deep);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.empty-text {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+@media (max-width: 420px) {
+  .coins-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .spell-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .attack-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .attack-damage {
+    grid-column: 1 / -1;
+  }
+}
 </style>
