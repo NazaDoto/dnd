@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-console.log(process.env);
+console.log(process.env.DB_PASSWORD);
 // ── CORS ─────────────────────────────────────────────────────
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
