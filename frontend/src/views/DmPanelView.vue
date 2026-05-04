@@ -107,10 +107,24 @@ export default {
 </script>
 
 <style scoped>
-.dm-view { display: flex; flex-direction: column; gap: 0.75rem; }
+.dm-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 100%;
+}
 .home-header { margin-bottom: 0.35rem; }
-.home-title { font-family: var(--font-display); font-size: 1.3rem; }
-.home-sub { color: var(--text-muted); font-size: 0.85rem; line-height: 1.45; }
+.home-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.home-sub {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  max-width: 65ch;
+}
 .create-row {
   display: flex;
   gap: 0.5rem;
@@ -123,6 +137,7 @@ export default {
   color: var(--text-muted);
   margin-top: 0.5rem;
   line-height: 1.4;
+  max-width: 70ch;
 }
 .table-wrap { display: flex; flex-direction: column; gap: 0.55rem; }
 .campaign-row {
@@ -146,4 +161,32 @@ export default {
   font-size: 0.78rem;
 }
 .actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+@media (min-width: 720px) {
+  .home-title { font-size: 1.55rem; }
+  .home-sub { font-size: 0.92rem; }
+  .create-row {
+    flex-wrap: nowrap;
+    max-width: 48rem;
+  }
+  .create-row input {
+    flex: 1 1 auto;
+    min-width: 220px;
+    max-width: 28rem;
+  }
+  .campaign-row {
+    flex-wrap: nowrap;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 0.35rem;
+  }
+  .campaign-row:last-child { margin-bottom: 0; }
+  .actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+  }
+}
 </style>

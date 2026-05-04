@@ -15,23 +15,27 @@
       </div>
     </div>
 
-    <div class="tabs">
-      <button
-        v-for="t in tabs"
-        :key="t.id"
-        type="button"
-        :class="['tab-btn', { active: tab === t.id }]"
-        @click="tab = t.id"
-      >
-        {{ t.label }}
-      </button>
-    </div>
+    <div class="dm-split">
+      <div class="tabs" role="tablist" aria-label="Secciones de campaña">
+        <button
+          v-for="t in tabs"
+          :key="t.id"
+          type="button"
+          role="tab"
+          :aria-selected="tab === t.id"
+          :class="['tab-btn', { active: tab === t.id }]"
+          @click="tab = t.id"
+        >
+          {{ t.label }}
+        </button>
+      </div>
 
+      <div class="tab-panels">
     <!-- Resumen -->
     <div v-show="tab === 'core'" class="tab-panel">
       <div class="card mb-3">
         <p class="section-title">Datos generales</p>
-        <div class="grid-2">
+        <div class="grid-2 grid-core-desk">
           <div class="form-group">
             <label class="form-label">Nombre</label>
             <input v-model="form.name" />
@@ -70,7 +74,8 @@
 
     <!-- Trama y mundo -->
     <div v-show="tab === 'world'" class="tab-panel">
-      <div class="card mb-3">
+      <div class="world-desk-grid">
+        <div class="card mb-3 world-main-card">
         <p class="section-title">Trama y fuerzas</p>
         <p class="hint">Inspirado en guías tipo “Lazy DM”: verdades del mundo, frentes y antagonistas, pistas.</p>
         <div class="form-group">
@@ -93,8 +98,9 @@
           <label class="form-label">Enlaces y recursos</label>
           <textarea v-model="form.resources_links" rows="3" placeholder="URLs a VTT, carpetas, PDFs..." />
         </div>
-      </div>
+        </div>
 
+        <div class="world-desk-side">
       <div class="card mb-3">
         <p class="section-title">NPCs (rápido)</p>
         <p class="hint">Nombre, rol o función, notas breves. Podés agregar filas.</p>
@@ -111,10 +117,13 @@
         <p class="section-title">Reglas de mesa</p>
         <textarea v-model="form.house_rules" rows="4" placeholder="Variantes, límites de PvP, descansos, líneas y velos..." />
       </div>
+        </div>
+      </div>
     </div>
 
     <!-- Preparación de sesión -->
     <div v-show="tab === 'session'" class="tab-panel">
+      <div class="session-desk-top">
       <div class="card mb-3">
         <p class="section-title">Preparación próxima sesión</p>
         <p class="hint">Checklist mental: fuerte inicio, escenas posibles, secretos, encuentros.</p>
@@ -124,6 +133,8 @@
         <p class="section-title">Resumen última sesión</p>
         <textarea v-model="form.last_session_recap" rows="6" placeholder="Qué pasó, decisiones de los PJ, consecuencias..." />
       </div>
+      </div>
+      <div class="session-desk-bottom">
       <div class="card mb-3">
         <p class="section-title">Tesoro / botín compartido (notas)</p>
         <textarea v-model="form.treasure_log" rows="4" />
@@ -133,10 +144,12 @@
         <p class="hint">Solo vos; no la ven los jugadores en la app.</p>
         <textarea v-model="form.dm_private_notes" rows="6" />
       </div>
+      </div>
     </div>
 
     <!-- Roster -->
     <div v-show="tab === 'roster'" class="tab-panel">
+      <div class="roster-desk-grid">
       <div class="card mb-3">
         <p class="section-title">Personajes en campaña</p>
         <div v-if="!roster.active.length" class="text-muted">Nadie aceptado aún. Los jugadores pueden pedir ingreso con el código.</div>
@@ -155,7 +168,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card roster-pending-card">
         <p class="section-title">Solicitudes pendientes</p>
         <div v-if="!roster.pending.length" class="text-muted">No hay solicitudes.</div>
         <div v-else class="roster-list">
@@ -170,6 +183,9 @@
             </div>
           </div>
         </div>
+      </div>
+      </div>
+    </div>
       </div>
     </div>
   </div>
@@ -344,7 +360,13 @@ export default {
 </script>
 
 <style scoped>
-.dm-campaign { display: flex; flex-direction: column; gap: 0.75rem; padding-bottom: 1rem; }
+.dm-campaign {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+  max-width: 100%;
+}
 .campaign-top {
   display: flex;
   align-items: flex-start;
@@ -355,6 +377,7 @@ export default {
 .campaign-title {
   font-family: var(--font-display);
   font-size: 1.15rem;
+  line-height: 1.2;
   background: linear-gradient(135deg, var(--gold-dark), var(--gold-light));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -376,12 +399,26 @@ export default {
   gap: 0.4rem;
   align-items: center;
 }
+.dm-split {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+.tab-panels {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
 .tabs {
   display: flex;
   gap: 0.25rem;
   overflow-x: auto;
   padding-bottom: 0.15rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.15rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 .tab-btn {
   flex-shrink: 0;
@@ -409,6 +446,28 @@ export default {
 }
 @media (max-width: 520px) {
   .grid-2 { grid-template-columns: 1fr; }
+}
+@media (min-width: 900px) {
+  .grid-core-desk {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.world-desk-grid,
+.world-desk-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.session-desk-top,
+.session-desk-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.roster-desk-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 .hint {
   font-size: 0.78rem;
@@ -439,4 +498,102 @@ export default {
 .roster-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
 .mt-2 { margin-top: 0.5rem; }
 .mb-3 { margin-bottom: 0.65rem !important; }
+
+@media (min-width: 720px) {
+  .campaign-top {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .campaign-title { font-size: 1.45rem; }
+  .campaign-top-actions {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+  }
+  .campaign-meta { font-size: 0.85rem; }
+}
+
+@media (min-width: 880px) {
+  .dm-split {
+    display: grid;
+    grid-template-columns: minmax(10.5rem, 13rem) minmax(0, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+  }
+  .tabs {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+    overflow-y: auto;
+    max-height: calc(100dvh - 9rem);
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-right: 1px solid var(--border);
+    padding-right: 0.75rem;
+    margin-right: 0;
+  }
+  .tab-btn {
+    width: 100%;
+    text-align: left;
+    text-transform: none;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    padding: 0.55rem 0.75rem;
+  }
+}
+
+@media (min-width: 960px) {
+  .world-desk-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
+    gap: 1rem;
+    align-items: start;
+  }
+  .session-desk-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  .session-desk-top .card.mb-3 { margin-bottom: 0 !important; }
+  .session-desk-bottom {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 0.25rem;
+  }
+  .session-desk-bottom .card.mb-3 { margin-bottom: 0 !important; }
+}
+
+@media (min-width: 900px) {
+  .roster-desk-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+  .roster-desk-grid > .card.mb-3 { margin-bottom: 0 !important; }
+}
+
+@media (min-width: 640px) {
+  .roster-row { flex-wrap: nowrap; }
+  .roster-actions { flex-shrink: 0; }
+}
+
+@media (min-width: 780px) {
+  .npc-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2.2fr) auto;
+    align-items: start;
+  }
+  .npc-row textarea {
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 2.75rem;
+  }
+  .npc-row .btn-sm {
+    grid-column: 4;
+    grid-row: 1;
+    align-self: start;
+  }
+}
 </style>

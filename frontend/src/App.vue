@@ -1,7 +1,12 @@
 <template>
   <div id="dnd-app">
     <NavBar v-if="isAuthenticated" />
-    <main :class="['main-content', { 'with-nav': isAuthenticated }]">
+    <main
+      :class="[
+        'main-content',
+        { 'with-nav': isAuthenticated, 'main-content--dm': isDmLayout }
+      ]"
+    >
       <RouterView />
     </main>
     <!-- Toast global -->
@@ -27,6 +32,11 @@ export default {
   computed: {
     isAuthenticated() {
       return !!localStorage.getItem('dnd_token')
+    },
+    /** Rutas del panel DM: ancho de lectura mayor en escritorio */
+    isDmLayout() {
+      const p = this.$route?.path || ''
+      return p === '/dm' || p.startsWith('/dm/')
     }
   },
   methods: {
@@ -53,6 +63,10 @@ export default {
   max-width: 600px;
   margin: 0 auto;
   width: 100%;
+}
+/* Panel DM y ficha en contexto campaña: aprovechar pantallas anchas */
+.main-content.main-content--dm {
+  max-width: min(1200px, 100%);
 }
 .main-content.with-nav {
   padding-top: 1rem;
