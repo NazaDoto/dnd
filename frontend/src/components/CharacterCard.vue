@@ -412,14 +412,14 @@ export default {
           y,
         );
 
-        if (c.spells_notes) {
+        if (c.spells) {
           y += 2;
           doc.setFont("helvetica", "bold");
           doc.setTextColor(80, 70, 55);
           doc.text("Conjuros / notas: ", 16, y);
           doc.setFont("helvetica", "normal");
           doc.setTextColor(35, 35, 35);
-          y = this.addTextBlock(doc, c.spells_notes, 16, y + 6, 178);
+          y = this.addTextBlock(doc, c.spells, 16, y + 6, 178);
         }
 
         y += 3;

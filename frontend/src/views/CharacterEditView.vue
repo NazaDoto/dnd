@@ -245,7 +245,7 @@
 
         <label class="field">
           <span>Conjuros / notas mágicas</span>
-          <textarea v-model.trim="form.spells_notes" class="input textarea"></textarea>
+          <textarea v-model.trim="form.spells" class="input textarea"></textarea>
         </label>
       </div>
 
@@ -524,7 +524,7 @@ export default {
         spellcasting_ability: data.spellcasting_ability || '',
         spell_save_dc: data.spell_save_dc || '',
         spell_attack_bonus: data.spell_attack_bonus || '',
-        spells_notes: data.spells_notes || '',
+        spells: data.spells || '',
 
         copper_pieces: data.copper_pieces || 0,
         silver_pieces: data.silver_pieces || 0,

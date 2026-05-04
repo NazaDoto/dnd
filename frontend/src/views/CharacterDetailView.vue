@@ -101,8 +101,8 @@
     </div>
   </div>
 
-  <p v-if="character.spells_notes" class="spell-notes">
-    {{ character.spells_notes }}
+  <p v-if="character.spells" class="spell-notes">
+    {{ character.spells }}
   </p>
 </div>
 

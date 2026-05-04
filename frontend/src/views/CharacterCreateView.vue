@@ -245,7 +245,7 @@
 
         <label class="field">
           <span>Conjuros / notas mágicas</span>
-          <textarea v-model.trim="form.spells_notes" class="input textarea" placeholder="Ej: Trucos: Fire Bolt, Mending&#10;Nivel 1: Shield, Cure Wounds"></textarea>
+          <textarea v-model.trim="form.spells" class="input textarea" placeholder="Ej: Trucos: Fire Bolt, Mending&#10;Nivel 1: Shield, Cure Wounds"></textarea>
         </label>
       </div>
 
@@ -483,7 +483,7 @@ export default {
         spellcasting_ability: '',
         spell_save_dc: '',
         spell_attack_bonus: '',
-        spells_notes: '',
+        spells: '',
 
         copper_pieces: 0,
         silver_pieces: 0,

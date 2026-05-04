@@ -161,7 +161,7 @@ router.post('/', auth, upload.single('photo'), async(req, res) => {
                 parseInt(data.platinum_pieces) || 0,
                 data.attacks_spellcasting || '[]', data.features_traits || '[]',
                 data.spellcasting_ability || null, data.spell_save_dc || null,
-                data.spell_attack_bonus || null, data.spells_notes || '{}',
+                data.spell_attack_bonus || null, data.spells || '{}',
                 data.languages || '[]', data.other_proficiencies || '[]',
                 data.allies_organizations || null, data.faction || null, data.treasure || null
             ]
@@ -235,7 +235,7 @@ router.put('/:id', auth, upload.single('photo'), async(req, res) => {
                 parseInt(data.platinum_pieces) || 0,
                 data.attacks_spellcasting || '[]', data.features_traits || '[]',
                 data.spellcasting_ability || null, data.spell_save_dc || null,
-                data.spell_attack_bonus || null, data.spells_notes || '{}',
+                data.spell_attack_bonus || null, data.spells || '{}',
                 data.languages || '[]', data.other_proficiencies || '[]',
                 data.allies_organizations || null, data.faction || null, data.treasure || null,
                 req.params.id, req.user.id
