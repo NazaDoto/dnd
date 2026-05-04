@@ -14,7 +14,12 @@
 
         <div class="photo-picker">
           <div class="photo-preview">
-            <img v-if="photoPreview" :src="photoPreview" alt="Foto del personaje" class="preview-img" />
+            <img
+              v-if="photoPreview"
+              :src="photoPreview"
+              alt="Foto del personaje"
+              class="preview-img"
+            />
             <div v-else class="preview-placeholder">
               {{ form.name ? form.name[0] : '?' }}
             </div>
@@ -34,12 +39,20 @@
         <div class="grid-2">
           <label class="field">
             <span>Raza</span>
-            <input v-model.trim="form.race" class="input" placeholder="Tiefling, Humano, Elfo..." />
+            <input
+              v-model.trim="form.race"
+              class="input"
+              placeholder="Tiefling, Humano, Elfo..."
+            />
           </label>
 
           <label class="field">
             <span>Subraza</span>
-            <input v-model.trim="form.subrace" class="input" placeholder="Opcional" />
+            <input
+              v-model.trim="form.subrace"
+              class="input"
+              placeholder="Opcional"
+            />
           </label>
         </div>
 
@@ -48,7 +61,11 @@
             <span>Clase</span>
             <select v-model="form.class" class="input" required>
               <option disabled value="">Elegir clase</option>
-              <option v-for="cls in CLASSES" :key="cls.value" :value="cls.value">
+              <option
+                v-for="cls in CLASSES"
+                :key="cls.value"
+                :value="cls.value"
+              >
                 {{ cls.label }}
               </option>
             </select>
@@ -56,7 +73,13 @@
 
           <label class="field">
             <span>Nivel</span>
-            <input v-model.number="form.level" class="input" type="number" min="1" max="20" />
+            <input
+              v-model.number="form.level"
+              class="input"
+              type="number"
+              min="1"
+              max="20"
+            />
           </label>
         </div>
 
@@ -70,14 +93,21 @@
             <span>Alineamiento</span>
             <select v-model="form.alignment" class="input">
               <option value="">Sin especificar</option>
-              <option v-for="a in alignments" :key="a" :value="a">{{ a }}</option>
+              <option v-for="a in alignments" :key="a" :value="a">
+                {{ a }}
+              </option>
             </select>
           </label>
         </div>
 
         <label class="field">
           <span>XP</span>
-          <input v-model.number="form.experience_points" class="input" type="number" min="0" />
+          <input
+            v-model.number="form.experience_points"
+            class="input"
+            type="number"
+            min="0"
+          />
         </label>
       </div>
 
@@ -87,39 +117,73 @@
         <div class="grid-3">
           <label class="field">
             <span>PV actuales</span>
-            <input v-model.number="form.hit_points_current" class="input" type="number" min="0" />
+            <input
+              v-model.number="form.hit_points_current"
+              class="input"
+              type="number"
+              min="0"
+            />
           </label>
 
           <label class="field">
             <span>PV máximos</span>
-            <input v-model.number="form.hit_points_max" class="input" type="number" min="1" />
+            <input
+              v-model.number="form.hit_points_max"
+              class="input"
+              type="number"
+              min="1"
+            />
           </label>
 
           <label class="field">
             <span>PV temporales</span>
-            <input v-model.number="form.hit_points_temp" class="input" type="number" min="0" />
+            <input
+              v-model.number="form.hit_points_temp"
+              class="input"
+              type="number"
+              min="0"
+            />
           </label>
         </div>
 
         <div class="grid-4">
           <label class="field">
             <span>CA</span>
-            <input v-model.number="form.armor_class" class="input" type="number" min="0" />
+            <input
+              v-model.number="form.armor_class"
+              class="input"
+              type="number"
+              min="0"
+            />
           </label>
 
           <label class="field">
             <span>Iniciativa</span>
-            <input v-model.number="form.initiative" class="input" type="number" />
+            <input
+              v-model.number="form.initiative"
+              class="input"
+              type="number"
+            />
           </label>
 
           <label class="field">
             <span>Velocidad</span>
-            <input v-model.number="form.speed" class="input" type="number" min="0" />
+            <input
+              v-model.number="form.speed"
+              class="input"
+              type="number"
+              min="0"
+            />
           </label>
 
           <label class="field">
             <span>B. competencia</span>
-            <input v-model.number="form.proficiency_bonus" class="input" type="number" min="2" />
+            <input
+              v-model.number="form.proficiency_bonus"
+              class="input"
+              type="number"
+              min="2"
+            />
           </label>
         </div>
 
@@ -133,9 +197,19 @@
         <p class="section-title">Atributos</p>
 
         <div class="stats-grid">
-          <label v-for="attr in ATTRIBUTES" :key="attr.key" class="stat-field">
+          <label
+            v-for="attr in ATTRIBUTES"
+            :key="attr.key"
+            class="stat-field"
+          >
             <span>{{ attr.short || attr.label }}</span>
-            <input v-model.number="form[attr.key]" class="input" type="number" min="1" max="30" />
+            <input
+              v-model.number="form[attr.key]"
+              class="input"
+              type="number"
+              min="1"
+              max="30"
+            />
           </label>
         </div>
       </div>
@@ -145,13 +219,20 @@
 
         <div class="chips-grid">
           <label
-  v-for="attr in ATTRIBUTES"
-  :key="attr.key"
-  :class="['chip-check', { active: form.saving_throws_prof.includes(attr.key) }]"
->
-  <input v-model="form.saving_throws_prof" :value="attr.key" type="checkbox" />
-  <span>{{ attr.label }}</span>
-</label>
+            v-for="attr in ATTRIBUTES"
+            :key="attr.key"
+            :class="[
+              'chip-check',
+              { active: form.saving_throws_prof.includes(attr.key) },
+            ]"
+          >
+            <input
+              v-model="form.saving_throws_prof"
+              :value="attr.key"
+              type="checkbox"
+            />
+            <span>{{ attr.label }}</span>
+          </label>
         </div>
       </div>
 
@@ -166,18 +247,30 @@
             </span>
 
             <label
-  :class="['mini-check', 'prof-check', { active: form.skills_prof.includes(sk.key) }]"
->
-  <input v-model="form.skills_prof" :value="sk.key" type="checkbox" />
-  Prof.
-</label>
+              :class="[
+                'mini-check',
+                'prof-check',
+                { active: form.skills_prof.includes(sk.key) },
+              ]"
+            >
+              <input v-model="form.skills_prof" :value="sk.key" type="checkbox" />
+              Prof.
+            </label>
 
-<label
-  :class="['mini-check', 'expert-check', { active: form.skills_expertise.includes(sk.key) }]"
->
-  <input v-model="form.skills_expertise" :value="sk.key" type="checkbox" />
-  Experto
-</label>
+            <label
+              :class="[
+                'mini-check',
+                'expert-check',
+                { active: form.skills_expertise.includes(sk.key) },
+              ]"
+            >
+              <input
+                v-model="form.skills_expertise"
+                :value="sk.key"
+                type="checkbox"
+              />
+              Experto
+            </label>
           </div>
         </div>
       </div>
@@ -185,7 +278,11 @@
       <div class="card">
         <p class="section-title">Ataques</p>
 
-        <div v-for="(atk, i) in form.attacks_spellcasting" :key="i" class="array-box">
+        <div
+          v-for="(atk, i) in form.attacks_spellcasting"
+          :key="i"
+          class="array-box"
+        >
           <div class="grid-4">
             <label class="field">
               <span>Nombre</span>
@@ -199,16 +296,28 @@
 
             <label class="field">
               <span>Daño</span>
-              <input v-model.trim="atk.damage" class="input" placeholder="1d8+3" />
+              <input
+                v-model.trim="atk.damage"
+                class="input"
+                placeholder="1d8+3"
+              />
             </label>
 
             <label class="field">
               <span>Tipo</span>
-              <input v-model.trim="atk.type" class="input" placeholder="Cortante" />
+              <input
+                v-model.trim="atk.type"
+                class="input"
+                placeholder="Cortante"
+              />
             </label>
           </div>
 
-          <button type="button" class="btn btn-ghost small-btn" @click="removeAttack(i)">
+          <button
+            type="button"
+            class="btn btn-ghost small-btn"
+            @click="removeAttack(i)"
+          >
             Quitar ataque
           </button>
         </div>
@@ -226,7 +335,11 @@
             <span>Característica</span>
             <select v-model="form.spellcasting_ability" class="input">
               <option value="">No lanzador</option>
-              <option v-for="a in SPELLCASTING_ABILITIES" :key="a.value" :value="a.value">
+              <option
+                v-for="a in SPELLCASTING_ABILITIES"
+                :key="a.value"
+                :value="a.value"
+              >
                 {{ a.label }}
               </option>
             </select>
@@ -234,19 +347,124 @@
 
           <label class="field">
             <span>CD salvación</span>
-            <input v-model.number="form.spell_save_dc" class="input" type="number" min="0" />
+            <input
+              v-model.number="form.spell_save_dc"
+              class="input"
+              type="number"
+              min="0"
+            />
           </label>
 
           <label class="field">
             <span>Ataque conjuro</span>
-            <input v-model.number="form.spell_attack_bonus" class="input" type="number" />
+            <input
+              v-model.number="form.spell_attack_bonus"
+              class="input"
+              type="number"
+            />
           </label>
         </div>
 
-        <label class="field">
-          <span>Conjuros / notas mágicas</span>
-          <textarea v-model.trim="form.spells" class="input textarea" placeholder="Ej: Trucos: Fire Bolt, Mending&#10;Nivel 1: Shield, Cure Wounds"></textarea>
-        </label>
+        <div class="spell-editor">
+          <div class="spell-level-box">
+            <div class="spell-level-head">
+              <p class="spell-level-title">Trucos</p>
+              <button
+                type="button"
+                class="btn btn-secondary small-btn"
+                @click="addSpell('cantrips')"
+              >
+                + Agregar
+              </button>
+            </div>
+
+            <div
+              v-for="(spell, i) in form.spells.cantrips"
+              :key="'cantrip-' + i"
+              class="spell-row"
+            >
+              <input
+                v-model.trim="form.spells.cantrips[i]"
+                class="input"
+                placeholder="Nombre del truco"
+              />
+              <button
+                type="button"
+                class="btn btn-ghost btn-icon"
+                @click="removeSpell('cantrips', i)"
+              >
+                ×
+              </button>
+            </div>
+
+            <p v-if="!form.spells.cantrips.length" class="empty-text">
+              Sin trucos cargados.
+            </p>
+          </div>
+
+          <div
+            v-for="level in spellLevels"
+            :key="level.key"
+            class="spell-level-box"
+          >
+            <div class="spell-level-head">
+              <p class="spell-level-title">{{ level.label }}</p>
+
+              <button
+                type="button"
+                class="btn btn-secondary small-btn"
+                @click="addSpell(level.key)"
+              >
+                + Agregar
+              </button>
+            </div>
+
+            <div class="grid-2 spell-slots">
+              <label class="field">
+                <span>Slots totales</span>
+                <input
+                  v-model.number="form.spells[level.key].slots"
+                  class="input"
+                  type="number"
+                  min="0"
+                />
+              </label>
+
+              <label class="field">
+                <span>Slots usados</span>
+                <input
+                  v-model.number="form.spells[level.key].slots_used"
+                  class="input"
+                  type="number"
+                  min="0"
+                />
+              </label>
+            </div>
+
+            <div
+              v-for="(spell, i) in form.spells[level.key].spells"
+              :key="level.key + '-' + i"
+              class="spell-row"
+            >
+              <input
+                v-model.trim="form.spells[level.key].spells[i]"
+                class="input"
+                placeholder="Nombre del conjuro"
+              />
+              <button
+                type="button"
+                class="btn btn-ghost btn-icon"
+                @click="removeSpell(level.key, i)"
+              >
+                ×
+              </button>
+            </div>
+
+            <p v-if="!form.spells[level.key].spells.length" class="empty-text">
+              Sin conjuros de {{ level.label.toLowerCase() }}.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -255,13 +473,22 @@
         <div class="grid-5">
           <label v-for="coin in coins" :key="coin.key" class="field">
             <span>{{ coin.label }}</span>
-            <input v-model.number="form[coin.key]" class="input" type="number" min="0" />
+            <input
+              v-model.number="form[coin.key]"
+              class="input"
+              type="number"
+              min="0"
+            />
           </label>
         </div>
 
         <label class="field">
           <span>Equipo</span>
-          <textarea v-model.trim="equipmentText" class="input textarea" placeholder="Un objeto por línea"></textarea>
+          <textarea
+            v-model.trim="equipmentText"
+            class="input textarea"
+            placeholder="Un objeto por línea"
+          ></textarea>
         </label>
 
         <label class="field">
@@ -275,7 +502,11 @@
 
         <label class="field">
           <span>Rasgos & capacidades</span>
-          <textarea v-model.trim="featuresText" class="input textarea" placeholder="Un rasgo por línea"></textarea>
+          <textarea
+            v-model.trim="featuresText"
+            class="input textarea"
+            placeholder="Un rasgo por línea"
+          ></textarea>
         </label>
 
         <label class="field">
@@ -308,7 +539,9 @@
         <div class="tag-row">
           <span v-for="p in form.other_proficiencies" :key="p" class="tag">
             {{ p }}
-            <button type="button" @click="removeTag('other_proficiencies', p)">×</button>
+            <button type="button" @click="removeTag('other_proficiencies', p)">
+              ×
+            </button>
           </span>
         </div>
       </div>
@@ -319,7 +552,10 @@
         <div class="grid-2">
           <label class="field">
             <span>Rasgos de personalidad</span>
-            <textarea v-model.trim="form.personality_traits" class="input textarea"></textarea>
+            <textarea
+              v-model.trim="form.personality_traits"
+              class="input textarea"
+            ></textarea>
           </label>
 
           <label class="field">
@@ -381,7 +617,10 @@
 
         <label class="field">
           <span>Notas de apariencia</span>
-          <textarea v-model.trim="form.appearance_notes" class="input textarea"></textarea>
+          <textarea
+            v-model.trim="form.appearance_notes"
+            class="input textarea"
+          ></textarea>
         </label>
       </div>
 
@@ -395,7 +634,10 @@
 
         <label class="field">
           <span>Aliados & organizaciones</span>
-          <textarea v-model.trim="form.allies_organizations" class="input textarea"></textarea>
+          <textarea
+            v-model.trim="form.allies_organizations"
+            class="input textarea"
+          ></textarea>
         </label>
       </div>
 
@@ -431,6 +673,17 @@ export default {
       ATTRIBUTES,
       SKILLS,
       SPELLCASTING_ABILITIES,
+      spellLevels: [
+        { key: 'level1', label: 'Nivel 1' },
+        { key: 'level2', label: 'Nivel 2' },
+        { key: 'level3', label: 'Nivel 3' },
+        { key: 'level4', label: 'Nivel 4' },
+        { key: 'level5', label: 'Nivel 5' },
+        { key: 'level6', label: 'Nivel 6' },
+        { key: 'level7', label: 'Nivel 7' },
+        { key: 'level8', label: 'Nivel 8' },
+        { key: 'level9', label: 'Nivel 9' }
+      ],
       alignments: [
         'Legal bueno',
         'Neutral bueno',
@@ -483,7 +736,18 @@ export default {
         spellcasting_ability: '',
         spell_save_dc: '',
         spell_attack_bonus: '',
-        spells: '',
+        spells: {
+          cantrips: [],
+          level1: { slots: 0, slots_used: 0, spells: [] },
+          level2: { slots: 0, slots_used: 0, spells: [] },
+          level3: { slots: 0, slots_used: 0, spells: [] },
+          level4: { slots: 0, slots_used: 0, spells: [] },
+          level5: { slots: 0, slots_used: 0, spells: [] },
+          level6: { slots: 0, slots_used: 0, spells: [] },
+          level7: { slots: 0, slots_used: 0, spells: [] },
+          level8: { slots: 0, slots_used: 0, spells: [] },
+          level9: { slots: 0, slots_used: 0, spells: [] }
+        },
 
         copper_pieces: 0,
         silver_pieces: 0,
@@ -517,11 +781,104 @@ export default {
     }
   },
   methods: {
+    emptySpells() {
+      return {
+        cantrips: [],
+        level1: { slots: 0, slots_used: 0, spells: [] },
+        level2: { slots: 0, slots_used: 0, spells: [] },
+        level3: { slots: 0, slots_used: 0, spells: [] },
+        level4: { slots: 0, slots_used: 0, spells: [] },
+        level5: { slots: 0, slots_used: 0, spells: [] },
+        level6: { slots: 0, slots_used: 0, spells: [] },
+        level7: { slots: 0, slots_used: 0, spells: [] },
+        level8: { slots: 0, slots_used: 0, spells: [] },
+        level9: { slots: 0, slots_used: 0, spells: [] }
+      }
+    },
+
+    normalizeSpells(value) {
+      const base = this.emptySpells()
+
+      if (!value) return base
+
+      let parsed = value
+
+      if (typeof value === 'string') {
+        try {
+          parsed = JSON.parse(value)
+        } catch {
+          return base
+        }
+      }
+
+      if (!parsed || typeof parsed !== 'object') return base
+
+      base.cantrips = Array.isArray(parsed.cantrips) ? parsed.cantrips : []
+
+      for (let i = 1; i <= 9; i++) {
+        const key = `level${i}`
+        const level = parsed[key]
+
+        if (level && typeof level === 'object') {
+          base[key] = {
+            slots: Number(level.slots || 0),
+            slots_used: Number(level.slots_used || 0),
+            spells: Array.isArray(level.spells) ? level.spells : []
+          }
+        }
+      }
+
+      return base
+    },
+
+    cleanSpellsBeforeSave() {
+      const spells = this.normalizeSpells(this.form.spells)
+
+      spells.cantrips = spells.cantrips
+        .map(spell => String(spell).trim())
+        .filter(Boolean)
+
+      for (let i = 1; i <= 9; i++) {
+        const key = `level${i}`
+
+        spells[key].slots = Number(spells[key].slots || 0)
+        spells[key].slots_used = Math.min(
+          Number(spells[key].slots_used || 0),
+          Number(spells[key].slots || 0)
+        )
+
+        spells[key].spells = spells[key].spells
+          .map(spell => String(spell).trim())
+          .filter(Boolean)
+      }
+
+      return spells
+    },
+
+    addSpell(levelKey) {
+      if (levelKey === 'cantrips') {
+        this.form.spells.cantrips.push('')
+        return
+      }
+
+      this.form.spells[levelKey].spells.push('')
+    },
+
+    removeSpell(levelKey, index) {
+      if (levelKey === 'cantrips') {
+        this.form.spells.cantrips.splice(index, 1)
+        return
+      }
+
+      this.form.spells[levelKey].spells.splice(index, 1)
+    },
+
     attrShort(attr) {
       const found = ATTRIBUTES.find(a => a.key === attr)
       if (found && found.short) return found.short
       return String(attr).toUpperCase().slice(0, 3)
     },
+
     onPhotoChange(event) {
       const file = event.target.files[0]
       if (!file) return
@@ -529,6 +886,7 @@ export default {
       this.photoFile = file
       this.photoPreview = URL.createObjectURL(file)
     },
+
     addAttack() {
       this.form.attacks_spellcasting.push({
         name: '',
@@ -537,9 +895,11 @@ export default {
         type: ''
       })
     },
+
     removeAttack(index) {
       this.form.attacks_spellcasting.splice(index, 1)
     },
+
     onLanguageKeydown(event) {
       if (event.key === ',' || event.key === 'Enter') {
         event.preventDefault()
@@ -547,6 +907,7 @@ export default {
         this.languageInput = ''
       }
     },
+
     onProfKeydown(event) {
       if (event.key === ',' || event.key === 'Enter') {
         event.preventDefault()
@@ -554,16 +915,20 @@ export default {
         this.profInput = ''
       }
     },
+
     addTag(field, value) {
       const clean = String(value || '').replace(',', '').trim()
       if (!clean) return
+
       if (!this.form[field].includes(clean)) {
         this.form[field].push(clean)
       }
     },
+
     removeTag(field, value) {
       this.form[field] = this.form[field].filter(v => v !== value)
     },
+
     buildPayload() {
       this.addTag('languages', this.languageInput)
       this.addTag('other_proficiencies', this.profInput)
@@ -578,6 +943,8 @@ export default {
         .map(v => v.trim())
         .filter(Boolean)
         .map(v => ({ name: v, description: '' }))
+
+      this.form.spells = this.cleanSpellsBeforeSave()
 
       const fd = new FormData()
 
@@ -599,6 +966,7 @@ export default {
 
       return fd
     },
+
     async submitForm() {
       if (!this.form.name.trim()) {
         this.showToast('El nombre es obligatorio', 'error')
@@ -801,6 +1169,25 @@ export default {
   font-size: 0.85rem;
   cursor: pointer;
 }
+
+.chip-check {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+}
+
+.chip-check input {
+  display: none;
+}
+
+.chip-check.active {
+  color: var(--bg-deep);
+  border-color: var(--gold);
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  box-shadow: var(--shadow-gold);
+}
+
 .mini-check {
   position: relative;
   border: 1px solid var(--border);
@@ -812,6 +1199,7 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-muted);
+  cursor: pointer;
   transition:
     background 0.2s,
     border-color 0.2s,
@@ -834,22 +1222,7 @@ export default {
   border-color: var(--gold-light);
   background: linear-gradient(135deg, var(--gold), var(--gold-light));
 }
-.chip-check {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.35rem 0.6rem;
-}
-.chip-check input {
-  display: none;
-}
 
-.chip-check.active {
-  color: var(--bg-deep);
-  border-color: var(--gold);
-  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-  box-shadow: var(--shadow-gold);
-}
 .skill-edit-list {
   display: flex;
   flex-direction: column;
@@ -887,6 +1260,59 @@ export default {
   margin-top: 0.45rem;
   font-size: 0.75rem;
   padding: 0.35rem 0.55rem;
+}
+
+.spell-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.spell-level-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem;
+}
+
+.spell-level-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.spell-level-title {
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  color: var(--gold-light);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.spell-slots {
+  margin-bottom: 0.5rem;
+}
+
+.spell-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.spell-row:last-child {
+  margin-bottom: 0;
+}
+
+.empty-text {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 0.3rem;
 }
 
 .tag-row {
@@ -938,6 +1364,10 @@ export default {
   .skill-edit-row {
     grid-template-columns: 1fr;
     align-items: flex-start;
+  }
+
+  .spell-row {
+    grid-template-columns: 1fr auto;
   }
 }
 </style>
