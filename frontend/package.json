@@ -9,6 +9,7 @@
     },
     "dependencies": {
         "axios": "^1.7.2",
+        "jspdf": "^4.2.1",
         "vue": "^3.4.29",
         "vue-router": "^4.3.3"
     },
