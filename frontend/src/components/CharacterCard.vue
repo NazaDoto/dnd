@@ -118,67 +118,368 @@ export default {
 
       return formatModifier(bonus);
     },
+    pdfTheme() {
+      return {
+        marginX: 14,
+        topY: 14,
+        bottomY: 282,
+        pageWidth: 210,
+        contentWidth: 182,
+
+        dark: [31, 27, 20],
+        sectionDark: [42, 36, 27],
+        gold: [245, 198, 102],
+        mutedGold: [120, 105, 80],
+        text: [35, 35, 35],
+        muted: [95, 85, 70],
+        softBg: [245, 242, 235],
+        line: [222, 215, 202],
+      }
+    },
+
+    setFont(doc, style = 'normal', size = 9, color = [35, 35, 35]) {
+      doc.setFont('helvetica', style)
+      doc.setFontSize(size)
+      doc.setTextColor(...color)
+    },
+
+    ensureSpace(doc, y, needed = 10) {
+      const t = this.pdfTheme()
+
+      if (y + needed > t.bottomY) {
+        doc.addPage()
+        return t.topY
+      }
+
+      return y
+    },
+
+    sanitizePdfText(value, fallback = '-') {
+      if (value === null || value === undefined || value === '') return fallback
+
+      return String(value)
+        .replace(/[—–]/g, '-')
+        .replace(/[•]/g, '-')
+        .replace(/[★]/g, '*')
+        .replace(/[●○]/g, '')
+        .replace(/\t/g, ' ')
+    },
 
     addSection(doc, title, y) {
-      if (y > 260) {
-        doc.addPage();
-        y = 18;
-      }
+      const t = this.pdfTheme()
 
-      doc.setFillColor(42, 36, 27);
-      doc.rect(14, y, 182, 8, "F");
+      y = this.ensureSpace(doc, y, 16)
 
-      doc.setTextColor(245, 198, 102);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(title.toUpperCase(), 18, y + 5.5);
+      doc.setFillColor(...t.sectionDark)
+      doc.rect(t.marginX, y, t.contentWidth, 8, 'F')
 
-      doc.setTextColor(35, 35, 35);
+      this.setFont(doc, 'bold', 10, t.gold)
+      doc.text(this.sanitizePdfText(title).toUpperCase(), t.marginX + 4, y + 5.5)
 
-      return y + 14;
+      return y + 13
     },
 
-    addTextBlock(doc, text, x, y, maxWidth = 178, lineHeight = 5) {
-      if (!text) return y;
+    addParagraph(doc, text, x, y, width = 182, options = {}) {
+      const t = this.pdfTheme()
+      const {
+        fontSize = 9,
+        lineHeight = 4.8,
+        style = 'normal',
+        color = t.text,
+        gapAfter = 2,
+      } = options
 
-      const lines = doc.splitTextToSize(String(text), maxWidth);
+      const clean = this.sanitizePdfText(text, '')
+      if (!clean.trim()) return y
 
-      lines.forEach((line) => {
-        if (y > 280) {
-          doc.addPage();
-          y = 18;
-        }
+      this.setFont(doc, style, fontSize, color)
 
-        doc.text(line, x, y);
-        y += lineHeight;
-      });
+      const paragraphs = clean.split('\n')
 
-      return y;
+      paragraphs.forEach((paragraph, pIndex) => {
+        const lines = paragraph.trim()
+          ? doc.splitTextToSize(paragraph.trim(), width)
+          : ['']
+
+        lines.forEach(line => {
+          y = this.ensureSpace(doc, y, lineHeight + 2)
+          doc.text(line, x, y)
+          y += lineHeight
+        })
+
+        if (pIndex < paragraphs.length - 1) y += 1.5
+      })
+
+      return y + gapAfter
     },
 
-    addKeyValue(doc, label, value, x, y, width = 85) {
-      if (y > 280) {
-        doc.addPage()
-        y = 18
-      }
+    addKeyValue(doc, label, value, x, y, width = 182, options = {}) {
+      const t = this.pdfTheme()
+      const {
+        labelWidth = 34,
+        fontSize = 9,
+        lineHeight = 4.8,
+        gapAfter = 1.5,
+      } = options
 
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(80, 70, 55)
+      const labelText = `${this.sanitizePdfText(label)}:`
+      const valueText = this.sanitizePdfText(value)
 
-      const labelText = label + ':'
+      this.setFont(doc, 'bold', fontSize, t.muted)
+      const valueX = x + labelWidth
+      const valueWidth = width - labelWidth
+
+      this.setFont(doc, 'normal', fontSize, t.text)
+      const valueLines = doc.splitTextToSize(valueText, valueWidth)
+
+      const needed = Math.max(6, valueLines.length * lineHeight)
+      y = this.ensureSpace(doc, y, needed + 2)
+
+      this.setFont(doc, 'bold', fontSize, t.muted)
       doc.text(labelText, x, y)
 
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(35, 35, 35)
+      this.setFont(doc, 'normal', fontSize, t.text)
+      doc.text(valueLines, valueX, y)
 
-      const gap = 2.2
-      const labelWidth = doc.getTextWidth(labelText)
-      const text = value === null || value === undefined || value === '' ? '-' : String(value)
-      const lines = doc.splitTextToSize(text, width - labelWidth - gap)
+      return y + needed + gapAfter
+    },
 
-      doc.text(lines, x + labelWidth + gap, y)
+    addTwoColumnKeyValues(doc, pairs, y) {
+      const t = this.pdfTheme()
+      const leftX = t.marginX + 2
+      const rightX = t.marginX + 94
+      const colW = 84
 
-      return y + Math.max(6, lines.length * 5)
+      for (let i = 0; i < pairs.length; i += 2) {
+        const left = pairs[i]
+        const right = pairs[i + 1]
+
+        const startY = y
+
+        let yLeft = startY
+        let yRight = startY
+
+        if (left) {
+          yLeft = this.addKeyValue(doc, left[0], left[1], leftX, yLeft, colW, {
+            labelWidth: 28,
+          })
+        }
+
+        if (right) {
+          yRight = this.addKeyValue(doc, right[0], right[1], rightX, yRight, colW, {
+            labelWidth: 28,
+          })
+        }
+
+        y = Math.max(yLeft, yRight)
+      }
+
+      return y
+    },
+
+    addStatCards(doc, items, y, columns = 3) {
+      const t = this.pdfTheme()
+      const gap = 5
+      const cardW = (t.contentWidth - gap * (columns - 1)) / columns
+      const cardH = 13
+
+      items.forEach((item, index) => {
+        if (index > 0 && index % columns === 0) y += cardH + 4
+
+        y = this.ensureSpace(doc, y, cardH + 4)
+
+        const col = index % columns
+        const x = t.marginX + col * (cardW + gap)
+
+        doc.setFillColor(...t.softBg)
+        doc.roundedRect(x, y, cardW, cardH, 2, 2, 'F')
+
+        this.setFont(doc, 'bold', 7, t.muted)
+        doc.text(this.sanitizePdfText(item.label).toUpperCase(), x + 3, y + 4)
+
+        this.setFont(doc, 'bold', 11, t.text)
+        doc.text(this.sanitizePdfText(item.value), x + 3, y + 10)
+      })
+
+      return y + cardH + 5
+    },
+
+    addBulletList(doc, items, x, y, width = 178, options = {}) {
+      const t = this.pdfTheme()
+      const {
+        fontSize = 9,
+        lineHeight = 4.8,
+        bullet = '-',
+        gapAfter = 2,
+      } = options
+
+      const cleanItems = items
+        .map(item => this.sanitizePdfText(item, '').trim())
+        .filter(Boolean)
+
+      if (!cleanItems.length) return y
+
+      cleanItems.forEach(item => {
+        const lines = doc.splitTextToSize(item, width - 6)
+
+        y = this.ensureSpace(doc, y, lines.length * lineHeight + 2)
+
+        this.setFont(doc, 'normal', fontSize, t.text)
+        doc.text(bullet, x, y)
+        doc.text(lines, x + 5, y)
+
+        y += Math.max(lineHeight, lines.length * lineHeight)
+      })
+
+      return y + gapAfter
+    },
+
+    addChipList(doc, items, x, y, width = 178) {
+      const t = this.pdfTheme()
+      const cleanItems = items
+        .map(item => this.sanitizePdfText(item, '').trim())
+        .filter(Boolean)
+
+      if (!cleanItems.length) return y
+
+      let cursorX = x
+      let cursorY = y
+      const chipH = 6
+      const gap = 2
+
+      cleanItems.forEach(item => {
+        this.setFont(doc, 'normal', 8, [90, 65, 145])
+
+        const chipW = Math.min(doc.getTextWidth(item) + 8, width)
+
+        if (cursorX + chipW > x + width) {
+          cursorX = x
+          cursorY += chipH + gap
+        }
+
+        cursorY = this.ensureSpace(doc, cursorY, chipH + 4)
+
+        doc.setFillColor(245, 240, 255)
+        doc.setDrawColor(124, 58, 237)
+        doc.roundedRect(cursorX, cursorY - 4.5, chipW, chipH, 3, 3, 'FD')
+
+        doc.setTextColor(90, 65, 145)
+        doc.text(item, cursorX + 4, cursorY)
+
+        cursorX += chipW + gap
+      })
+
+      return cursorY + chipH + 3
+    },
+
+    addSimpleTable(doc, headers, rows, y, widths) {
+      const t = this.pdfTheme()
+      const x = t.marginX
+      const rowH = 6
+
+      y = this.ensureSpace(doc, y, rowH * 2)
+
+      doc.setFillColor(...t.softBg)
+      doc.rect(x, y - 4.5, t.contentWidth, rowH, 'F')
+
+      let cx = x + 2
+
+      this.setFont(doc, 'bold', 7.5, t.muted)
+      headers.forEach((h, i) => {
+        doc.text(this.sanitizePdfText(h).toUpperCase(), cx, y)
+        cx += widths[i]
+      })
+
+      y += rowH
+
+      rows.forEach(row => {
+        y = this.ensureSpace(doc, y, rowH + 2)
+
+        cx = x + 2
+        this.setFont(doc, 'normal', 8.5, t.text)
+
+        row.forEach((cell, i) => {
+          const text = this.sanitizePdfText(cell)
+          const lines = doc.splitTextToSize(text, widths[i] - 2)
+          doc.text(lines.slice(0, 1), cx, y)
+          cx += widths[i]
+        })
+
+        doc.setDrawColor(...t.line)
+        doc.line(x, y + 1.5, x + t.contentWidth, y + 1.5)
+
+        y += rowH
+      })
+
+      return y + 2
+    },
+
+    addPageFooters(doc, name) {
+      const t = this.pdfTheme()
+      const pageCount = doc.internal.getNumberOfPages()
+
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        this.setFont(doc, 'normal', 8, [130, 120, 105])
+        doc.text(
+          `${this.sanitizePdfText(name || 'Personaje')} · Página ${i} de ${pageCount}`,
+          t.pageWidth / 2,
+          290,
+          { align: 'center' }
+        )
+      }
+    },
+
+    formatEquipmentItems(equipment) {
+      return equipment.map(item => {
+        if (typeof item === 'string') return item
+
+        if (!item || typeof item !== 'object') return 'Objeto'
+
+        const name = item.name || 'Objeto'
+        const qty = item.qty ? ` x${item.qty}` : ''
+
+        return `${name}${qty}`
+      })
+    },
+
+    formatSpellsBlocksForPdf(value) {
+      const spells = this.normalizeSpells(value)
+      const blocks = []
+
+      const cantrips = spells.cantrips
+        .map(spell => String(spell).trim())
+        .filter(Boolean)
+
+      if (cantrips.length) {
+        blocks.push({
+          title: 'Trucos',
+          subtitle: '',
+          items: cantrips,
+        })
+      }
+
+      for (let i = 1; i <= 9; i++) {
+        const key = `level${i}`
+        const level = spells[key]
+
+        const levelSpells = Array.isArray(level.spells)
+          ? level.spells.map(spell => String(spell).trim()).filter(Boolean)
+          : []
+
+        const slots = Number(level.slots || 0)
+        const used = Number(level.slots_used || 0)
+
+        if (!levelSpells.length && slots <= 0) continue
+
+        blocks.push({
+          title: `Nivel ${i}`,
+          subtitle: slots > 0 ? `Slots ${used}/${slots}` : '',
+          items: levelSpells.length ? levelSpells : ['Sin conjuros preparados'],
+        })
+      }
+
+      return blocks
     },
     normalizeSpells(value) {
       const base = {
@@ -279,403 +580,347 @@ export default {
       return lines.join("\n").trim()
     },
     async downloadPdf() {
-      const id = this.getCharacterId();
+      const id = this.getCharacterId()
 
       if (!id) {
-        alert("No se encontró el ID del personaje.");
-        return;
+        alert('No se encontró el ID del personaje.')
+        return
       }
 
-      this.downloadingPdf = true;
+      this.downloadingPdf = true
 
       try {
-        const { data } = await charactersAPI.getFull(id);
-        const c = data;
+        const { data } = await charactersAPI.getFull(id)
+        const c = data
+        const t = this.pdfTheme()
 
         const doc = new jsPDF({
-          orientation: "portrait",
-          unit: "mm",
-          format: "a4",
-        });
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4',
+        })
 
-        const pageWidth = doc.internal.pageSize.getWidth();
+        const attacks = this.safeArray(c.attacks_spellcasting)
+        const equipment = this.safeArray(c.equipment)
+        const features = this.safeArray(c.features_traits)
+        const languages = this.safeArray(c.languages)
+        const otherProfs = this.safeArray(c.other_proficiencies)
+        const savingThrows = this.safeArray(c.saving_throws_prof)
+        const skillsProf = this.safeArray(c.skills_prof)
+        const skillsExpertise = this.safeArray(c.skills_expertise)
 
-        const attacks = this.safeArray(c.attacks_spellcasting);
-        const equipment = this.safeArray(c.equipment);
-        const features = this.safeArray(c.features_traits);
-        const languages = this.safeArray(c.languages);
-        const otherProfs = this.safeArray(c.other_proficiencies);
-        const savingThrows = this.safeArray(c.saving_throws_prof);
-        const skillsProf = this.safeArray(c.skills_prof);
-        const skillsExpertise = this.safeArray(c.skills_expertise);
+        let y = 0
 
-        let y = 18;
+        doc.setFillColor(...t.dark)
+        doc.rect(0, 0, t.pageWidth, 36, 'F')
 
-        doc.setFillColor(31, 27, 20);
-        doc.rect(0, 0, pageWidth, 34, "F");
+        this.setFont(doc, 'bold', 22, t.gold)
+        doc.text(this.sanitizePdfText(c.name || 'Personaje'), t.marginX, 16)
 
-        doc.setTextColor(245, 198, 102);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(22);
-        doc.text(c.name || "Personaje", 14, 16);
-
-        doc.setFontSize(10);
-        doc.setTextColor(230, 220, 200);
+        this.setFont(doc, 'normal', 10, [230, 220, 200])
         doc.text(
-          `${c.race || "—"}${c.subrace ? ` (${c.subrace})` : ""} · ${this.getClassLabel(c.class)} · Nivel ${c.level || 1}`,
-          14,
-          24,
-        );
+          `${this.sanitizePdfText(c.race || '-')}${c.subrace ? ` (${this.sanitizePdfText(c.subrace)})` : ''} · ${this.getClassLabel(c.class)} · Nivel ${c.level || 1}`,
+          t.marginX,
+          24
+        )
 
-        if (c.background || c.alignment) {
-          doc.text(`${c.background || "—"} · ${c.alignment || "—"}`, 14, 30);
+        const subtitle = [c.background, c.alignment]
+          .map(v => this.sanitizePdfText(v, '').trim())
+          .filter(Boolean)
+          .join(' · ')
+
+        if (subtitle) {
+          doc.text(subtitle, t.marginX, 30)
         }
 
-        y = 44;
+        y = 46
 
-        y = this.addSection(doc, "Datos principales", y);
-        doc.setFontSize(9);
-
-        y = this.addKeyValue(doc, "Nombre", c.name, 16, y);
-        y = this.addKeyValue(
+        y = this.addSection(doc, 'Datos principales', y)
+        y = this.addTwoColumnKeyValues(
           doc,
-          "Raza",
-          `${c.race || "—"}${c.subrace ? ` (${c.subrace})` : ""}`,
-          16,
-          y,
-        );
-        y = this.addKeyValue(doc, "Clase", this.getClassLabel(c.class), 16, y);
-        y = this.addKeyValue(doc, "Nivel", c.level, 16, y);
-        y = this.addKeyValue(doc, "Trasfondo", c.background, 16, y);
-        y = this.addKeyValue(doc, "Alineamiento", c.alignment, 16, y);
-        y = this.addKeyValue(doc, "XP", c.experience_points || 0, 16, y);
+          [
+            ['Nombre', c.name],
+            ['Raza', `${c.race || '-'}${c.subrace ? ` (${c.subrace})` : ''}`],
+            ['Clase', this.getClassLabel(c.class)],
+            ['Nivel', c.level],
+            ['Trasfondo', c.background],
+            ['Alineamiento', c.alignment],
+            ['XP', c.experience_points || 0],
+          ],
+          y
+        )
 
-        y += 3;
-        y = this.addSection(doc, "Combate", y);
+        y += 2
+        y = this.addSection(doc, 'Combate', y)
 
-        const combat = [
-          ["PV", `${c.hit_points_current || 0}/${c.hit_points_max || 0}`],
-          ["PV temp.", c.hit_points_temp || 0],
-          ["CA", c.armor_class || "—"],
-          ["Iniciativa", formatModifier(c.initiative || 0)],
-          ["Velocidad", `${c.speed || 0} ft`],
-          ["B. competencia", formatModifier(c.proficiency_bonus || 2)],
-        ];
+        y = this.addStatCards(doc, [
+          { label: 'PV', value: `${c.hit_points_current || 0}/${c.hit_points_max || 0}` },
+          { label: 'PV temp.', value: c.hit_points_temp || 0 },
+          { label: 'CA', value: c.armor_class || '-' },
+          { label: 'Iniciativa', value: formatModifier(c.initiative || 0) },
+          { label: 'Velocidad', value: `${c.speed || 0} ft` },
+          { label: 'B. competencia', value: formatModifier(c.proficiency_bonus || 2) },
+        ])
 
-        let x = 16;
-        combat.forEach((item, index) => {
-          if (index > 0 && index % 3 === 0) {
-            x = 16;
-            y += 16;
-          }
+        y = this.addSection(doc, 'Atributos', y)
 
-          doc.setFillColor(245, 242, 235);
-          doc.roundedRect(x, y, 55, 11, 2, 2, "F");
+        const attrCards = ATTRIBUTES.map(attr => ({
+          label: attr.short || attr.label,
+          value: `${c[attr.key] || 10} (${formatModifier(getModifier(c[attr.key] || 10))})`,
+        }))
 
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(80, 70, 55);
-          doc.setFontSize(7);
-          doc.text(item[0].toUpperCase(), x + 3, y + 4);
+        y = this.addStatCards(doc, attrCards, y, 3)
 
-          doc.setFontSize(11);
-          doc.setTextColor(35, 35, 35);
-          doc.text(String(item[1]), x + 3, y + 9);
-
-          x += 60;
-        });
-
-        y += 20;
-        y = this.addSection(doc, "Atributos", y);
-
-        x = 16;
-        ATTRIBUTES.forEach((attr) => {
-          const value = c[attr.key] || 10;
-          const mod = formatModifier(getModifier(value));
-
-          doc.setFillColor(245, 242, 235);
-          doc.roundedRect(x, y, 26, 18, 2, 2, "F");
-
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(80, 70, 55);
-          doc.setFontSize(7);
-          doc.text((attr.short || attr.label).toUpperCase(), x + 13, y + 5, {
-            align: "center",
-          });
-
-          doc.setFontSize(13);
-          doc.setTextColor(35, 35, 35);
-          doc.text(String(value), x + 13, y + 11, { align: "center" });
-
-          doc.setFontSize(8);
-          doc.setTextColor(120, 105, 80);
-          doc.text(mod, x + 13, y + 16, { align: "center" });
-
-          x += 30;
-        });
-
-        y += 28;
-        y = this.addSection(doc, "Salvaciones y habilidades", y);
-
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(80, 70, 55);
-        doc.text("Salvaciones competentes: ", 16, y);
-
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(35, 35, 35);
+        y = this.addSection(doc, 'Salvaciones y habilidades', y)
 
         const savesText = savingThrows.length
-          ? savingThrows.map(this.getAttrLabel).join(", ")
-          : "Ninguna";
+          ? savingThrows.map(attr => this.getAttrLabel(attr)).join(', ')
+          : 'Ninguna'
 
-        y = this.addTextBlock(doc, savesText, 16, y + 6, 178);
+        y = this.addKeyValue(doc, 'Salvaciones', savesText, t.marginX + 2, y, 178, {
+          labelWidth: 30,
+        })
 
-        y += 3;
+        y += 1
+        this.setFont(doc, 'bold', 9, t.muted)
+        y = this.addParagraph(doc, 'Habilidades', t.marginX + 2, y, 178, {
+          style: 'bold',
+          color: t.muted,
+          gapAfter: 1,
+        })
 
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(80, 70, 55);
-        doc.text("Habilidades: ", 16, y);
+        this.setFont(doc, 'italic', 8, t.mutedGold)
+        y = this.addParagraph(
+          doc,
+          '[P] Competente   [E] Experto   [ ] Sin competencia',
+          t.marginX + 2,
+          y,
+          178,
+          { style: 'italic', fontSize: 8, color: t.mutedGold, gapAfter: 1 }
+        )
 
-        y += 6;
+        const skillRows = SKILLS.map(sk => {
+          const isProf = skillsProf.includes(sk.key)
+          const isExpert = skillsExpertise.includes(sk.key)
+          const mark = isExpert ? '[E]' : isProf ? '[P]' : '[ ]'
 
-        doc.setFont("helvetica", "italic");
-        doc.setTextColor(120, 105, 80);
-        doc.text("[P] Competente   [E] Experto   [ ] Sin competencia", 18, y);
-        y += 7;
+          return [
+            mark,
+            `${sk.label} (${this.getAttrLabel(sk.attr)})`,
+            this.getSkillBonus(c, sk),
+          ]
+        })
 
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(35, 35, 35);
+        y = this.addSimpleTable(
+          doc,
+          ['', 'Habilidad', 'Bonus'],
+          skillRows,
+          y,
+          [12, 142, 24]
+        )
 
-        SKILLS.forEach((sk) => {
-          if (y > 276) {
-            doc.addPage();
-            y = 18;
-          }
+        y = this.addSection(doc, 'Ataques', y)
 
-          const isProf = skillsProf.includes(sk.key);
-          const isExpert = skillsExpertise.includes(sk.key);
-          const mark = isExpert ? "[E]" : isProf ? "[P]" : "[ ]";
-
-          doc.text(
-            `${mark} ${sk.label} (${this.getAttrLabel(sk.attr)}) ${this.getSkillBonus(c, sk)}`,
-            18,
-            y,
-          );
-
-          y += 5;
-        });
-
-        y += 3;
-        y = this.addSection(doc, "Ataques", y);
-
-        doc.setFontSize(9);
         if (attacks.length) {
-          attacks.forEach((atk) => {
-            const line = `${atk.name || "Ataque"} · ${atk.bonus || "+0"} · ${atk.damage || "—"} ${atk.type || ""}`;
-            y = this.addTextBlock(doc, line, 16, y, 178);
-            y += 2;
-          });
+          const attackRows = attacks.map(atk => [
+            atk.name || 'Ataque',
+            atk.bonus || '+0',
+            atk.damage || '-',
+            atk.type || '-',
+          ])
+
+          y = this.addSimpleTable(
+            doc,
+            ['Nombre', 'Bonus', 'Daño', 'Tipo'],
+            attackRows,
+            y,
+            [80, 24, 38, 36]
+          )
         } else {
-          y = this.addTextBlock(doc, "Sin ataques registrados.", 16, y, 178);
+          y = this.addParagraph(doc, 'Sin ataques registrados.', t.marginX + 2, y)
         }
 
-        y += 3;
-        y = this.addSection(doc, "Magia", y);
+        y = this.addSection(doc, 'Magia', y)
 
-        y = this.addKeyValue(
+        y = this.addTwoColumnKeyValues(
           doc,
-          "Característica",
-          this.getAttrLabel(c.spellcasting_ability),
-          16,
-          y,
-        );
-        y = this.addKeyValue(doc, "CD salvación", c.spell_save_dc, 16, y);
-        y = this.addKeyValue(
-          doc,
-          "Ataque conjuro",
-          c.spell_attack_bonus ? `+${c.spell_attack_bonus}` : "—",
-          16,
-          y,
-        );
+          [
+            ['Característica', this.getAttrLabel(c.spellcasting_ability)],
+            ['CD salvación', c.spell_save_dc],
+            ['Ataque conjuro', c.spell_attack_bonus ? `+${c.spell_attack_bonus}` : '-'],
+          ],
+          y
+        )
 
-        const spellsText = this.formatSpellsForPdf(c.spells)
+        const spellBlocks = this.formatSpellsBlocksForPdf(c.spells)
 
-        if (spellsText) {
-          y += 2
-          doc.setFont("helvetica", "bold")
-          doc.setTextColor(80, 70, 55)
-          doc.text("Conjuros:", 16, y)
+        if (spellBlocks.length) {
+          y += 1
 
-          doc.setFont("helvetica", "normal")
-          doc.setTextColor(35, 35, 35)
+          spellBlocks.forEach(block => {
+            y = this.ensureSpace(doc, y, 18)
 
-          y = this.addTextBlock(doc, spellsText, 16, y + 6, 178)
-        } else {
-          y += 2
-          y = this.addTextBlock(doc, "Sin conjuros registrados.", 16, y, 178)
-        }
+            this.setFont(doc, 'bold', 9, t.muted)
+            doc.text(block.title, t.marginX + 2, y)
 
-        y += 3;
-        y = this.addSection(doc, "Equipo", y);
-
-        y = this.addKeyValue(doc, "PC", c.copper_pieces || 0, 16, y);
-        y = this.addKeyValue(doc, "PP", c.silver_pieces || 0, 16, y);
-        y = this.addKeyValue(doc, "PE", c.electrum_pieces || 0, 16, y);
-        y = this.addKeyValue(doc, "PO", c.gold_pieces || 0, 16, y);
-        y = this.addKeyValue(doc, "PPl", c.platinum_pieces || 0, 16, y);
-
-        y += 2;
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(80, 70, 55);
-        doc.text("Equipo: ", 16, y);
-
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(35, 35, 35);
-
-        const equipmentText = equipment.length
-          ? equipment
-            .map((item) => {
-              if (typeof item === "string") return item;
-              return `${item.name || "Objeto"}${item.qty ? ` x${item.qty}` : ""}`;
-            })
-            .join("\n")
-          : "Sin equipo registrado.";
-
-        y = this.addTextBlock(doc, equipmentText, 16, y + 6, 178);
-
-        if (c.treasure) {
-          y += 2;
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(80, 70, 55);
-          doc.text("Tesoros: ", 16, y);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(35, 35, 35);
-          y = this.addTextBlock(doc, c.treasure, 16, y + 6, 178);
-        }
-
-        y += 3;
-        y = this.addSection(doc, "Rasgos, idiomas y competencias", y);
-
-        if (features.length) {
-          features.forEach((feat) => {
-            const name = typeof feat === "string" ? feat : feat.name;
-            const desc = typeof feat === "string" ? "" : feat.description;
-
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(80, 70, 55);
-            y = this.addTextBlock(doc, name || "Rasgo", 16, y, 178);
-
-            if (desc) {
-              doc.setFont("helvetica", "normal");
-              doc.setTextColor(35, 35, 35);
-              y = this.addTextBlock(doc, desc, 18, y, 174);
+            if (block.subtitle) {
+              this.setFont(doc, 'normal', 8, t.mutedGold)
+              doc.text(block.subtitle, t.marginX + 45, y)
             }
 
-            y += 2;
-          });
+            y += 4
+            y = this.addChipList(doc, block.items, t.marginX + 2, y, 178)
+          })
         } else {
-          y = this.addTextBlock(doc, "Sin rasgos registrados.", 16, y, 178);
+          y = this.addParagraph(doc, 'Sin conjuros registrados.', t.marginX + 2, y)
         }
 
-        y += 2;
-        y = this.addKeyValue(
-          doc,
-          "Idiomas",
-          languages.length ? languages.join(", ") : "—",
-          16,
-          y,
-        );
-        y = this.addKeyValue(
-          doc,
-          "Competencias",
-          otherProfs.length ? otherProfs.join(", ") : "—",
-          16,
-          y,
-        );
+        y = this.addSection(doc, 'Equipo', y)
 
-        y += 3;
-        y = this.addSection(doc, "Trasfondo", y);
+        y = this.addStatCards(doc, [
+          { label: 'PC', value: c.copper_pieces || 0 },
+          { label: 'PP', value: c.silver_pieces || 0 },
+          { label: 'PE', value: c.electrum_pieces || 0 },
+          { label: 'PO', value: c.gold_pieces || 0 },
+          { label: 'PPl', value: c.platinum_pieces || 0 },
+        ], y, 5)
 
-        y = this.addKeyValue(
-          doc,
-          "Rasgos personalidad",
-          c.personality_traits,
-          16,
-          y,
-          178,
-        );
-        y = this.addKeyValue(doc, "Ideales", c.ideals, 16, y, 178);
-        y = this.addKeyValue(doc, "Vínculos", c.bonds, 16, y, 178);
-        y = this.addKeyValue(doc, "Defectos", c.flaws, 16, y, 178);
+        const equipmentItems = equipment.length
+          ? this.formatEquipmentItems(equipment)
+          : ['Sin equipo registrado.']
+
+        y = this.addParagraph(doc, 'Equipo', t.marginX + 2, y, 178, {
+          style: 'bold',
+          color: t.muted,
+          gapAfter: 1,
+        })
+
+        y = this.addChipList(doc, equipmentItems, t.marginX + 2, y, 178)
+
+        if (c.treasure) {
+          y = this.addKeyValue(doc, 'Tesoros', c.treasure, t.marginX + 2, y, 178, {
+            labelWidth: 24,
+          })
+        }
+
+        y = this.addSection(doc, 'Rasgos, idiomas y competencias', y)
+
+        if (features.length) {
+          features.forEach(feat => {
+            const name = typeof feat === 'string' ? feat : feat.name
+            const desc = typeof feat === 'string' ? '' : feat.description
+
+            y = this.addParagraph(doc, name || 'Rasgo', t.marginX + 2, y, 178, {
+              style: 'bold',
+              color: t.muted,
+              gapAfter: 1,
+            })
+
+            if (desc) {
+              y = this.addParagraph(doc, desc, t.marginX + 4, y, 174, {
+                fontSize: 8.5,
+                gapAfter: 2,
+              })
+            }
+          })
+        } else {
+          y = this.addParagraph(doc, 'Sin rasgos registrados.', t.marginX + 2, y)
+        }
+
+        if (languages.length) {
+          y = this.addParagraph(doc, 'Idiomas', t.marginX + 2, y, 178, {
+            style: 'bold',
+            color: t.muted,
+            gapAfter: 1,
+          })
+          y = this.addChipList(doc, languages, t.marginX + 2, y, 178)
+        }
+
+        if (otherProfs.length) {
+          y = this.addParagraph(doc, 'Competencias', t.marginX + 2, y, 178, {
+            style: 'bold',
+            color: t.muted,
+            gapAfter: 1,
+          })
+          y = this.addChipList(doc, otherProfs, t.marginX + 2, y, 178)
+        }
+
+        y = this.addSection(doc, 'Trasfondo', y)
+
+        y = this.addKeyValue(doc, 'Rasgos', c.personality_traits, t.marginX + 2, y, 178, {
+          labelWidth: 28,
+        })
+
+        y = this.addKeyValue(doc, 'Ideales', c.ideals, t.marginX + 2, y, 178, {
+          labelWidth: 28,
+        })
+
+        y = this.addKeyValue(doc, 'Vínculos', c.bonds, t.marginX + 2, y, 178, {
+          labelWidth: 28,
+        })
+
+        y = this.addKeyValue(doc, 'Defectos', c.flaws, t.marginX + 2, y, 178, {
+          labelWidth: 28,
+        })
 
         if (c.backstory) {
-          y += 2;
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(80, 70, 55);
-          doc.text("Historia: ", 16, y);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(35, 35, 35);
-          y = this.addTextBlock(doc, c.backstory, 16, y + 6, 178);
+          y = this.addParagraph(doc, 'Historia', t.marginX + 2, y, 178, {
+            style: 'bold',
+            color: t.muted,
+            gapAfter: 1,
+          })
+
+          y = this.addParagraph(doc, c.backstory, t.marginX + 2, y, 178, {
+            fontSize: 8.7,
+            lineHeight: 4.7,
+            gapAfter: 2,
+          })
         }
 
-        y += 3;
-        y = this.addSection(doc, "Apariencia", y);
+        y = this.addSection(doc, 'Apariencia', y)
 
-        y = this.addKeyValue(doc, "Edad", c.age, 16, y);
-        y = this.addKeyValue(doc, "Altura", c.height, 16, y);
-        y = this.addKeyValue(doc, "Peso", c.weight, 16, y);
-        y = this.addKeyValue(doc, "Ojos", c.eyes, 16, y);
-        y = this.addKeyValue(doc, "Piel", c.skin, 16, y);
-        y = this.addKeyValue(doc, "Cabello", c.hair, 16, y);
+        y = this.addTwoColumnKeyValues(
+          doc,
+          [
+            ['Edad', c.age],
+            ['Altura', c.height],
+            ['Peso', c.weight],
+            ['Ojos', c.eyes],
+            ['Piel', c.skin],
+            ['Cabello', c.hair],
+          ],
+          y
+        )
 
         if (c.appearance_notes) {
-          y += 2;
-          doc.setFont("helvetica", "bold");
-          doc.setTextColor(80, 70, 55);
-          doc.text("Notas de apariencia: ", 16, y);
-          doc.setFont("helvetica", "normal");
-          doc.setTextColor(35, 35, 35);
-          y = this.addTextBlock(doc, c.appearance_notes, 16, y + 6, 178);
+          y = this.addKeyValue(doc, 'Notas', c.appearance_notes, t.marginX + 2, y, 178, {
+            labelWidth: 24,
+          })
         }
 
-        y += 3;
-        y = this.addSection(doc, "Alianzas", y);
+        y = this.addSection(doc, 'Alianzas', y)
 
-        y = this.addKeyValue(doc, "Facción", c.faction, 16, y, 178);
-        y = this.addKeyValue(
-          doc,
-          "Aliados",
-          c.allies_organizations,
-          16,
-          y,
-          178,
-        );
+        y = this.addKeyValue(doc, 'Facción', c.faction, t.marginX + 2, y, 178, {
+          labelWidth: 28,
+        })
 
-        const pageCount = doc.internal.getNumberOfPages();
+        y = this.addKeyValue(doc, 'Aliados', c.allies_organizations, t.marginX + 2, y, 178, {
+          labelWidth: 28,
+        })
 
-        for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i);
-          doc.setFontSize(8);
-          doc.setTextColor(130, 120, 105);
-          doc.text(
-            `${c.name || "Personaje"} · Página ${i} de ${pageCount}`,
-            pageWidth / 2,
-            290,
-            { align: "center" },
-          );
-        }
+        this.addPageFooters(doc, c.name)
 
-        const filename = `${String(c.name || "personaje")
+        const filename = `${String(c.name || 'personaje')
           .toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-_]/g, "")}.pdf`;
+          .replace(/\s+/g, '-')
+          .replace(/[^a-z0-9-_]/g, '')}.pdf`
 
-        doc.save(filename);
+        doc.save(filename)
       } catch (error) {
-        console.error(error);
-        alert("No se pudo generar el PDF del personaje.");
+        console.error(error)
+        alert('No se pudo generar el PDF del personaje.')
       } finally {
-        this.downloadingPdf = false;
+        this.downloadingPdf = false
       }
     },
   },
