@@ -79,6 +79,19 @@ export default {
     },
   },
   methods: {
+    splitTagItems(items) {
+  return this.safeArray(items)
+    .flatMap(item => {
+      const text = this.sanitizePdfText(item, '').trim()
+
+      if (!text) return []
+
+      return text
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean)
+    })
+},
     safeArray(value) {
       if (Array.isArray(value)) return value;
 
@@ -357,50 +370,66 @@ export default {
     },
 
     addChipList(doc, items, x, y, width = 178) {
-      const t = this.pdfTheme();
+  const t = this.pdfTheme()
 
-      const cleanItems = items
-        .map((item) => this.sanitizePdfText(item, "").trim())
-        .filter(Boolean);
+  const cleanItems = items
+    .flatMap(item => {
+      const text = this.sanitizePdfText(item, '').trim()
 
-      if (!cleanItems.length) return y;
+      // Si viene todo junto separado por comas, lo separa en chips individuales.
+      if (text.includes(',')) {
+        return text
+          .split(',')
+          .map(part => part.trim())
+          .filter(Boolean)
+      }
 
-      let cursorX = x;
-      let cursorY = y;
-      const chipH = 6;
-      const gap = 2;
+      return text ? [text] : []
+    })
+    .filter(Boolean)
 
-      cleanItems.forEach((item) => {
-        this.setFont(doc, "normal", 8, t.chipText);
+  if (!cleanItems.length) return y
 
-        const rawW = doc.getTextWidth(item) + 8;
-        const chipW = Math.min(rawW, width);
+  let cursorX = x
+  let cursorY = y
 
-        if (cursorX + chipW > x + width) {
-          cursorX = x;
-          cursorY += chipH + gap;
-        }
+  const chipH = 7
+  const gapX = 2
+  const gapY = 2.5
+  const textY = 4.8
 
-        cursorY = this.ensureSpace(doc, cursorY, chipH + 4);
+  cleanItems.forEach(item => {
+    this.setFont(doc, 'normal', 8, t.chipText)
 
-        doc.setFillColor(...t.chipBg);
-        doc.setDrawColor(...t.chipBorder);
-        doc.roundedRect(cursorX, cursorY - 4.5, chipW, chipH, 3, 3, "FD");
+    const maxChipW = width
+    const rawW = doc.getTextWidth(item) + 8
+    const chipW = Math.min(rawW, maxChipW)
 
-        doc.setTextColor(...t.chipText);
+    if (cursorX + chipW > x + width) {
+      cursorX = x
+      cursorY += chipH + gapY
+    }
 
-        const label =
-          rawW > width
-            ? doc.splitTextToSize(item, chipW - 8)[0]
-            : item;
+    cursorY = this.ensureSpace(doc, cursorY, chipH + gapY + 2)
 
-        doc.text(label, cursorX + 4, cursorY);
+    doc.setFillColor(...t.chipBg)
+    doc.setDrawColor(...t.chipBorder)
+    doc.roundedRect(cursorX, cursorY, chipW, chipH, 3, 3, 'FD')
 
-        cursorX += chipW + gap;
-      });
+    doc.setTextColor(...t.chipText)
 
-      return cursorY + chipH + 3;
-    },
+    const label =
+      rawW > maxChipW
+        ? doc.splitTextToSize(item, chipW - 8)[0]
+        : item
+
+    doc.text(label, cursorX + 4, cursorY + textY)
+
+    cursorX += chipW + gapX
+  })
+
+  return cursorY + chipH + gapY + 2
+},
 
     addSimpleTable(doc, headers, rows, y, widths) {
       const t = this.pdfTheme();
@@ -585,8 +614,8 @@ export default {
         const attacks = this.safeArray(c.attacks_spellcasting);
         const equipment = this.safeArray(c.equipment);
         const features = this.safeArray(c.features_traits);
-        const languages = this.safeArray(c.languages);
-        const otherProfs = this.safeArray(c.other_proficiencies);
+const languages = this.splitTagItems(c.languages)
+const otherProfs = this.splitTagItems(c.other_proficiencies)
         const savingThrows = this.safeArray(c.saving_throws_prof);
         const skillsProf = this.safeArray(c.skills_prof);
         const skillsExpertise = this.safeArray(c.skills_expertise);
@@ -761,7 +790,7 @@ export default {
               doc.text(block.subtitle, t.marginX + 45, y);
             }
 
-            y += 4;
+            y += 6;
             y = this.addChipList(doc, block.items, t.marginX + 2, y, 178);
           });
         } else {
@@ -790,7 +819,7 @@ export default {
         y = this.addParagraph(doc, "Equipo", t.marginX + 2, y, 178, {
           style: "bold",
           color: t.muted,
-          gapAfter: 1,
+          gapAfter: 2,
           justify: false,
         });
 
@@ -830,7 +859,7 @@ export default {
           y = this.addParagraph(doc, "Idiomas", t.marginX + 2, y, 178, {
             style: "bold",
             color: t.muted,
-            gapAfter: 1,
+            gapAfter: 2,
             justify: false,
           });
 
@@ -841,7 +870,7 @@ export default {
           y = this.addParagraph(doc, "Competencias", t.marginX + 2, y, 178, {
             style: "bold",
             color: t.muted,
-            gapAfter: 1,
+            gapAfter: 2,
             justify: false,
           });
 
