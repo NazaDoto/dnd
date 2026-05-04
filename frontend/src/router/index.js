@@ -10,6 +10,7 @@ import CharacterEditView from '../views/CharacterEditView.vue'
 import NotesView from '../views/NotesView.vue'
 import AdminPanelView from '../views/AdminPanelView.vue'
 import DmPanelView from '../views/DmPanelView.vue'
+import DmCampaignDetailView from '../views/DmCampaignDetailView.vue'
 
 function getStoredUser() {
     const raw = localStorage.getItem('dnd_user')
@@ -27,7 +28,14 @@ const routes = [
     { path: '/register', component: RegisterView, meta: { guest: true } },
     { path: '/home', component: HomeView, meta: { requiresAuth: true, roles: ['jugador'] } },
     { path: '/admin', component: AdminPanelView, meta: { requiresAuth: true, roles: ['administrador'] } },
-    { path: '/dm', component: DmPanelView, meta: { requiresAuth: true, roles: ['dm', 'administrador'] } },
+    { path: '/dm', component: DmPanelView, meta: { requiresAuth: true, roles: ['dm'] } },
+    { path: '/dm/campaign/:id', component: DmCampaignDetailView, meta: { requiresAuth: true, roles: ['dm'] } },
+    {
+        path: '/dm/campaign/:campaignId/character/:id',
+        name: 'DmCampaignCharacter',
+        component: CharacterFullView,
+        meta: { requiresAuth: true, roles: ['dm'] }
+    },
     { path: '/character/new', component: CharacterCreateView, meta: { requiresAuth: true, roles: ['jugador'] } },
     { path: '/character/:id', component: CharacterDetailView, meta: { requiresAuth: true, roles: ['jugador'] } },
     { path: '/character/:id/full', component: CharacterFullView, meta: { requiresAuth: true, roles: ['jugador'] } },

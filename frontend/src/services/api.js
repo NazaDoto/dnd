@@ -5,14 +5,12 @@ const api = axios.create({
     timeout: 15000,
 })
 
-// Adjuntar token automáticamente
 api.interceptors.request.use(config => {
     const token = localStorage.getItem('dnd_token')
     if (token) config.headers.Authorization = `Bearer ${token}`
     return config
 })
 
-// Manejo global de 401
 api.interceptors.response.use(
     res => res,
     err => {
@@ -25,14 +23,12 @@ api.interceptors.response.use(
     }
 )
 
-// ── Auth ─────────────────────────────────────────────────────
 export const authAPI = {
     register: (data) => api.post('/auth/register', data),
     login: (data) => api.post('/auth/login', data),
     me: () => api.get('/auth/me'),
 }
 
-// ── Characters ───────────────────────────────────────────────
 export const charactersAPI = {
     getAll: () => api.get('/characters'),
     getSummary: (id) => api.get(`/characters/${id}/summary`),
@@ -42,7 +38,6 @@ export const charactersAPI = {
     delete: (id) => api.delete(`/characters/${id}`),
 }
 
-// ── Notes ────────────────────────────────────────────────────
 export const notesAPI = {
     getAll: (charId) => api.get(`/notes/${charId}`),
     create: (charId, data) => api.post(`/notes/${charId}`, data),
@@ -50,21 +45,37 @@ export const notesAPI = {
     delete: (noteId) => api.delete(`/notes/${noteId}`),
 }
 
+export const campaignsAPI = {
+    previewByCode: (code) => api.get(`/campaigns/preview/${encodeURIComponent(code)}`),
+    join: (payload) => api.post('/campaigns/join', payload),
+    myRequests: () => api.get('/campaigns/my-requests'),
+}
+
 export const adminAPI = {
     getUsers: () => api.get('/admin/users'),
     updateUserRole: (id, role) => api.put(`/admin/users/${id}/role`, { role }),
-    getLinks: () => api.get('/admin/dm-links'),
-    createLink: (dm_user_id, player_user_id) => api.post('/admin/dm-links', { dm_user_id, player_user_id }),
-    deleteLink: (id) => api.delete(`/admin/dm-links/${id}`),
+    getCampaigns: () => api.get('/admin/campaigns'),
+    getAllCharacters: () => api.get('/admin/characters'),
+    getCampaignCharacters: (campaignId) => {
+        const q = campaignId ? `?campaign_id=${campaignId}` : ''
+        return api.get(`/admin/campaign-characters${q}`)
+    },
+    assignCharacterToCampaign: (campaign_id, character_id) => api.post('/admin/campaign-characters', { campaign_id, character_id }),
+    removeCampaignCharacter: (linkId) => api.delete(`/admin/campaign-characters/${linkId}`),
 }
 
 export const dmAPI = {
     getCampaigns: () => api.get('/dm/campaigns'),
+    getCampaign: (id) => api.get(`/dm/campaigns/${id}`),
     createCampaign: (payload) => api.post('/dm/campaigns', payload),
     updateCampaign: (id, payload) => api.put(`/dm/campaigns/${id}`, payload),
     deleteCampaign: (id) => api.delete(`/dm/campaigns/${id}`),
-    getPlayers: () => api.get('/dm/players'),
-    getCharacters: () => api.get('/dm/characters'),
+    rotateInvite: (id) => api.post(`/dm/campaigns/${id}/invite-rotate`),
+    getRoster: (id) => api.get(`/dm/campaigns/${id}/roster`),
+    rosterAccept: (campaignId, linkId) => api.patch(`/dm/campaigns/${campaignId}/roster/${linkId}`, { action: 'accept' }),
+    rosterReject: (campaignId, linkId) => api.patch(`/dm/campaigns/${campaignId}/roster/${linkId}`, { action: 'reject' }),
+    removeRosterMember: (campaignId, linkId) => api.delete(`/dm/campaigns/${campaignId}/roster/${linkId}`),
+    getCampaignCharacter: (campaignId, characterId) => api.get(`/dm/campaigns/${campaignId}/characters/${characterId}`),
 }
 
 export default api

@@ -11,18 +11,71 @@
       </RouterLink>
     </div>
 
+    <div v-if="!loading && myRequests.length" class="card requests-only">
+      <p class="section-title">Tus solicitudes a campañas</p>
+      <ul class="requests-list">
+        <li v-for="r in myRequests" :key="r.link_id">
+          <span>{{ r.character_name }}</span> → {{ r.campaign_name }}
+          <span class="req-status">{{ statusLabel(r.status) }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <div v-if="!loading && characters.length" class="card join-block">
+      <p class="section-title">Unir personaje a una campaña</p>
+      <p class="join-hint">
+        Pedí ingreso con el código que te pase el DM. Él acepta o rechaza desde su panel de campaña.
+      </p>
+      <div class="join-grid">
+        <div class="form-group">
+          <label class="form-label" for="invite-code">Código de invitación</label>
+          <input id="invite-code" v-model.trim="inviteCode" placeholder="Ej. A1B2C3D4E" autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="join-char">Personaje</label>
+          <select id="join-char" v-model.number="joinCharacterId">
+            <option :value="null">Elegir personaje</option>
+            <option v-for="ch in characters" :key="'j-' + ch.id" :value="ch.id">{{ ch.name }}</option>
+          </select>
+        </div>
+        <div class="join-actions">
+          <button type="button" class="btn btn-secondary" :disabled="joinPreviewing" @click="previewInvite">
+            {{ joinPreviewing ? '...' : 'Ver campaña' }}
+          </button>
+          <button type="button" class="btn btn-primary" :disabled="joinSending" @click="sendJoinRequest">
+            {{ joinSending ? 'Enviando...' : 'Solicitar ingreso' }}
+          </button>
+        </div>
+      </div>
+      <p v-if="previewInfo" class="preview-box text-muted">
+        <strong class="text-gold">{{ previewInfo.name }}</strong>
+        · DM: {{ previewInfo.dm_username }}
+        <span v-if="previewInfo.setting_name"> · {{ previewInfo.setting_name }}</span>
+      </p>
+    </div>
+
     <!-- Loading -->
     <div v-if="loading" class="loading-screen">
       <div class="spinner"></div>
       <span>Convocando personajes...</span>
     </div>
 
-    <!-- Empty state -->
-    <div v-else-if="!characters.length" class="empty-state">
+    <!-- Empty state (sin solicitudes pendientes) -->
+    <div v-else-if="!characters.length && !myRequests.length" class="empty-state">
       <div class="empty-icon">🐉</div>
       <h3>Ningún aventurero aún</h3>
       <p>Creá tu primer personaje y comenzá la aventura</p>
       <RouterLink to="/character/new" class="btn btn-primary mt-4">
+        Crear personaje
+      </RouterLink>
+    </div>
+
+    <!-- Sin personajes pero con solicitudes a campañas -->
+    <div v-else-if="!characters.length && myRequests.length" class="card no-chars-hint">
+      <p class="text-muted">
+        No tenés personajes creados. Creá uno para seguir jugando o para unirte a otra campaña.
+      </p>
+      <RouterLink to="/character/new" class="btn btn-primary mt-2">
         Crear personaje
       </RouterLink>
     </div>
@@ -41,14 +94,24 @@
 
 <script>
 import CharacterCard from '../components/CharacterCard.vue'
-import { charactersAPI } from '../services/api.js'
+import { charactersAPI, campaignsAPI } from '../services/api.js'
 
 export default {
   name: 'HomeView',
   components: { CharacterCard },
   inject: ['showToast'],
   data() {
-    return { characters: [], loading: true, user: null }
+    return {
+      characters: [],
+      loading: true,
+      user: null,
+      inviteCode: '',
+      joinCharacterId: null,
+      joinPreviewing: false,
+      joinSending: false,
+      previewInfo: null,
+      myRequests: []
+    }
   },
   async mounted() {
     const stored = localStorage.getItem('dnd_user')
@@ -62,8 +125,23 @@ export default {
       return
     }
     await this.loadCharacters()
+    await this.loadMyRequests()
   },
   methods: {
+    statusLabel(s) {
+      if (s === 'pending') return 'pendiente'
+      if (s === 'active') return 'aceptada'
+      if (s === 'rejected') return 'rechazada'
+      return s
+    },
+    async loadMyRequests() {
+      try {
+        const { data } = await campaignsAPI.myRequests()
+        this.myRequests = data || []
+      } catch {
+        this.myRequests = []
+      }
+    },
     async loadCharacters() {
       this.loading = true
       try {
@@ -73,6 +151,38 @@ export default {
         this.showToast('Error al cargar personajes', 'error')
       } finally {
         this.loading = false
+      }
+    },
+    async previewInvite() {
+      if (!this.inviteCode) {
+        this.showToast('Ingresá un código', 'error')
+        return
+      }
+      this.joinPreviewing = true
+      this.previewInfo = null
+      try {
+        const { data } = await campaignsAPI.previewByCode(this.inviteCode)
+        this.previewInfo = data
+      } catch {
+        this.showToast('Código no válido o campaña inactiva', 'error')
+      } finally {
+        this.joinPreviewing = false
+      }
+    },
+    async sendJoinRequest() {
+      if (!this.inviteCode || !this.joinCharacterId) {
+        this.showToast('Código y personaje son obligatorios', 'error')
+        return
+      }
+      this.joinSending = true
+      try {
+        await campaignsAPI.join({ invite_code: this.inviteCode, character_id: this.joinCharacterId })
+        this.showToast('Solicitud enviada al DM', 'success')
+        await this.loadMyRequests()
+      } catch (err) {
+        this.showToast(err.response?.data?.message || 'No se pudo enviar la solicitud', 'error')
+      } finally {
+        this.joinSending = false
       }
     }
   }
@@ -108,4 +218,46 @@ export default {
 .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; }
 .empty-state h3 { font-family: var(--font-title); color: var(--text-secondary); margin-bottom: 0.5rem; }
 .empty-state p  { font-size: 0.9rem; }
+
+.join-block { margin-bottom: 1rem; }
+.join-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: -0.35rem 0 0.65rem;
+  line-height: 1.45;
+}
+.join-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.join-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.preview-box {
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.requests-only { margin-bottom: 1rem; }
+.requests-list {
+  list-style: none;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.req-status {
+  margin-left: 0.35rem;
+  font-family: var(--font-title);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--gold-light);
+}
 </style>

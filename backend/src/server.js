@@ -23,6 +23,7 @@ app.use('/api/characters', require('./routes/characters'));
 app.use('/api/notes', require('./routes/notes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/dm', require('./routes/dm'));
+app.use('/api/campaigns', require('./routes/campaignsJoin'));
 
 // ── Health check ─────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));
@@ -39,5 +40,5 @@ app.use((err, req, res, next) => {
 // ── Start ─────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`\n⚔️  DnD Vault API corriendo en http://localhost:${PORT}\n`);
+    console.log(`\nDnD Vault API corriendo en http://localhost:${PORT}\n`);
 });

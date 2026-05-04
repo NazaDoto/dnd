@@ -3,56 +3,42 @@
     <div class="home-header">
       <div>
         <h1 class="home-title">Panel DM</h1>
-        <p class="home-sub">Campañas y personajes vinculados</p>
+        <p class="home-sub">Campañas: entrá a cada una para editar datos, preparar sesiones y gestionar personajes.</p>
       </div>
     </div>
 
-    <div class="card mb-4">
+    <div class="card mb-3">
       <p class="section-title">Nueva campaña</p>
-      <div class="campaign-form">
-        <input v-model="campaignForm.name" placeholder="Nombre de campaña" />
-        <input v-model="campaignForm.setting_name" placeholder="Mundo / setting" />
-        <select v-model="campaignForm.status">
-          <option value="activa">activa</option>
-          <option value="pausada">pausada</option>
-          <option value="finalizada">finalizada</option>
-        </select>
-        <input v-model="campaignForm.start_date" type="date" />
-        <input v-model="campaignForm.next_session_date" type="date" />
-        <textarea v-model="campaignForm.summary" rows="3" placeholder="Resumen, trama, NPCs, objetivos..." />
-        <button class="btn btn-primary" @click="createCampaign">Crear campaña</button>
+      <div class="create-row">
+        <input v-model="newName" placeholder="Nombre de la campaña" />
+        <button type="button" class="btn btn-primary" :disabled="creating" @click="createCampaign">
+          {{ creating ? 'Creando...' : 'Crear' }}
+        </button>
       </div>
-    </div>
-
-    <div class="card mb-4">
-      <p class="section-title">Campañas</p>
-      <div v-if="loadingCampaigns" class="text-muted">Cargando campañas...</div>
-      <div v-else-if="!campaigns.length" class="text-muted">Sin campañas todavía.</div>
-      <div v-else class="table-wrap">
-        <div v-for="c in campaigns" :key="c.id" class="campaign-row">
-          <div>
-            <strong>{{ c.name }}</strong>
-            <p class="text-muted">{{ c.setting_name || 'Sin setting' }} · {{ c.status }}</p>
-          </div>
-          <div class="actions">
-            <button class="btn btn-secondary" @click="downloadCampaign(c)">PDF</button>
-            <button class="btn btn-danger" @click="deleteCampaign(c.id)">Eliminar</button>
-          </div>
-        </div>
-      </div>
+      <p class="hint">Después podés completar mundo, NPCs, preparación y roster desde la vista de campaña.</p>
     </div>
 
     <div class="card">
-      <p class="section-title">Personajes vinculados (sin notas)</p>
-      <div v-if="loadingCharacters" class="text-muted">Cargando personajes...</div>
-      <div v-else-if="!characters.length" class="text-muted">No hay personajes vinculados.</div>
+      <p class="section-title">Mis campañas</p>
+      <div v-if="loading" class="text-muted">Cargando...</div>
+      <div v-else-if="!campaigns.length" class="text-muted">Todavía no tenés campañas.</div>
       <div v-else class="table-wrap">
-        <div v-for="char in characters" :key="char.id" class="campaign-row">
-          <div>
-            <strong>{{ char.name }}</strong>
-            <p class="text-muted">{{ char.player_username }} · {{ char.race }} · {{ char.class }} Nv.{{ char.level }}</p>
+        <div v-for="c in campaigns" :key="c.id" class="campaign-row">
+          <div class="campaign-main">
+            <strong>{{ c.name }}</strong>
+            <p class="text-muted">
+              {{ c.setting_name || 'Sin ambientación' }} · {{ c.status }}
+              <span v-if="c.active_pc_count != null"> · {{ c.active_pc_count }} PJ</span>
+              <span v-if="c.pending_count"> · {{ c.pending_count }} pendiente(s)</span>
+            </p>
+            <p class="code-line">
+              Código: <code>{{ c.invite_code }}</code>
+            </p>
           </div>
-          <button class="btn btn-secondary" @click="downloadCharacter(char)">PDF</button>
+          <div class="actions">
+            <RouterLink :to="`/dm/campaign/${c.id}`" class="btn btn-primary">Abrir</RouterLink>
+            <button type="button" class="btn btn-danger" @click="removeCampaign(c.id)">Eliminar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -61,7 +47,6 @@
 
 <script>
 import { dmAPI } from '../services/api.js'
-import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
 
 export default {
   name: 'DmPanelView',
@@ -69,73 +54,53 @@ export default {
   data() {
     return {
       campaigns: [],
-      characters: [],
-      loadingCampaigns: true,
-      loadingCharacters: true,
-      campaignForm: {
-        name: '',
-        setting_name: '',
-        summary: '',
-        status: 'activa',
-        start_date: '',
-        next_session_date: ''
-      }
+      loading: true,
+      newName: '',
+      creating: false
     }
   },
   async mounted() {
-    await Promise.all([this.loadCampaigns(), this.loadCharacters()])
+    await this.load()
   },
   methods: {
-    async loadCampaigns() {
-      this.loadingCampaigns = true
+    async load() {
+      this.loading = true
       try {
         const { data } = await dmAPI.getCampaigns()
         this.campaigns = data
       } catch {
         this.showToast('No se pudieron cargar las campañas', 'error')
       } finally {
-        this.loadingCampaigns = false
-      }
-    },
-    async loadCharacters() {
-      this.loadingCharacters = true
-      try {
-        const { data } = await dmAPI.getCharacters()
-        this.characters = data
-      } catch {
-        this.showToast('No se pudieron cargar los personajes vinculados', 'error')
-      } finally {
-        this.loadingCharacters = false
+        this.loading = false
       }
     },
     async createCampaign() {
-      if (!this.campaignForm.name.trim()) {
-        this.showToast('El nombre de campaña es obligatorio', 'error')
+      if (!this.newName.trim()) {
+        this.showToast('Escribí un nombre', 'error')
         return
       }
+      this.creating = true
       try {
-        await dmAPI.createCampaign(this.campaignForm)
+        const { data } = await dmAPI.createCampaign({ name: this.newName.trim() })
         this.showToast('Campaña creada', 'success')
-        this.campaignForm = { name: '', setting_name: '', summary: '', status: 'activa', start_date: '', next_session_date: '' }
-        await this.loadCampaigns()
+        this.newName = ''
+        await this.load()
+        if (data?.id) this.$router.push(`/dm/campaign/${data.id}`)
       } catch (err) {
-        this.showToast(err.response?.data?.message || 'No se pudo crear la campaña', 'error')
+        this.showToast(err.response?.data?.message || 'Error al crear', 'error')
+      } finally {
+        this.creating = false
       }
     },
-    async deleteCampaign(id) {
+    async removeCampaign(id) {
+      if (!confirm('¿Eliminar esta campaña y todo su roster?')) return
       try {
         await dmAPI.deleteCampaign(id)
         this.showToast('Campaña eliminada', 'success')
-        await this.loadCampaigns()
+        await this.load()
       } catch {
-        this.showToast('No se pudo eliminar la campaña', 'error')
+        this.showToast('No se pudo eliminar', 'error')
       }
-    },
-    downloadCampaign(campaign) {
-      exportCampaignPdf(campaign, this.characters)
-    },
-    downloadCharacter(character) {
-      exportCharacterPdf(character)
     }
   }
 }
@@ -143,18 +108,42 @@ export default {
 
 <style scoped>
 .dm-view { display: flex; flex-direction: column; gap: 0.75rem; }
-.home-header { margin-bottom: 0.5rem; }
+.home-header { margin-bottom: 0.35rem; }
 .home-title { font-family: var(--font-display); font-size: 1.3rem; }
-.home-sub { color: var(--text-muted); font-size: 0.9rem; }
-.campaign-form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.campaign-form textarea { grid-column: 1 / -1; }
-.campaign-form button { justify-self: end; }
-.table-wrap { display: flex; flex-direction: column; gap: 0.5rem; }
-.campaign-row { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
-.actions { display: flex; gap: 0.4rem; }
-@media (max-width: 520px) {
-  .campaign-form { grid-template-columns: 1fr; }
-  .campaign-row { flex-direction: column; align-items: stretch; }
-  .actions { justify-content: flex-end; }
+.home-sub { color: var(--text-muted); font-size: 0.85rem; line-height: 1.45; }
+.create-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
+.create-row input { flex: 1; min-width: 160px; }
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+.table-wrap { display: flex; flex-direction: column; gap: 0.55rem; }
+.campaign-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+}
+.campaign-main { flex: 1; min-width: 0; }
+.code-line {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+.code-line code {
+  font-family: ui-monospace, monospace;
+  color: var(--gold-light);
+  font-size: 0.78rem;
+}
+.actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
 </style>

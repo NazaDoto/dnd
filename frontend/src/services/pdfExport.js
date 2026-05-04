@@ -174,12 +174,43 @@ export function exportCampaignPdf(campaign, linkedCharacters = []) {
     y = addTwoCols(doc, [
         ['Estado', campaign.status || 'activa'],
         ['Mundo', campaign.setting_name || '-'],
+        ['Código invitación', campaign.invite_code || '-'],
         ['Inicio', campaign.start_date || '-'],
         ['Próxima sesión', campaign.next_session_date || '-']
     ], y)
     y = addParagraph(doc, campaign.summary || 'Sin resumen', t.marginX + 2, y, 178, { gapAfter: 2 })
+    if (campaign.campaign_hook) {
+        y = addParagraph(doc, `Gancho: ${campaign.campaign_hook}`, t.marginX + 2, y, 178, { gapAfter: 2 })
+    }
 
-    y = addSection(doc, 'Personajes vinculados', y + 2)
+    const longBlocks = [
+        ['Verdades y temas', campaign.themes_truths],
+        ['Frentes y antagonistas', campaign.fronts_antagonists],
+        ['Misiones activas', campaign.active_quests],
+        ['Ubicaciones y mapas', campaign.locations_maps],
+        ['Reglas de mesa', campaign.house_rules],
+        ['Preparación de sesión', campaign.session_prep],
+        ['Última sesión (recap)', campaign.last_session_recap],
+        ['Tesoro / botín (notas)', campaign.treasure_log],
+        ['Notas privadas DM', campaign.dm_private_notes],
+        ['Enlaces y recursos', campaign.resources_links]
+    ]
+    longBlocks.forEach(([title, text]) => {
+        if (!text || !String(text).trim()) return
+        y = addSection(doc, title, y + 2)
+        y = addParagraph(doc, text, t.marginX + 2, y, 178, { gapAfter: 2 })
+    })
+
+    const npcs = Array.isArray(campaign.npcs_json) ? campaign.npcs_json : []
+    if (npcs.length) {
+        y = addSection(doc, 'NPCs', y + 2)
+        npcs.forEach((npc) => {
+            const line = [npc.name, npc.role].filter(Boolean).join(' — ') || 'NPC'
+            y = addParagraph(doc, `${line}: ${npc.notes || ''}`, t.marginX + 2, y, 178, { gapAfter: 1.5 })
+        })
+    }
+
+    y = addSection(doc, 'Personajes en campaña', y + 2)
     if (!linkedCharacters.length) {
         addParagraph(doc, 'No hay personajes vinculados.', t.marginX + 2, y, 178)
     } else {

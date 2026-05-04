@@ -161,17 +161,46 @@ CREATE TABLE IF NOT EXISTS dm_player_links (
 -- CAMPAÑAS (gestionadas por DM)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS campaigns (
-  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  dm_user_id        INT UNSIGNED NOT NULL,
-  name              VARCHAR(120) NOT NULL,
-  setting_name      VARCHAR(120) DEFAULT NULL,
-  summary           LONGTEXT DEFAULT NULL,
-  status            ENUM('activa','pausada','finalizada') NOT NULL DEFAULT 'activa',
-  start_date        DATE DEFAULT NULL,
-  next_session_date DATE DEFAULT NULL,
-  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_campaign_dm FOREIGN KEY (dm_user_id) REFERENCES users(id) ON DELETE CASCADE
+  id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  dm_user_id          INT UNSIGNED NOT NULL,
+  name                VARCHAR(120) NOT NULL,
+  invite_code         VARCHAR(24)  NOT NULL,
+  setting_name        VARCHAR(120) DEFAULT NULL,
+  summary             LONGTEXT DEFAULT NULL,
+  status              ENUM('activa','pausada','finalizada') NOT NULL DEFAULT 'activa',
+  start_date          DATE DEFAULT NULL,
+  next_session_date   DATE DEFAULT NULL,
+  campaign_hook       VARCHAR(280) DEFAULT NULL,
+  themes_truths       LONGTEXT DEFAULT NULL,
+  fronts_antagonists  LONGTEXT DEFAULT NULL,
+  npcs_json           JSON DEFAULT NULL,
+  locations_maps      LONGTEXT DEFAULT NULL,
+  session_prep        LONGTEXT DEFAULT NULL,
+  last_session_recap  LONGTEXT DEFAULT NULL,
+  active_quests       LONGTEXT DEFAULT NULL,
+  treasure_log        LONGTEXT DEFAULT NULL,
+  house_rules         LONGTEXT DEFAULT NULL,
+  dm_private_notes    LONGTEXT DEFAULT NULL,
+  resources_links     LONGTEXT DEFAULT NULL,
+  created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_campaign_dm FOREIGN KEY (dm_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY uq_campaign_invite (invite_code)
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- PERSONAJES EN CAMPAÑA (solicitud del jugador + aceptación DM)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS campaign_characters (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  campaign_id    INT UNSIGNED NOT NULL,
+  character_id   INT UNSIGNED NOT NULL,
+  status         ENUM('pending','active','rejected') NOT NULL DEFAULT 'pending',
+  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  responded_at   DATETIME DEFAULT NULL,
+  UNIQUE KEY uq_campaign_character (campaign_id, character_id),
+  CONSTRAINT fk_cc_campaign FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,
+  CONSTRAINT fk_cc_character FOREIGN KEY (character_id) REFERENCES characters(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------
@@ -184,3 +213,6 @@ CREATE INDEX idx_users_role       ON users(role);
 CREATE INDEX idx_links_dm         ON dm_player_links(dm_user_id);
 CREATE INDEX idx_links_player     ON dm_player_links(player_user_id);
 CREATE INDEX idx_campaigns_dm     ON campaigns(dm_user_id);
+CREATE INDEX idx_cc_campaign      ON campaign_characters(campaign_id);
+CREATE INDEX idx_cc_character     ON campaign_characters(character_id);
+CREATE INDEX idx_cc_status        ON campaign_characters(campaign_id, status);

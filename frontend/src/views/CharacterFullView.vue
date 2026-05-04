@@ -1,12 +1,35 @@
 <template>
   <div class="full-view" v-if="character">
     <div class="full-header">
-      <button class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
+      <button type="button" class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
       <h2 class="full-title">{{ character.name }}</h2>
-      <RouterLink :to="`/character/${id}/edit`" class="btn btn-secondary"
-        style="font-size: 0.78rem; padding: 0.4rem 0.7rem">
-        Editar
-      </RouterLink>
+      <div class="full-header-actions">
+        <RouterLink
+          v-if="!isDmCampaignReader"
+          :to="`/character/${id}/edit`"
+          class="btn btn-secondary"
+          style="font-size: 0.78rem; padding: 0.4rem 0.7rem"
+        >
+          Editar
+        </RouterLink>
+        <template v-else>
+          <RouterLink
+            :to="`/dm/campaign/${campaignId}`"
+            class="btn btn-ghost"
+            style="font-size: 0.78rem; padding: 0.4rem 0.7rem"
+          >
+            Campaña
+          </RouterLink>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            style="font-size: 0.78rem; padding: 0.4rem 0.7rem"
+            @click="downloadDmPdf"
+          >
+            PDF
+          </button>
+        </template>
+      </div>
     </div>
 
     <!-- Tabs -->
@@ -252,7 +275,8 @@
 </template>
 
 <script>
-import { charactersAPI } from "../services/api.js";
+import { charactersAPI, dmAPI } from "../services/api.js";
+import { exportCharacterPdf } from "../services/pdfExport.js";
 import {
   ATTRIBUTES,
   SKILLS,
@@ -300,6 +324,12 @@ export default {
     },
     id() {
       return this.$route.params.id;
+    },
+    campaignId() {
+      return this.$route.params.campaignId;
+    },
+    isDmCampaignReader() {
+      return this.$route.name === "DmCampaignCharacter";
     },
     attacks() {
       return Array.isArray(this.character?.attacks_spellcasting)
@@ -386,14 +416,22 @@ export default {
   },
   async mounted() {
     try {
-      const { data } = await charactersAPI.getFull(this.id);
-      this.character = data;
+      if (this.isDmCampaignReader) {
+        const { data } = await dmAPI.getCampaignCharacter(this.campaignId, this.id);
+        this.character = data;
+      } else {
+        const { data } = await charactersAPI.getFull(this.id);
+        this.character = data;
+      }
     } catch {
       this.showToast("Error al cargar ficha", "error");
       this.$router.back();
     }
   },
   methods: {
+    downloadDmPdf() {
+      if (this.character) exportCharacterPdf(this.character);
+    },
     hasSavingThrow(attr) {
       return (this.character?.saving_throws_prof || []).includes(attr);
     },
@@ -488,6 +526,13 @@ normalizeSpells(value) {
   justify-content: space-between;
   margin-bottom: 0.75rem;
   gap: 0.5rem;
+}
+
+.full-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 .full-title {

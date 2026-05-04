@@ -1,0 +1,442 @@
+<template>
+  <div class="dm-campaign" v-if="loaded">
+    <div class="campaign-top">
+      <button type="button" class="btn btn-ghost btn-icon" @click="$router.push('/dm')">‹</button>
+      <div class="campaign-top-main">
+        <h1 class="campaign-title">{{ form.name || 'Campaña' }}</h1>
+        <p class="campaign-meta text-muted">
+          Código de invitación: <code class="invite-code">{{ form.invite_code }}</code>
+        </p>
+      </div>
+      <div class="campaign-top-actions">
+        <button type="button" class="btn btn-secondary" :disabled="saving" @click="saveAll">Guardar</button>
+        <button type="button" class="btn btn-ghost" @click="rotateInvite">Nuevo código</button>
+        <button type="button" class="btn btn-secondary" @click="downloadPdf">PDF</button>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button
+        v-for="t in tabs"
+        :key="t.id"
+        type="button"
+        :class="['tab-btn', { active: tab === t.id }]"
+        @click="tab = t.id"
+      >
+        {{ t.label }}
+      </button>
+    </div>
+
+    <!-- Resumen -->
+    <div v-show="tab === 'core'" class="tab-panel">
+      <div class="card mb-3">
+        <p class="section-title">Datos generales</p>
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input v-model="form.name" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estado</label>
+            <select v-model="form.status">
+              <option value="activa">Activa</option>
+              <option value="pausada">Pausada</option>
+              <option value="finalizada">Finalizada</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mundo / ambientación</label>
+            <input v-model="form.setting_name" placeholder="Ej. Faerûn, mundo homebrew..." />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Próxima sesión</label>
+            <input v-model="form.next_session_date" type="date" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Inicio aproximado</label>
+            <input v-model="form.start_date" type="date" />
+          </div>
+        </div>
+        <div class="form-group mt-2">
+          <label class="form-label">Resumen visible (elevator pitch)</label>
+          <textarea v-model="form.summary" rows="4" placeholder="De qué va la campaña en unas pocas frases..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gancho principal (1 línea)</label>
+          <input v-model="form.campaign_hook" placeholder="Ej. Los héroes deben impedir que el pacto se cumpla antes de la luna nueva." />
+        </div>
+      </div>
+    </div>
+
+    <!-- Trama y mundo -->
+    <div v-show="tab === 'world'" class="tab-panel">
+      <div class="card mb-3">
+        <p class="section-title">Trama y fuerzas</p>
+        <p class="hint">Inspirado en guías tipo “Lazy DM”: verdades del mundo, frentes y antagonistas, pistas.</p>
+        <div class="form-group">
+          <label class="form-label">Verdades / temas del mundo</label>
+          <textarea v-model="form.themes_truths" rows="5" placeholder="Qué es verdad en tu setting: facciones, tabúes, leyes mágicas..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Frentes, antagonistas, relojes</label>
+          <textarea v-model="form.fronts_antagonists" rows="5" placeholder="Quién empuja la trama, qué pasa si nadie actúa..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Misiones / quests activas</label>
+          <textarea v-model="form.active_quests" rows="4" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ubicaciones y mapas (notas)</label>
+          <textarea v-model="form.locations_maps" rows="4" placeholder="Taberna del Puerto, Torre Oeste, enlace a mapa externo..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Enlaces y recursos</label>
+          <textarea v-model="form.resources_links" rows="3" placeholder="URLs a VTT, carpetas, PDFs..." />
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <p class="section-title">NPCs (rápido)</p>
+        <p class="hint">Nombre, rol o función, notas breves. Podés agregar filas.</p>
+        <div v-for="(npc, idx) in npcList" :key="idx" class="npc-row card inner-card">
+          <input v-model="npc.name" placeholder="Nombre" />
+          <input v-model="npc.role" placeholder="Rol (tabernero, villano...)" />
+          <textarea v-model="npc.notes" rows="2" placeholder="Notas" />
+          <button type="button" class="btn btn-danger btn-sm" @click="removeNpc(idx)">Quitar</button>
+        </div>
+        <button type="button" class="btn btn-secondary mt-2" @click="addNpc">Agregar NPC</button>
+      </div>
+
+      <div class="card">
+        <p class="section-title">Reglas de mesa</p>
+        <textarea v-model="form.house_rules" rows="4" placeholder="Variantes, límites de PvP, descansos, líneas y velos..." />
+      </div>
+    </div>
+
+    <!-- Preparación de sesión -->
+    <div v-show="tab === 'session'" class="tab-panel">
+      <div class="card mb-3">
+        <p class="section-title">Preparación próxima sesión</p>
+        <p class="hint">Checklist mental: fuerte inicio, escenas posibles, secretos, encuentros.</p>
+        <textarea v-model="form.session_prep" rows="8" placeholder="Strong start, posibles escenas, pistas, encuentros, ítems..." />
+      </div>
+      <div class="card mb-3">
+        <p class="section-title">Resumen última sesión</p>
+        <textarea v-model="form.last_session_recap" rows="6" placeholder="Qué pasó, decisiones de los PJ, consecuencias..." />
+      </div>
+      <div class="card mb-3">
+        <p class="section-title">Tesoro / botín compartido (notas)</p>
+        <textarea v-model="form.treasure_log" rows="4" />
+      </div>
+      <div class="card">
+        <p class="section-title">Notas privadas del DM</p>
+        <p class="hint">Solo vos; no la ven los jugadores en la app.</p>
+        <textarea v-model="form.dm_private_notes" rows="6" />
+      </div>
+    </div>
+
+    <!-- Roster -->
+    <div v-show="tab === 'roster'" class="tab-panel">
+      <div class="card mb-3">
+        <p class="section-title">Personajes en campaña</p>
+        <div v-if="!roster.active.length" class="text-muted">Nadie aceptado aún. Los jugadores pueden pedir ingreso con el código.</div>
+        <div v-else class="roster-list">
+          <div v-for="row in roster.active" :key="row.id" class="roster-row">
+            <div>
+              <strong>{{ row.name }}</strong>
+              <p class="text-muted">{{ row.player_username }} · {{ row.race }} {{ row.class }} Nv.{{ row.level }}</p>
+            </div>
+            <div class="roster-actions">
+              <RouterLink :to="`/dm/campaign/${cid}/character/${row.id}`" class="btn btn-secondary">Ver ficha</RouterLink>
+              <button type="button" class="btn btn-ghost" @click="pdfOne(row)">PDF</button>
+              <button type="button" class="btn btn-danger" @click="removeMember(row.link_id)">Quitar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-title">Solicitudes pendientes</p>
+        <div v-if="!roster.pending.length" class="text-muted">No hay solicitudes.</div>
+        <div v-else class="roster-list">
+          <div v-for="p in roster.pending" :key="p.link_id" class="roster-row">
+            <div>
+              <strong>{{ p.character_name }}</strong>
+              <p class="text-muted">{{ p.player_username }}</p>
+            </div>
+            <div class="roster-actions">
+              <button type="button" class="btn btn-primary" @click="acceptPending(p.link_id)">Aceptar</button>
+              <button type="button" class="btn btn-secondary" @click="rejectPending(p.link_id)">Rechazar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="loading-screen">
+    <div class="spinner"></div>
+    <span>Cargando campaña...</span>
+  </div>
+</template>
+
+<script>
+import { dmAPI } from '../services/api.js'
+import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
+
+const emptyForm = () => ({
+  name: '',
+  invite_code: '',
+  status: 'activa',
+  setting_name: '',
+  summary: '',
+  start_date: '',
+  next_session_date: '',
+  campaign_hook: '',
+  themes_truths: '',
+  fronts_antagonists: '',
+  locations_maps: '',
+  session_prep: '',
+  last_session_recap: '',
+  active_quests: '',
+  treasure_log: '',
+  house_rules: '',
+  dm_private_notes: '',
+  resources_links: ''
+})
+
+export default {
+  name: 'DmCampaignDetailView',
+  inject: ['showToast'],
+  data() {
+    return {
+      loaded: false,
+      saving: false,
+      tab: 'core',
+      tabs: [
+        { id: 'core', label: 'Resumen' },
+        { id: 'world', label: 'Mundo y trama' },
+        { id: 'session', label: 'Sesión' },
+        { id: 'roster', label: 'Personajes' }
+      ],
+      form: emptyForm(),
+      npcList: [],
+      roster: { active: [], pending: [] }
+    }
+  },
+  computed: {
+    cid() {
+      return this.$route.params.id
+    }
+  },
+  async mounted() {
+    await this.reload()
+  },
+  methods: {
+    normalizeNpcs(val) {
+      if (!val) return []
+      if (Array.isArray(val)) {
+        return val.map((n) => ({
+          name: n.name || '',
+          role: n.role || '',
+          notes: n.notes || ''
+        }))
+      }
+      return []
+    },
+    applyCampaignToForm(c) {
+      this.form = { ...emptyForm(), ...c }
+      this.npcList = this.normalizeNpcs(c.npcs_json)
+    },
+    buildPayload() {
+      const npcs_json = this.npcList
+        .filter((n) => (n.name || '').trim() || (n.role || '').trim() || (n.notes || '').trim())
+        .map((n) => ({
+          name: (n.name || '').trim(),
+          role: (n.role || '').trim(),
+          notes: (n.notes || '').trim()
+        }))
+      return { ...this.form, npcs_json }
+    },
+    async reload() {
+      this.loaded = false
+      try {
+        const [{ data: camp }, { data: roster }] = await Promise.all([
+          dmAPI.getCampaign(this.cid),
+          dmAPI.getRoster(this.cid)
+        ])
+        this.applyCampaignToForm(camp)
+        this.roster = roster
+      } catch {
+        this.showToast('No se pudo cargar la campaña', 'error')
+        this.$router.push('/dm')
+        return
+      }
+      this.loaded = true
+    },
+    async saveAll() {
+      if (!this.form.name || !String(this.form.name).trim()) {
+        this.showToast('El nombre es obligatorio', 'error')
+        return
+      }
+      this.saving = true
+      try {
+        await dmAPI.updateCampaign(this.cid, this.buildPayload())
+        this.showToast('Guardado', 'success')
+        await this.reload()
+      } catch (err) {
+        this.showToast(err.response?.data?.message || 'Error al guardar', 'error')
+      } finally {
+        this.saving = false
+      }
+    },
+    async rotateInvite() {
+      try {
+        const { data } = await dmAPI.rotateInvite(this.cid)
+        this.form.invite_code = data.invite_code
+        this.showToast(data.message || 'Código actualizado', 'success')
+      } catch {
+        this.showToast('No se pudo generar código', 'error')
+      }
+    },
+    downloadPdf() {
+      exportCampaignPdf(this.buildPayload(), this.roster.active)
+    },
+    pdfOne(row) {
+      exportCharacterPdf(row)
+    },
+    addNpc() {
+      this.npcList.push({ name: '', role: '', notes: '' })
+    },
+    removeNpc(i) {
+      this.npcList.splice(i, 1)
+    },
+    async acceptPending(linkId) {
+      try {
+        await dmAPI.rosterAccept(this.cid, linkId)
+        this.showToast('Personaje aceptado', 'success')
+        await this.reload()
+      } catch {
+        this.showToast('No se pudo aceptar', 'error')
+      }
+    },
+    async rejectPending(linkId) {
+      try {
+        await dmAPI.rosterReject(this.cid, linkId)
+        this.showToast('Solicitud rechazada', 'success')
+        await this.reload()
+      } catch {
+        this.showToast('No se pudo rechazar', 'error')
+      }
+    },
+    async removeMember(linkId) {
+      if (!confirm('¿Quitar este personaje de la campaña?')) return
+      try {
+        await dmAPI.removeRosterMember(this.cid, linkId)
+        this.showToast('Quitado de la campaña', 'success')
+        await this.reload()
+      } catch {
+        this.showToast('No se pudo quitar', 'error')
+      }
+    }
+  }
+}
+</script>
+
+<style scoped>
+.dm-campaign { display: flex; flex-direction: column; gap: 0.75rem; padding-bottom: 1rem; }
+.campaign-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.campaign-top-main { flex: 1; min-width: 0; }
+.campaign-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.campaign-meta { font-size: 0.8rem; margin-top: 0.25rem; }
+.invite-code {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  color: var(--gold-light);
+  background: var(--bg-surface);
+  padding: 0.1rem 0.35rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.campaign-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.15rem;
+  margin-bottom: 0.25rem;
+}
+.tab-btn {
+  flex-shrink: 0;
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.tab-btn.active {
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  color: var(--bg-deep);
+  border-color: var(--gold);
+}
+.tab-panel { display: flex; flex-direction: column; gap: 0.65rem; }
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+@media (max-width: 520px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: -0.35rem 0 0.65rem;
+  line-height: 1.4;
+}
+.npc-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+  align-items: start;
+}
+.npc-row textarea { grid-column: 1 / -1; }
+.inner-card { padding: 0.65rem; margin-bottom: 0.5rem; }
+.btn-sm { font-size: 0.7rem; padding: 0.35rem 0.5rem; min-height: auto; }
+.roster-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.roster-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.45rem;
+}
+.roster-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-3 { margin-bottom: 0.65rem !important; }
+</style>
