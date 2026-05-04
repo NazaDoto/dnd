@@ -122,7 +122,7 @@ router.post('/', auth, upload.single('photo'), async(req, res) => {
         age, height, weight, eyes, skin, hair, appearance_notes,
         equipment, copper_pieces, silver_pieces, electrum_pieces, gold_pieces, platinum_pieces,
         attacks_spellcasting, features_traits,
-        spellcasting_ability, spell_save_dc, spell_attack_bonus, spells_notes,
+        spellcasting_ability, spell_save_dc, spell_attack_bonus, spells,
         languages, other_proficiencies, allies_organizations, faction, treasure
       ) VALUES (
         ?,?,?,?,?,?,?,?,?,?,?,
@@ -208,7 +208,7 @@ router.put('/:id', auth, upload.single('photo'), async(req, res) => {
         equipment=?, copper_pieces=?, silver_pieces=?, electrum_pieces=?,
         gold_pieces=?, platinum_pieces=?,
         attacks_spellcasting=?, features_traits=?,
-        spellcasting_ability=?, spell_save_dc=?, spell_attack_bonus=?, spells_notes=?,
+        spellcasting_ability=?, spell_save_dc=?, spell_attack_bonus=?, spells=?,
         languages=?, other_proficiencies=?, allies_organizations=?, faction=?, treasure=?
       WHERE id=? AND user_id=?`, [
                 photo_url,
