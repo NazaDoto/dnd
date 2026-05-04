@@ -3,23 +3,16 @@
     <div class="full-header">
       <button class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
       <h2 class="full-title">{{ character.name }}</h2>
-      <RouterLink
-        :to="`/character/${id}/edit`"
-        class="btn btn-secondary"
-        style="font-size: 0.78rem; padding: 0.4rem 0.7rem"
-      >
+      <RouterLink :to="`/character/${id}/edit`" class="btn btn-secondary"
+        style="font-size: 0.78rem; padding: 0.4rem 0.7rem">
         ✏️ Editar
       </RouterLink>
     </div>
 
     <!-- Tabs -->
     <div class="tabs">
-      <button
-        v-for="tab in tabs"
-        :key="tab.id"
-        :class="['tab-btn', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id"
-      >
+      <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
+        @click="activeTab = tab.id">
         {{ tab.label }}
       </button>
     </div>
@@ -30,9 +23,7 @@
         <p class="section-title">Salvaciones</p>
         <div class="skill-list">
           <div v-for="attr in ATTRIBUTES" :key="attr.key" class="skill-row">
-            <span
-              :class="['prof-dot', hasSavingThrow(attr.key) ? 'filled' : '']"
-            ></span>
+            <span :class="['prof-dot', hasSavingThrow(attr.key) ? 'filled' : '']"></span>
             <span class="skill-name">{{ attr.label }}</span>
             <span class="skill-bonus">{{ getSavingThrowBonus(attr.key) }}</span>
           </div>
@@ -42,20 +33,16 @@
         <p class="section-title">Habilidades</p>
         <div class="skill-list">
           <div v-for="sk in SKILLS" :key="sk.key" class="skill-row">
-            <span
-              :class="[
-                'prof-dot',
-                hasExpertise(sk.key)
-                  ? 'expertise'
-                  : hasSkill(sk.key)
-                    ? 'filled'
-                    : '',
-              ]"
-            ></span>
-            <span class="skill-name"
-              >{{ sk.label }}
-              <span class="skill-attr">({{ attrShort(sk.attr) }})</span></span
-            >
+            <span :class="[
+              'prof-dot',
+              hasExpertise(sk.key)
+                ? 'expertise'
+                : hasSkill(sk.key)
+                  ? 'filled'
+                  : '',
+            ]"></span>
+            <span class="skill-name">{{ sk.label }}
+              <span class="skill-attr">({{ attrShort(sk.attr) }})</span></span>
             <span class="skill-bonus">{{ getSkillBonus(sk) }}</span>
           </div>
         </div>
@@ -106,194 +93,162 @@
           Personaje no lanzador
         </p>
       </div>
-      <div class="card" v-if="spells">
+      <div class="card" v-if="visibleSpellBlocks.length">
         <p class="section-title">Conjuros</p>
-        <div
-          v-for="(slotData, lvlKey) in spells"
-          :key="lvlKey"
-          class="spell-level-block"
-        >
+
+        <div v-for="block in visibleSpellBlocks" :key="block.key" class="spell-level-block">
           <div class="spell-level-header">
-            <span class="spell-level-name">{{ levelLabel(lvlKey) }}</span>
-            <span v-if="lvlKey !== 'cantrips'" class="slots-indicator">
-              <span
-                v-for="n in slotData.slots || 0"
-                :key="n"
-                :class="[
-                  'slot-pip',
-                  n <= (slotData.slots_used || 0) ? 'used' : '',
-                ]"
-              ></span>
+            <span class="spell-level-name">{{ block.label }}</span>
+
+            <span v-if="block.showSlots" class="slots-indicator">
+              <span v-for="n in block.slots" :key="n" :class="[
+                'slot-pip',
+                n <= block.slotsUsed ? 'used' : '',
+              ]"></span>
             </span>
           </div>
-          <div class="spell-tags">
-            <span
-              v-for="sp in Array.isArray(slotData)
-                ? slotData
-                : slotData.spells || []"
-              :key="sp"
-              class="spell-tag"
-              >{{ sp }}</span
-            >
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- ── PESTAÑA: Equipo ── -->
-    <div v-if="activeTab === 'equipment'" class="tab-content">
-      <div class="card mb-4">
-        <p class="section-title">Monedas</p>
-        <div class="coins-grid">
-          <div
-            v-for="coin in coins"
-            :key="coin.key"
-            class="coin-box"
-            :style="{ borderColor: coin.color }"
-          >
-            <span class="coin-icon">{{ coin.icon }}</span>
-            <span class="coin-val">{{ character[coin.key] || 0 }}</span>
-            <span class="coin-lbl">{{ coin.label }}</span>
+          <div class="spell-tags">
+            <span v-for="sp in block.spells" :key="sp" class="spell-tag">
+              {{ sp }}
+            </span>
           </div>
         </div>
       </div>
-      <div class="card mb-4">
-        <p class="section-title">Equipo</p>
-        <div v-if="equipment.length">
-          <div v-for="(item, i) in equipment" :key="i" class="equip-row">
-            <span class="equip-name">{{ item.name || item }}</span>
-            <span v-if="item.qty" class="equip-qty">x{{ item.qty }}</span>
+      </div>
+
+      <!-- ── PESTAÑA: Equipo ── -->
+      <div v-if="activeTab === 'equipment'" class="tab-content">
+        <div class="card mb-4">
+          <p class="section-title">Monedas</p>
+          <div class="coins-grid">
+            <div v-for="coin in coins" :key="coin.key" class="coin-box" :style="{ borderColor: coin.color }">
+              <span class="coin-icon">{{ coin.icon }}</span>
+              <span class="coin-val">{{ character[coin.key] || 0 }}</span>
+              <span class="coin-lbl">{{ coin.label }}</span>
+            </div>
           </div>
         </div>
-        <p v-else class="text-muted" style="font-size: 0.85rem">
-          Mochila vacía
-        </p>
-      </div>
-      <div class="card" v-if="character.treasure">
-        <p class="section-title">Tesoros & Otros</p>
-        <p
-          style="
+        <div class="card mb-4">
+          <p class="section-title">Equipo</p>
+          <div v-if="equipment.length">
+            <div v-for="(item, i) in equipment" :key="i" class="equip-row">
+              <span class="equip-name">{{ item.name || item }}</span>
+              <span v-if="item.qty" class="equip-qty">x{{ item.qty }}</span>
+            </div>
+          </div>
+          <p v-else class="text-muted" style="font-size: 0.85rem">
+            Mochila vacía
+          </p>
+        </div>
+        <div class="card" v-if="character.treasure">
+          <p class="section-title">Tesoros & Otros</p>
+          <p style="
             font-size: 0.9rem;
             color: var(--text-secondary);
             white-space: pre-line;
-          "
-        >
-          {{ character.treasure }}
-        </p>
+          ">
+            {{ character.treasure }}
+          </p>
+        </div>
       </div>
-    </div>
 
-    <!-- ── PESTAÑA: Trasfondo ── -->
-    <div v-if="activeTab === 'backstory'" class="tab-content">
-      <div
-        class="card mb-4"
-        v-if="
+      <!-- ── PESTAÑA: Trasfondo ── -->
+      <div v-if="activeTab === 'backstory'" class="tab-content">
+        <div class="card mb-4" v-if="
           character.personality_traits ||
           character.ideals ||
           character.bonds ||
           character.flaws
-        "
-      >
-        <p class="section-title">Personalidad</p>
-        <div class="trait-grid">
-          <div v-if="character.personality_traits" class="trait-box">
-            <p class="trait-lbl">Rasgos</p>
-            <p class="trait-val">{{ character.personality_traits }}</p>
-          </div>
-          <div v-if="character.ideals" class="trait-box">
-            <p class="trait-lbl">Ideales</p>
-            <p class="trait-val">{{ character.ideals }}</p>
-          </div>
-          <div v-if="character.bonds" class="trait-box">
-            <p class="trait-lbl">Vínculos</p>
-            <p class="trait-val">{{ character.bonds }}</p>
-          </div>
-          <div v-if="character.flaws" class="trait-box">
-            <p class="trait-lbl">Defectos</p>
-            <p class="trait-val">{{ character.flaws }}</p>
+        ">
+          <p class="section-title">Personalidad</p>
+          <div class="trait-grid">
+            <div v-if="character.personality_traits" class="trait-box">
+              <p class="trait-lbl">Rasgos</p>
+              <p class="trait-val">{{ character.personality_traits }}</p>
+            </div>
+            <div v-if="character.ideals" class="trait-box">
+              <p class="trait-lbl">Ideales</p>
+              <p class="trait-val">{{ character.ideals }}</p>
+            </div>
+            <div v-if="character.bonds" class="trait-box">
+              <p class="trait-lbl">Vínculos</p>
+              <p class="trait-val">{{ character.bonds }}</p>
+            </div>
+            <div v-if="character.flaws" class="trait-box">
+              <p class="trait-lbl">Defectos</p>
+              <p class="trait-val">{{ character.flaws }}</p>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="card mb-4" v-if="character.backstory">
-        <p class="section-title">Historia</p>
-        <p
-          style="
+        <div class="card mb-4" v-if="character.backstory">
+          <p class="section-title">Historia</p>
+          <p style="
             font-size: 0.9rem;
             line-height: 1.7;
             color: var(--text-secondary);
             white-space: pre-line;
-          "
-        >
-          {{ character.backstory }}
-        </p>
-      </div>
-      <div class="card mb-4">
-        <p class="section-title">Apariencia</p>
-        <div class="appear-grid">
-          <div
-            v-for="f in visibleAppearanceFields"
-            :key="f.key"
-            class="appear-row"
-          >
-            <span class="appear-lbl">{{ f.label }}</span>
-            <span class="appear-val">{{ character[f.key] }}</span>
-          </div>
+          ">
+            {{ character.backstory }}
+          </p>
         </div>
-        <p
-          v-if="character.appearance_notes"
-          style="
+        <div class="card mb-4">
+          <p class="section-title">Apariencia</p>
+          <div class="appear-grid">
+            <div v-for="f in visibleAppearanceFields" :key="f.key" class="appear-row">
+              <span class="appear-lbl">{{ f.label }}</span>
+              <span class="appear-val">{{ character[f.key] }}</span>
+            </div>
+          </div>
+          <p v-if="character.appearance_notes" style="
             margin-top: 0.5rem;
             font-size: 0.85rem;
             color: var(--text-secondary);
             white-space: pre-line;
-          "
-        >
-          {{ character.appearance_notes }}
-        </p>
-      </div>
-      <div
-        class="card"
-        v-if="character.allies_organizations || character.faction"
-      >
-        <p class="section-title">Alianzas & Organizaciones</p>
-        <p v-if="character.faction" class="badge badge-purple mb-2">
-          {{ character.faction }}
-        </p>
-        <p style="font-size: 0.9rem; color: var(--text-secondary)">
-          {{ character.allies_organizations }}
-        </p>
-      </div>
-    </div>
-
-    <!-- ── PESTAÑA: Rasgos ── -->
-    <div v-if="activeTab === 'features'" class="tab-content">
-      <div class="card mb-4" v-if="features.length">
-        <p class="section-title">Rasgos & Capacidades</p>
-        <div v-for="(feat, i) in features" :key="i" class="feat-block">
-          <p class="feat-name">{{ feat.name }}</p>
-          <p class="feat-desc" v-if="feat.description">
-            {{ feat.description }}
+          ">
+            {{ character.appearance_notes }}
+          </p>
+        </div>
+        <div class="card" v-if="character.allies_organizations || character.faction">
+          <p class="section-title">Alianzas & Organizaciones</p>
+          <p v-if="character.faction" class="badge badge-purple mb-2">
+            {{ character.faction }}
+          </p>
+          <p style="font-size: 0.9rem; color: var(--text-secondary)">
+            {{ character.allies_organizations }}
           </p>
         </div>
       </div>
-      <div class="card" v-if="languages.length || otherProfs.length">
-        <p class="section-title">Competencias & Idiomas</p>
-        <div class="lang-tags">
-          <span v-for="l in languages" :key="l" class="badge badge-blue">{{
-            l
-          }}</span>
-          <span v-for="p in otherProfs" :key="p" class="badge badge-gold">{{
-            p
-          }}</span>
+
+      <!-- ── PESTAÑA: Rasgos ── -->
+      <div v-if="activeTab === 'features'" class="tab-content">
+        <div class="card mb-4" v-if="features.length">
+          <p class="section-title">Rasgos & Capacidades</p>
+          <div v-for="(feat, i) in features" :key="i" class="feat-block">
+            <p class="feat-name">{{ feat.name }}</p>
+            <p class="feat-desc" v-if="feat.description">
+              {{ feat.description }}
+            </p>
+          </div>
+        </div>
+        <div class="card" v-if="languages.length || otherProfs.length">
+          <p class="section-title">Competencias & Idiomas</p>
+          <div class="lang-tags">
+            <span v-for="l in languages" :key="l" class="badge badge-blue">{{
+              l
+            }}</span>
+            <span v-for="p in otherProfs" :key="p" class="badge badge-gold">{{
+              p
+            }}</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <div v-else class="loading-screen">
-    <div class="spinner"></div>
-    <span>Cargando ficha...</span>
-  </div>
+    <div v-else class="loading-screen">
+      <div class="spinner"></div>
+      <span>Cargando ficha...</span>
+    </div>
 </template>
 
 <script>
@@ -341,7 +296,7 @@ export default {
   },
   computed: {
     visibleAppearanceFields() {
-        return this.appearanceFields.filter(f => this.character[f.key])
+      return this.appearanceFields.filter(f => this.character[f.key])
     },
     id() {
       return this.$route.params.id;
@@ -352,9 +307,55 @@ export default {
         : [];
     },
     spells() {
-      return this.character?.spells && typeof this.character.spells === "object"
-        ? this.character.spells
-        : null;
+      return this.normalizeSpells(this.character?.spells)
+    },
+
+    visibleSpellBlocks() {
+      const spells = this.spells
+      const blocks = []
+
+      const cantrips = spells.cantrips
+        .map(spell => String(spell).trim())
+        .filter(Boolean)
+
+      if (cantrips.length) {
+        blocks.push({
+          key: 'cantrips',
+          label: 'Trucos',
+          spells: cantrips,
+          slots: 0,
+          slotsUsed: 0,
+          showSlots: false
+        })
+      }
+
+      for (let i = 1; i <= 9; i++) {
+        const key = `level${i}`
+        const level = spells[key]
+
+        const levelSpells = Array.isArray(level.spells)
+          ? level.spells.map(spell => String(spell).trim()).filter(Boolean)
+          : []
+
+        const slots = Number(level.slots || 0)
+        const slotsUsed = Number(level.slots_used || 0)
+
+        const hasSpells = levelSpells.length > 0
+        const hasSlots = slots > 0
+
+        if (!hasSpells && !hasSlots) continue
+
+        blocks.push({
+          key,
+          label: `Nivel ${i}`,
+          spells: levelSpells,
+          slots,
+          slotsUsed,
+          showSlots: hasSlots
+        })
+      }
+
+      return blocks
     },
     equipment() {
       return Array.isArray(this.character?.equipment)
@@ -421,6 +422,57 @@ export default {
         attr.toUpperCase().slice(0, 3)
       );
     },
+    emptySpells() {
+  return {
+    cantrips: [],
+    level1: { slots: 0, slots_used: 0, spells: [] },
+    level2: { slots: 0, slots_used: 0, spells: [] },
+    level3: { slots: 0, slots_used: 0, spells: [] },
+    level4: { slots: 0, slots_used: 0, spells: [] },
+    level5: { slots: 0, slots_used: 0, spells: [] },
+    level6: { slots: 0, slots_used: 0, spells: [] },
+    level7: { slots: 0, slots_used: 0, spells: [] },
+    level8: { slots: 0, slots_used: 0, spells: [] },
+    level9: { slots: 0, slots_used: 0, spells: [] },
+  }
+},
+
+normalizeSpells(value) {
+  const base = this.emptySpells()
+
+  if (!value) return base
+
+  let parsed = value
+
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value)
+    } catch {
+      return base
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return base
+  }
+
+  base.cantrips = Array.isArray(parsed.cantrips) ? parsed.cantrips : []
+
+  for (let i = 1; i <= 9; i++) {
+    const key = `level${i}`
+    const level = parsed[key]
+
+    if (level && typeof level === 'object') {
+      base[key] = {
+        slots: Number(level.slots || 0),
+        slots_used: Number(level.slots_used || 0),
+        spells: Array.isArray(level.spells) ? level.spells : []
+      }
+    }
+  }
+
+  return base
+},
     levelLabel(key) {
       if (key === "cantrips") return "Trucos";
       return `Nivel ${key.replace("level", "")}`;
@@ -437,6 +489,7 @@ export default {
   margin-bottom: 0.75rem;
   gap: 0.5rem;
 }
+
 .full-title {
   font-family: var(--font-title);
   font-size: 1.1rem;
@@ -455,9 +508,11 @@ export default {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
 .tabs::-webkit-scrollbar {
   display: none;
 }
+
 .tab-btn {
   flex-shrink: 0;
   font-family: var(--font-title);
@@ -472,6 +527,7 @@ export default {
   transition: all 0.2s;
   text-transform: uppercase;
 }
+
 .tab-btn.active {
   background: linear-gradient(135deg, var(--gold-dark), var(--gold));
   color: var(--bg-deep);
@@ -483,6 +539,7 @@ export default {
   flex-direction: column;
   gap: 0.65rem;
 }
+
 .mb-4 {
   margin-bottom: 0 !important;
 }
@@ -493,6 +550,7 @@ export default {
   flex-direction: column;
   gap: 0.15rem;
 }
+
 .skill-row {
   display: flex;
   align-items: center;
@@ -500,6 +558,7 @@ export default {
   padding: 0.2rem 0;
   border-bottom: 1px solid var(--bg-deep);
 }
+
 .prof-dot {
   width: 10px;
   height: 10px;
@@ -508,24 +567,29 @@ export default {
   flex-shrink: 0;
   transition: all 0.2s;
 }
+
 .prof-dot.filled {
   background: var(--gold);
   border-color: var(--gold);
 }
+
 .prof-dot.expertise {
   background: var(--gold-light);
   border-color: var(--gold-light);
   box-shadow: 0 0 4px var(--gold-light);
 }
+
 .skill-name {
   flex: 1;
   font-size: 0.85rem;
   color: var(--text-secondary);
 }
+
 .skill-attr {
   font-size: 0.7rem;
   color: var(--text-dim);
 }
+
 .skill-bonus {
   font-family: var(--font-title);
   font-weight: 700;
@@ -541,6 +605,7 @@ export default {
   flex-direction: column;
   gap: 0.3rem;
 }
+
 .attack-row {
   display: grid;
   grid-template-columns: 1fr auto auto auto;
@@ -549,10 +614,12 @@ export default {
   padding: 0.35rem 0;
   border-bottom: 1px solid var(--bg-deep);
 }
+
 .atk-name {
   font-size: 0.85rem;
   color: var(--text-primary);
 }
+
 .atk-dmg {
   font-family: var(--font-title);
   font-size: 0.85rem;
@@ -565,6 +632,7 @@ export default {
   grid-template-columns: repeat(3, 1fr);
   gap: 0.5rem;
 }
+
 .spell-meta-box {
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -574,12 +642,14 @@ export default {
   align-items: center;
   padding: 0.5rem;
 }
+
 .smb-val {
   font-family: var(--font-title);
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--gold-light);
 }
+
 .smb-lbl {
   font-size: 0.6rem;
   font-family: var(--font-title);
@@ -592,12 +662,14 @@ export default {
 .spell-level-block {
   margin-bottom: 0.6rem;
 }
+
 .spell-level-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 0.25rem;
 }
+
 .spell-level-name {
   font-family: var(--font-title);
   font-size: 0.75rem;
@@ -605,10 +677,12 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+
 .slots-indicator {
   display: flex;
   gap: 3px;
 }
+
 .slot-pip {
   width: 10px;
   height: 10px;
@@ -616,16 +690,19 @@ export default {
   background: var(--purple);
   opacity: 0.9;
 }
+
 .slot-pip.used {
   background: var(--bg-deep);
   border: 1px solid var(--purple);
   opacity: 0.5;
 }
+
 .spell-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
 }
+
 .spell-tag {
   font-size: 0.78rem;
   padding: 0.15rem 0.5rem;
@@ -641,6 +718,7 @@ export default {
   grid-template-columns: repeat(5, 1fr);
   gap: 0.35rem;
 }
+
 .coin-box {
   display: flex;
   flex-direction: column;
@@ -650,16 +728,19 @@ export default {
   border-radius: var(--radius-sm);
   padding: 0.4rem 0.15rem;
 }
+
 .coin-icon {
   font-size: 1rem;
   line-height: 1;
 }
+
 .coin-val {
   font-family: var(--font-title);
   font-size: 0.9rem;
   font-weight: 700;
   color: var(--text-primary);
 }
+
 .coin-lbl {
   font-size: 0.55rem;
   color: var(--text-muted);
@@ -676,6 +757,7 @@ export default {
   font-size: 0.88rem;
   color: var(--text-secondary);
 }
+
 .equip-qty {
   color: var(--text-muted);
   font-size: 0.78rem;
@@ -687,12 +769,14 @@ export default {
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
 }
+
 .trait-box {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 0.6rem;
 }
+
 .trait-lbl {
   font-family: var(--font-title);
   font-size: 0.65rem;
@@ -701,6 +785,7 @@ export default {
   letter-spacing: 0.08em;
   margin-bottom: 0.2rem;
 }
+
 .trait-val {
   font-size: 0.82rem;
   color: var(--text-secondary);
@@ -713,6 +798,7 @@ export default {
   flex-direction: column;
   gap: 0.1rem;
 }
+
 .appear-row {
   display: flex;
   gap: 0.75rem;
@@ -720,12 +806,14 @@ export default {
   padding: 0.15rem 0;
   border-bottom: 1px solid var(--bg-deep);
 }
+
 .appear-lbl {
   font-family: var(--font-title);
   color: var(--text-muted);
   font-size: 0.78rem;
   min-width: 4rem;
 }
+
 .appear-val {
   color: var(--text-secondary);
 }
@@ -735,12 +823,14 @@ export default {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--bg-deep);
 }
+
 .feat-name {
   font-family: var(--font-title);
   font-size: 0.85rem;
   color: var(--gold-light);
   margin-bottom: 0.2rem;
 }
+
 .feat-desc {
   font-size: 0.82rem;
   color: var(--text-secondary);

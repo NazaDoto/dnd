@@ -1,12 +1,7 @@
 <template>
   <div class="char-card" @click="$emit('click')">
     <div class="char-avatar">
-      <img
-        v-if="character.photo_url"
-        :src="character.photo_url"
-        :alt="character.name"
-        class="avatar-img"
-      />
+      <img v-if="character.photo_url" :src="character.photo_url" :alt="character.name" class="avatar-img" />
       <div v-else class="avatar-placeholder">{{ character.name[0] }}</div>
 
       <div class="hp-badge" :class="hpClass">
@@ -26,13 +21,7 @@
     </div>
 
     <div class="char-actions">
-      <button
-        class="pdf-btn"
-        type="button"
-        title="Descargar PDF"
-        :disabled="downloadingPdf"
-        @click.stop="downloadPdf"
-      >
+      <button class="pdf-btn" type="button" title="Descargar PDF" :disabled="downloadingPdf" @click.stop="downloadPdf">
         {{ downloadingPdf ? "..." : "PDF" }}
       </button>
 
@@ -168,127 +157,127 @@ export default {
     },
 
     addKeyValue(doc, label, value, x, y, width = 85) {
-  if (y > 280) {
-    doc.addPage()
-    y = 18
-  }
-
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(80, 70, 55)
-
-  const labelText = label + ':'
-  doc.text(labelText, x, y)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(35, 35, 35)
-
-  const gap = 2.2
-  const labelWidth = doc.getTextWidth(labelText)
-  const text = value === null || value === undefined || value === '' ? '-' : String(value)
-  const lines = doc.splitTextToSize(text, width - labelWidth - gap)
-
-  doc.text(lines, x + labelWidth + gap, y)
-
-  return y + Math.max(6, lines.length * 5)
-},
-normalizeSpells(value) {
-  const base = {
-    cantrips: [],
-    level1: { slots: 0, slots_used: 0, spells: [] },
-    level2: { slots: 0, slots_used: 0, spells: [] },
-    level3: { slots: 0, slots_used: 0, spells: [] },
-    level4: { slots: 0, slots_used: 0, spells: [] },
-    level5: { slots: 0, slots_used: 0, spells: [] },
-    level6: { slots: 0, slots_used: 0, spells: [] },
-    level7: { slots: 0, slots_used: 0, spells: [] },
-    level8: { slots: 0, slots_used: 0, spells: [] },
-    level9: { slots: 0, slots_used: 0, spells: [] },
-  }
-
-  if (!value) return base
-
-  let parsed = value
-
-  if (typeof value === "string") {
-    try {
-      parsed = JSON.parse(value)
-    } catch {
-      return base
-    }
-  }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return base
-  }
-
-  base.cantrips = Array.isArray(parsed.cantrips) ? parsed.cantrips : []
-
-  for (let i = 1; i <= 9; i++) {
-    const key = `level${i}`
-    const level = parsed[key]
-
-    if (level && typeof level === "object") {
-      base[key] = {
-        slots: Number(level.slots || 0),
-        slots_used: Number(level.slots_used || 0),
-        spells: Array.isArray(level.spells) ? level.spells : [],
+      if (y > 280) {
+        doc.addPage()
+        y = 18
       }
-    }
-  }
 
-  return base
-},
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(80, 70, 55)
 
-getSpellLevelLabel(key) {
-  if (key === "cantrips") return "Trucos"
-  return `Nivel ${key.replace("level", "")}`
-},
+      const labelText = label + ':'
+      doc.text(labelText, x, y)
 
-formatSpellsForPdf(value) {
-  const spells = this.normalizeSpells(value)
-  const lines = []
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(35, 35, 35)
 
-  const cantrips = spells.cantrips
-    .map(spell => String(spell).trim())
-    .filter(Boolean)
+      const gap = 2.2
+      const labelWidth = doc.getTextWidth(labelText)
+      const text = value === null || value === undefined || value === '' ? '-' : String(value)
+      const lines = doc.splitTextToSize(text, width - labelWidth - gap)
 
-  if (cantrips.length) {
-    lines.push("Trucos:")
-    cantrips.forEach(spell => lines.push(`- ${spell}`))
-    lines.push("")
-  }
+      doc.text(lines, x + labelWidth + gap, y)
 
-  for (let i = 1; i <= 9; i++) {
-    const key = `level${i}`
-    const level = spells[key]
+      return y + Math.max(6, lines.length * 5)
+    },
+    normalizeSpells(value) {
+      const base = {
+        cantrips: [],
+        level1: { slots: 0, slots_used: 0, spells: [] },
+        level2: { slots: 0, slots_used: 0, spells: [] },
+        level3: { slots: 0, slots_used: 0, spells: [] },
+        level4: { slots: 0, slots_used: 0, spells: [] },
+        level5: { slots: 0, slots_used: 0, spells: [] },
+        level6: { slots: 0, slots_used: 0, spells: [] },
+        level7: { slots: 0, slots_used: 0, spells: [] },
+        level8: { slots: 0, slots_used: 0, spells: [] },
+        level9: { slots: 0, slots_used: 0, spells: [] },
+      }
 
-    const levelSpells = Array.isArray(level.spells)
-      ? level.spells.map(spell => String(spell).trim()).filter(Boolean)
-      : []
+      if (!value) return base
 
-    const hasSlots = Number(level.slots || 0) > 0
-    const hasSpells = levelSpells.length > 0
+      let parsed = value
 
-    // Esto evita mostrar niveles vacíos.
-    if (!hasSlots && !hasSpells) continue
+      if (typeof value === "string") {
+        try {
+          parsed = JSON.parse(value)
+        } catch {
+          return base
+        }
+      }
 
-    lines.push(`Nivel ${i}:`)
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return base
+      }
 
-    if (hasSlots) {
-      lines.push(`Slots: ${level.slots_used || 0}/${level.slots}`)
-    }
+      base.cantrips = Array.isArray(parsed.cantrips) ? parsed.cantrips : []
 
-    if (hasSpells) {
-      levelSpells.forEach(spell => lines.push(`- ${spell}`))
-    } else {
-      lines.push("- Sin conjuros preparados")
-    }
+      for (let i = 1; i <= 9; i++) {
+        const key = `level${i}`
+        const level = parsed[key]
 
-    lines.push("")
-  }
+        if (level && typeof level === "object") {
+          base[key] = {
+            slots: Number(level.slots || 0),
+            slots_used: Number(level.slots_used || 0),
+            spells: Array.isArray(level.spells) ? level.spells : [],
+          }
+        }
+      }
 
-  return lines.join("\n").trim()
-},
+      return base
+    },
+
+    getSpellLevelLabel(key) {
+      if (key === "cantrips") return "Trucos"
+      return `Nivel ${key.replace("level", "")}`
+    },
+
+    formatSpellsForPdf(value) {
+      const spells = this.normalizeSpells(value)
+      const lines = []
+
+      const cantrips = spells.cantrips
+        .map(spell => String(spell).trim())
+        .filter(Boolean)
+
+      if (cantrips.length) {
+        lines.push("Trucos:")
+        cantrips.forEach(spell => lines.push(`- ${spell}`))
+        lines.push("")
+      }
+
+      for (let i = 1; i <= 9; i++) {
+        const key = `level${i}`
+        const level = spells[key]
+
+        const levelSpells = Array.isArray(level.spells)
+          ? level.spells.map(spell => String(spell).trim()).filter(Boolean)
+          : []
+
+        const hasSlots = Number(level.slots || 0) > 0
+        const hasSpells = levelSpells.length > 0
+
+        // Esto evita mostrar niveles vacíos.
+        if (!hasSlots && !hasSpells) continue
+
+        lines.push(`Nivel ${i}:`)
+
+        if (hasSlots) {
+          lines.push(`Slots: ${level.slots_used || 0}/${level.slots}`)
+        }
+
+        if (hasSpells) {
+          levelSpells.forEach(spell => lines.push(`- ${spell}`))
+        } else {
+          lines.push("- Sin conjuros preparados")
+        }
+
+        lines.push("")
+      }
+
+      return lines.join("\n").trim()
+    },
     async downloadPdf() {
       const id = this.getCharacterId();
 
@@ -511,20 +500,20 @@ formatSpellsForPdf(value) {
 
         const spellsText = this.formatSpellsForPdf(c.spells)
 
-if (spellsText) {
-  y += 2
-  doc.setFont("helvetica", "bold")
-  doc.setTextColor(80, 70, 55)
-  doc.text("Conjuros:", 16, y)
+        if (spellsText) {
+          y += 2
+          doc.setFont("helvetica", "bold")
+          doc.setTextColor(80, 70, 55)
+          doc.text("Conjuros:", 16, y)
 
-  doc.setFont("helvetica", "normal")
-  doc.setTextColor(35, 35, 35)
+          doc.setFont("helvetica", "normal")
+          doc.setTextColor(35, 35, 35)
 
-  y = this.addTextBlock(doc, spellsText, 16, y + 6, 178)
-} else {
-  y += 2
-  y = this.addTextBlock(doc, "Sin conjuros registrados.", 16, y, 178)
-}
+          y = this.addTextBlock(doc, spellsText, 16, y + 6, 178)
+        } else {
+          y += 2
+          y = this.addTextBlock(doc, "Sin conjuros registrados.", 16, y, 178)
+        }
 
         y += 3;
         y = this.addSection(doc, "Equipo", y);
@@ -545,11 +534,11 @@ if (spellsText) {
 
         const equipmentText = equipment.length
           ? equipment
-              .map((item) => {
-                if (typeof item === "string") return item;
-                return `${item.name || "Objeto"}${item.qty ? ` x${item.qty}` : ""}`;
-              })
-              .join("\n")
+            .map((item) => {
+              if (typeof item === "string") return item;
+              return `${item.name || "Objeto"}${item.qty ? ` x${item.qty}` : ""}`;
+            })
+            .join("\n")
           : "Sin equipo registrado.";
 
         y = this.addTextBlock(doc, equipmentText, 16, y + 6, 178);
