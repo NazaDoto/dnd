@@ -27,24 +27,18 @@
         </div>
 
         <div class="form-group">
-          <span class="form-label">Tipo de cuenta</span>
-          <div class="role-options">
-            <label class="check-group role-option">
-              <input v-model="role" type="radio" name="role" value="jugador" />
-              <span>Jugador (personajes, notas)</span>
-            </label>
-            <label class="check-group role-option">
-              <input v-model="role" type="radio" name="role" value="dm" />
-              <span>Maestro (DM)</span>
-            </label>
-          </div>
+          <label class="form-label" for="register-role">Tipo de cuenta</label>
+          <select id="register-role" v-model="role" class="register-role-select" aria-label="Tipo de cuenta">
+            <option value="jugador">Jugador — personajes y notas</option>
+            <option value="dm">Maestro (DM) — campañas y fichas vinculadas</option>
+          </select>
         </div>
 
         <p v-if="error" class="form-error text-center mt-2">{{ error }}</p>
 
         <button type="submit" class="btn btn-primary btn-full mt-4" :disabled="loading">
           <span v-if="loading" class="spinner" style="width:1rem;height:1rem;border-width:2px"></span>
-          {{ loading ? 'Creando cuenta...' : '🧙 Registrarse' }}
+          {{ loading ? 'Creando cuenta...' : 'Registrarse' }}
         </button>
       </form>
 
@@ -129,22 +123,10 @@ export default {
 .logo-sub { color: var(--text-muted); font-style: italic; margin-top: 0.25rem; }
 .auth-card { width: 100%; max-width: 380px; }
 .auth-form { display: flex; flex-direction: column; gap: 0.75rem; }
-.role-options {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-}
-.role-option {
-  align-items: flex-start;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-}
-.role-option span:last-child {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.35;
+/* Refuerzo local: texto largo en opciones + alineación vertical */
+.register-role-select {
+  font-size: 0.95rem;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 </style>

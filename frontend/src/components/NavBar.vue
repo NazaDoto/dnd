@@ -1,14 +1,12 @@
 <template>
   <nav class="navbar">
     <RouterLink :to="homePath" class="nav-item" active-class="active">
-      <span class="nav-icon">⚔️</span>
       <span class="nav-label">{{ homeLabel }}</span>
     </RouterLink>
     <RouterLink v-if="isPlayer" to="/character/new" class="nav-item nav-create" active-class="active">
-      <span class="nav-icon-create">＋</span>
+      <span class="nav-icon-create">+</span>
     </RouterLink>
-    <button class="nav-item" @click="logout">
-      <span class="nav-icon">🚪</span>
+    <button type="button" class="nav-item" @click="logout">
       <span class="nav-label">Salir</span>
     </button>
   </nav>
@@ -74,7 +72,9 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.15rem;
+  min-height: 2.5rem;
   color: var(--text-muted);
   text-decoration: none;
   background: none;
@@ -90,8 +90,7 @@ export default {
 }
 .nav-item.active, .nav-item:hover { color: var(--gold-light); }
 
-.nav-icon { font-size: 1.3rem; line-height: 1; }
-.nav-label { font-size: 0.6rem; }
+.nav-label { font-size: 0.6rem; text-align: center; max-width: 4.5rem; line-height: 1.15; }
 
 .nav-create {
   background: linear-gradient(135deg, var(--gold-dark), var(--gold));

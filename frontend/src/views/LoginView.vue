@@ -31,7 +31,7 @@
               required
             />
             <button type="button" class="pwd-toggle" @click="showPwd = !showPwd">
-              {{ showPwd ? '🙈' : '👁️' }}
+              {{ showPwd ? 'Ocultar' : 'Mostrar' }}
             </button>
           </div>
         </div>
@@ -44,7 +44,7 @@
             class="spinner"
             style="width:1rem;height:1rem;border-width:2px"
           ></span>
-          {{ loading ? 'Entrando...' : '⚔️ Ingresar' }}
+          {{ loading ? 'Entrando...' : 'Ingresar' }}
         </button>
       </form>
 
@@ -150,19 +150,27 @@ export default {
 }
 
 .input-pwd input {
-  padding-right: 2.5rem;
+  padding-right: 4.25rem;
 }
 
 .pwd-toggle {
   position: absolute;
-  right: 0.5rem;
+  right: 0.45rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-family: var(--font-title);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
   line-height: 1;
+  padding: 0.2rem 0;
+}
+.pwd-toggle:hover {
+  color: var(--gold-light);
 }
 
 .auth-deco {

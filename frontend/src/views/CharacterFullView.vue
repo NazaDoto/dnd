@@ -5,7 +5,7 @@
       <h2 class="full-title">{{ character.name }}</h2>
       <RouterLink :to="`/character/${id}/edit`" class="btn btn-secondary"
         style="font-size: 0.78rem; padding: 0.4rem 0.7rem">
-        ✏️ Editar
+        Editar
       </RouterLink>
     </div>
 

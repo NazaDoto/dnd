@@ -35,7 +35,7 @@
         </span>
 
         <div class="hp-controls">
-          <button class="btn btn-secondary btn-icon" @click="adjustHP(-1)">−</button>
+          <button class="btn btn-secondary btn-icon" @click="adjustHP(-1)">-</button>
 
           <span class="hp-display">
             <span :class="['hp-current', hpClass]">
@@ -45,7 +45,7 @@
             <span class="hp-max">{{ character.hit_points_max }}</span>
           </span>
 
-          <button class="btn btn-secondary btn-icon" @click="adjustHP(+1)">＋</button>
+          <button class="btn btn-secondary btn-icon" @click="adjustHP(+1)">+</button>
         </div>
       </div>
 
@@ -233,15 +233,15 @@
     <!-- Acciones rápidas -->
     <div class="quick-actions">
       <RouterLink :to="`/character/${id}/full`" class="btn btn-primary quick-btn">
-        📜 Ficha completa
+        Ficha completa
       </RouterLink>
 
       <RouterLink :to="`/character/${id}/notes`" class="btn btn-secondary quick-btn">
-        📝 Notas
+        Notas
       </RouterLink>
 
       <RouterLink :to="`/character/${id}/edit`" class="btn btn-ghost quick-btn">
-        ✏️ Editar
+        Editar
       </RouterLink>
     </div>
 

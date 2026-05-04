@@ -4,7 +4,7 @@
       <button class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
       <h2 class="notes-title">📝 Notas de Campaña</h2>
       <button class="btn btn-primary" style="font-size:0.78rem;padding:0.4rem 0.7rem" @click="openNew">
-        ＋ Nueva
+        Nueva
       </button>
     </div>
 
@@ -61,8 +61,8 @@
             <p class="note-date" v-if="note.session_date">🗓️ {{ formatDate(note.session_date) }}</p>
           </div>
           <div class="note-actions">
-            <button class="btn btn-ghost btn-icon" @click="editNote(note)" title="Editar">✏️</button>
-            <button class="btn btn-ghost btn-icon" @click="deleteNote(note.id)" title="Eliminar">🗑️</button>
+            <button type="button" class="btn btn-ghost note-action-btn" @click="editNote(note)">Editar</button>
+            <button type="button" class="btn btn-ghost note-action-btn" @click="deleteNote(note.id)">Eliminar</button>
           </div>
         </div>
         <p class="note-preview">{{ note.content }}</p>
@@ -217,7 +217,14 @@ export default {
 .note-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 0.4rem; }
 .note-title-text { font-family: var(--font-title); font-size: 0.9rem; color: var(--text-primary); }
 .note-date { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.15rem; }
-.note-actions { display: flex; gap: 0.1rem; flex-shrink: 0; }
+.note-actions { display: flex; gap: 0.35rem; flex-shrink: 0; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.note-action-btn {
+  font-size: 0.68rem;
+  padding: 0.35rem 0.5rem;
+  min-width: auto;
+  height: auto;
+  white-space: nowrap;
+}
 .note-preview {
   font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;

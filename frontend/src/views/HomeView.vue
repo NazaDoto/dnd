@@ -7,7 +7,7 @@
         <p class="home-sub" v-if="user">¡Bienvenido, {{ user.username }}!</p>
       </div>
       <RouterLink to="/character/new" class="btn btn-primary">
-        ＋ Nuevo
+        Nuevo
       </RouterLink>
     </div>
 
