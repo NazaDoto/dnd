@@ -161,7 +161,7 @@ router.post('/', auth, upload.single('photo'), async(req, res) => {
                 parseInt(data.platinum_pieces) || 0,
                 data.attacks_spellcasting || '[]', data.features_traits || '[]',
                 data.spellcasting_ability || null, data.spell_save_dc || null,
-                data.spell_attack_bonus || null, data.spells || '{}',
+                data.spell_attack_bonus || null, data.spells_notes || '{}',
                 data.languages || '[]', data.other_proficiencies || '[]',
                 data.allies_organizations || null, data.faction || null, data.treasure || null
             ]
@@ -208,7 +208,7 @@ router.put('/:id', auth, upload.single('photo'), async(req, res) => {
         equipment=?, copper_pieces=?, silver_pieces=?, electrum_pieces=?,
         gold_pieces=?, platinum_pieces=?,
         attacks_spellcasting=?, features_traits=?,
-        spellcasting_ability=?, spell_save_dc=?, spell_attack_bonus=?, spells=?,
+        spellcasting_ability=?, spell_save_dc=?, spell_attack_bonus=?, spells_notes=?,
         languages=?, other_proficiencies=?, allies_organizations=?, faction=?, treasure=?
       WHERE id=? AND user_id=?`, [
                 photo_url,
@@ -235,7 +235,7 @@ router.put('/:id', auth, upload.single('photo'), async(req, res) => {
                 parseInt(data.platinum_pieces) || 0,
                 data.attacks_spellcasting || '[]', data.features_traits || '[]',
                 data.spellcasting_ability || null, data.spell_save_dc || null,
-                data.spell_attack_bonus || null, data.spells || '{}',
+                data.spell_attack_bonus || null, data.spells_notes || '{}',
                 data.languages || '[]', data.other_proficiencies || '[]',
                 data.allies_organizations || null, data.faction || null, data.treasure || null,
                 req.params.id, req.user.id
