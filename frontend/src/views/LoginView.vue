@@ -10,9 +10,16 @@
 
       <form @submit.prevent="login" class="auth-form">
         <div class="form-group">
-          <label class="form-label">Email</label>
-          <input v-model="email" type="email" placeholder="aventurero@taverna.com" required />
+          <label class="form-label">Usuario</label>
+          <input
+            v-model.trim="username"
+            type="text"
+            placeholder="Tu nombre de usuario"
+            autocomplete="username"
+            required
+          />
         </div>
+
         <div class="form-group">
           <label class="form-label">Contraseña</label>
           <div class="input-pwd">
@@ -20,6 +27,7 @@
               v-model="password"
               :type="showPwd ? 'text' : 'password'"
               placeholder="••••••••"
+              autocomplete="current-password"
               required
             />
             <button type="button" class="pwd-toggle" @click="showPwd = !showPwd">
@@ -31,7 +39,11 @@
         <p v-if="error" class="form-error text-center mt-2">{{ error }}</p>
 
         <button type="submit" class="btn btn-primary btn-full mt-4" :disabled="loading">
-          <span v-if="loading" class="spinner" style="width:1rem;height:1rem;border-width:2px"></span>
+          <span
+            v-if="loading"
+            class="spinner"
+            style="width:1rem;height:1rem;border-width:2px"
+          ></span>
           {{ loading ? 'Entrando...' : '⚔️ Ingresar' }}
         </button>
       </form>
@@ -54,16 +66,28 @@ export default {
   name: 'LoginView',
   inject: ['showToast'],
   data() {
-    return { email: '', password: '', error: '', loading: false, showPwd: false }
+    return {
+      username: '',
+      password: '',
+      error: '',
+      loading: false,
+      showPwd: false
+    }
   },
   methods: {
     async login() {
       this.error = ''
       this.loading = true
+
       try {
-        const { data } = await authAPI.login({ email: this.email, password: this.password })
+        const { data } = await authAPI.login({
+          username: this.username,
+          password: this.password
+        })
+
         localStorage.setItem('dnd_token', data.token)
         localStorage.setItem('dnd_user', JSON.stringify(data.user))
+
         this.$router.push('/home')
       } catch (err) {
         this.error = err.response?.data?.message || 'Error al ingresar'
@@ -85,7 +109,11 @@ export default {
   padding: 1.5rem;
   gap: 1.5rem;
 }
-.auth-logo { text-align: center; }
+
+.auth-logo {
+  text-align: center;
+}
+
 .logo-title {
   font-family: var(--font-display);
   font-size: 2.2rem;
@@ -96,19 +124,42 @@ export default {
   background-clip: text;
   text-shadow: none;
 }
-.logo-sub { color: var(--text-muted); font-style: italic; margin-top: 0.25rem; }
 
-.auth-card { width: 100%; max-width: 380px; }
-.auth-form { display: flex; flex-direction: column; gap: 0.75rem; }
+.logo-sub {
+  color: var(--text-muted);
+  font-style: italic;
+  margin-top: 0.25rem;
+}
 
-.input-pwd { position: relative; }
-.input-pwd input { padding-right: 2.5rem; }
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input-pwd {
+  position: relative;
+}
+
+.input-pwd input {
+  padding-right: 2.5rem;
+}
+
 .pwd-toggle {
   position: absolute;
-  right: 0.5rem; top: 50%;
+  right: 0.5rem;
+  top: 50%;
   transform: translateY(-50%);
-  background: none; border: none; cursor: pointer;
-  font-size: 1rem; line-height: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .auth-deco {

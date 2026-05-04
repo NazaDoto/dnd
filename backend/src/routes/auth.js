@@ -39,24 +39,37 @@ router.post('/register', async(req, res) => {
 // ── POST /api/auth/login ─────────────────────────────────────
 router.post('/login', async(req, res) => {
     try {
-        const { email, password } = req.body;
-        if (!email || !password)
-            return res.status(400).json({ message: 'Email y contraseña requeridos' });
+        const { username, password } = req.body;
 
-        const [rows] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (!username || !password)
+            return res.status(400).json({ message: 'Usuario y contraseña requeridos' });
+
+        const [rows] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
+
         if (!rows.length)
             return res.status(401).json({ message: 'Credenciales incorrectas' });
 
         const user = rows[0];
+
         const valid = await bcrypt.compare(password, user.password);
+
         if (!valid)
             return res.status(401).json({ message: 'Credenciales incorrectas' });
 
-        const token = jwt.sign({ id: user.id, username: user.username, email: user.email },
-            process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        const token = jwt.sign(
+            { id: user.id, username: user.username, email: user.email },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
 
-        res.json({ token, user: { id: user.id, username: user.username, email: user.email } });
+        res.json({
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email
+            }
+        });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error del servidor' });
