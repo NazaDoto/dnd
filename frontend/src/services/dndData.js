@@ -102,7 +102,7 @@ export const CLASSES = [{
     },
     {
         value: 'artificer',
-        label: 'Artificiero',
+        label: 'Artificer',
         hitDie: 'd8',
         subclasses: ['Alquimista', 'Armorer', 'Artillerist', 'Battle Smith']
     },
@@ -159,7 +159,7 @@ export const LANGUAGES = [
 ]
 
 export const SPELLCASTING_ABILITIES = [
-    { value: 'intelligence', label: 'Inteligencia (Magos, Artificiero)' },
+    { value: 'intelligence', label: 'Inteligencia (Magos, Artificer)' },
     { value: 'wisdom', label: 'Sabiduría (Clérigos, Druidas, Exploradores)' },
     { value: 'charisma', label: 'Carisma (Bardos, Hechiceros, Brujos, Paladines)' },
 ]
