@@ -1,0 +1,539 @@
+/* ============================================================
+   DnD Vault — Global Styles
+   Tema: Pergamino oscuro / grimdark fantasy
+   ============================================================ */
+
+:root {
+    --bg-deep: #0d0a07;
+    --bg-dark: #151008;
+    --bg-card: #1c1408;
+    --bg-surface: #241a0d;
+    --bg-elevated: #2e2010;
+    --border: #5c3d1a;
+    --border-glow: #c8860a;
+    --gold: #d4a017;
+    --gold-light: #f0c040;
+    --gold-dark: #8b6914;
+    --red: #b91c1c;
+    --red-light: #ef4444;
+    --green: #16a34a;
+    --blue: #1d4ed8;
+    --blue-light: #60a5fa;
+    --purple: #7c3aed;
+    --text-primary: #f5e6c8;
+    --text-secondary: #c8a97a;
+    --text-muted: #8a6a42;
+    --text-dim: #5a4530;
+    --font-display: 'Cinzel Decorative', serif;
+    --font-title: 'Cinzel', serif;
+    --font-body: 'Crimson Text', serif;
+    --radius-sm: 4px;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.6);
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+    --shadow-gold: 0 0 20px rgba(212, 160, 23, 0.15);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100dvh;
+    line-height: 1.6;
+    /* Patrón sutil de textura */
+    background-image: radial-gradient(ellipse at 20% 50%, rgba(212, 160, 23, 0.03) 0%, transparent 50%), radial-gradient(ellipse at 80% 10%, rgba(185, 28, 28, 0.03) 0%, transparent 50%);
+}
+
+
+/* ── Tipografía ─────────────────────────────────────────────── */
+
+h1,
+h2,
+h3 {
+    font-family: var(--font-title);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+}
+
+h4,
+h5,
+h6 {
+    font-family: var(--font-title);
+    font-weight: 500;
+}
+
+
+/* ── Scrollbar custom ───────────────────────────────────────── */
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gold-dark);
+}
+
+
+/* ── Inputs base ────────────────────────────────────────────── */
+
+input,
+textarea,
+select {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.2);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-dim);
+}
+
+select option {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+}
+
+
+/* ── Botones base ───────────────────────────────────────────── */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    font-family: var(--font-title);
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 0.55rem 1.1rem;
+    border-radius: var(--radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    color: #0d0a07;
+    border-color: var(--gold);
+    box-shadow: var(--shadow-sm), 0 0 10px rgba(212, 160, 23, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    box-shadow: var(--shadow), 0 0 20px rgba(212, 160, 23, 0.35);
+}
+
+.btn-secondary {
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    border-color: var(--gold-dark);
+    color: var(--gold-light);
+}
+
+.btn-danger {
+    background: var(--bg-surface);
+    color: var(--red-light);
+    border-color: var(--red);
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: var(--red);
+    color: white;
+}
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+    color: var(--gold-light);
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    min-width: 2.2rem;
+    height: 2.2rem;
+}
+
+.btn-full {
+    width: 100%;
+}
+
+
+/* ── Cards ──────────────────────────────────────────────────── */
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+
+/* ── Form groups ────────────────────────────────────────────── */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.form-label {
+    font-family: var(--font-title);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.form-hint {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.form-error {
+    font-size: 0.8rem;
+    color: var(--red-light);
+}
+
+
+/* ── Section title ──────────────────────────────────────────── */
+
+.section-title {
+    font-family: var(--font-title);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+
+/* ── Badge ──────────────────────────────────────────────────── */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-family: var(--font-title);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.badge-gold {
+    background: rgba(212, 160, 23, 0.15);
+    color: var(--gold-light);
+    border: 1px solid var(--gold-dark);
+}
+
+.badge-red {
+    background: rgba(185, 28, 28, 0.15);
+    color: var(--red-light);
+    border: 1px solid var(--red);
+}
+
+.badge-green {
+    background: rgba(22, 163, 74, 0.15);
+    color: #4ade80;
+    border: 1px solid var(--green);
+}
+
+.badge-blue {
+    background: rgba(29, 78, 216, 0.15);
+    color: var(--blue-light);
+    border: 1px solid var(--blue);
+}
+
+.badge-purple {
+    background: rgba(124, 58, 237, 0.15);
+    color: #a78bfa;
+    border: 1px solid var(--purple);
+}
+
+
+/* ── Divider ornamental ─────────────────────────────────────── */
+
+.divider {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-family: var(--font-title);
+    margin: 1rem 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border));
+}
+
+.divider::after {
+    background: linear-gradient(to left, transparent, var(--border));
+}
+
+
+/* ── Toast / snackbar ───────────────────────────────────────── */
+
+.toast-container {
+    position: fixed;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    box-shadow: var(--shadow);
+    animation: toastIn 0.3s ease;
+    pointer-events: auto;
+}
+
+.toast.success {
+    border-color: var(--green);
+    color: #4ade80;
+}
+
+.toast.error {
+    border-color: var(--red);
+    color: var(--red-light);
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+/* ── Loading spinner ────────────────────────────────────────── */
+
+.spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 3px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-family: var(--font-title);
+    letter-spacing: 0.1em;
+}
+
+
+/* ── Checkbox/Radio custom ──────────────────────────────────── */
+
+.check-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.check-group input[type="checkbox"],
+.check-group input[type="radio"] {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex-shrink: 0;
+    accent-color: var(--gold);
+}
+
+
+/* ── Number input sin flechas ───────────────────────────────── */
+
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+}
+
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+
+/* ── Utilities ──────────────────────────────────────────────── */
+
+.text-gold {
+    color: var(--gold-light);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.text-danger {
+    color: var(--red-light);
+}
+
+.text-success {
+    color: #4ade80;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.flex {
+    display: flex;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.items-center {
+    align-items: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.gap-1 {
+    gap: 0.25rem;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-3 {
+    gap: 0.75rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.mt-1 {
+    margin-top: 0.25rem;
+}
+
+.mt-2 {
+    margin-top: 0.5rem;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
+.w-full {
+    width: 100%;
+}
+
+
+/* ── Safe area mobile ───────────────────────────────────────── */
+
+.safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 1rem);
+}

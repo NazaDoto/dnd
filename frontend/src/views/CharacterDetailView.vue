@@ -1,0 +1,298 @@
+<template>
+  <div class="detail-view" v-if="character">
+    <!-- Header con foto -->
+    <div class="detail-hero">
+      <button class="btn btn-ghost btn-icon back-btn" @click="$router.back()">‹</button>
+      <div class="hero-photo">
+        <img v-if="character.photo_url" :src="character.photo_url" :alt="character.name" class="hero-img" />
+        <div v-else class="hero-placeholder">{{ character.name[0] }}</div>
+      </div>
+      <div class="hero-info">
+        <h1 class="hero-name">{{ character.name }}</h1>
+        <p class="hero-meta">
+          {{ character.race }}
+          <span v-if="character.subrace"> ({{ character.subrace }})</span>
+          · {{ classLabel }} Nv.{{ character.level }}
+        </p>
+        <p class="hero-bg" v-if="character.background">{{ character.background }} · {{ character.alignment }}</p>
+      </div>
+    </div>
+
+    <!-- HP Bar -->
+    <div class="hp-section card">
+      <div class="hp-header">
+        <span class="section-title" style="margin:0;border:none;padding:0">Puntos de Vida</span>
+        <div class="hp-controls">
+          <button class="btn btn-secondary btn-icon" @click="adjustHP(-1)">−</button>
+          <span class="hp-display">
+            <span :class="['hp-current', hpClass]">{{ character.hit_points_current }}</span>
+            <span class="hp-sep">/</span>
+            <span class="hp-max">{{ character.hit_points_max }}</span>
+          </span>
+          <button class="btn btn-secondary btn-icon" @click="adjustHP(+1)">＋</button>
+        </div>
+      </div>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar" :style="{ width: hpPct + '%' }" :class="hpClass"></div>
+      </div>
+      <div v-if="character.hit_points_temp > 0" class="hp-temp">
+        ✨ +{{ character.hit_points_temp }} PV temporales
+      </div>
+    </div>
+
+    <!-- Combat stats rápidos -->
+    <div class="combat-row">
+      <div class="combat-box">
+        <span class="cbox-val">{{ character.armor_class }}</span>
+        <span class="cbox-lbl">CA</span>
+      </div>
+      <div class="combat-box">
+        <span class="cbox-val">{{ fmtMod(character.initiative) }}</span>
+        <span class="cbox-lbl">Iniciativa</span>
+      </div>
+      <div class="combat-box">
+        <span class="cbox-val">{{ character.speed }}ft</span>
+        <span class="cbox-lbl">Velocidad</span>
+      </div>
+      <div class="combat-box">
+        <span class="cbox-val">{{ fmtMod(character.proficiency_bonus) }}</span>
+        <span class="cbox-lbl">B.Profic.</span>
+      </div>
+    </div>
+
+    <!-- Atributos -->
+    <div class="card">
+      <p class="section-title">Atributos</p>
+      <StatsBlock :character="character" />
+    </div>
+
+    <!-- Inspiration + Percepción Pasiva -->
+    <div class="row-2">
+      <div class="card info-pill">
+        <span class="pill-icon">{{ character.inspiration ? '✨' : '○' }}</span>
+        <span class="pill-lbl">Inspiración</span>
+      </div>
+      <div class="card info-pill">
+        <span class="pill-val">{{ character.passive_perception }}</span>
+        <span class="pill-lbl">Perc. Pasiva</span>
+      </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="quick-actions">
+      <RouterLink :to="`/character/${id}/full`" class="btn btn-primary quick-btn">
+        📜 Ficha completa
+      </RouterLink>
+      <RouterLink :to="`/character/${id}/notes`" class="btn btn-secondary quick-btn">
+        📝 Notas
+      </RouterLink>
+      <RouterLink :to="`/character/${id}/edit`" class="btn btn-ghost quick-btn">
+        ✏️ Editar
+      </RouterLink>
+    </div>
+
+    <!-- XP -->
+    <div class="card xp-section">
+      <div class="xp-header">
+        <span class="section-title" style="margin:0;border:none;padding:0">Experiencia</span>
+        <span class="badge badge-gold">{{ character.experience_points }} XP</span>
+      </div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar" :style="{ width: xpPct + '%' }"></div>
+      </div>
+      <p class="xp-hint">{{ xpLabel }}</p>
+    </div>
+  </div>
+
+  <div v-else class="loading-screen">
+    <div class="spinner"></div>
+    <span>Cargando personaje...</span>
+  </div>
+</template>
+
+<script>
+import StatsBlock from '../components/StatsBlock.vue'
+import { charactersAPI } from '../services/api.js'
+import { CLASSES, XP_BY_LEVEL, getModifier, formatModifier } from '../services/dndData.js'
+
+export default {
+  name: 'CharacterDetailView',
+  components: { StatsBlock },
+  inject: ['showToast'],
+  data() {
+    return { character: null }
+  },
+  computed: {
+    id() { return this.$route.params.id },
+    classLabel() {
+      const cls = CLASSES.find(c => c.value === this.character?.class)
+      return cls ? cls.label : this.character?.class
+    },
+    hpPct() {
+      if (!this.character) return 0
+      return Math.max(0, Math.min(100,
+        (this.character.hit_points_current / this.character.hit_points_max) * 100
+      ))
+    },
+    hpClass() {
+      const p = this.hpPct
+      if (p > 50) return 'ok'
+      if (p > 25) return 'warn'
+      return 'danger'
+    },
+    xpPct() {
+      const lvl = this.character?.level || 1
+      const cur = this.character?.experience_points || 0
+      const base = XP_BY_LEVEL[lvl - 1] || 0
+      const next = XP_BY_LEVEL[lvl] || base
+      if (!next || next === base) return 100
+      return Math.min(100, ((cur - base) / (next - base)) * 100)
+    },
+    xpLabel() {
+      const lvl = this.character?.level || 1
+      if (lvl >= 20) return 'Nivel máximo alcanzado'
+      const next = XP_BY_LEVEL[lvl] || 0
+      const rem = next - (this.character?.experience_points || 0)
+      return rem > 0 ? `${rem} XP para nivel ${lvl + 1}` : '¡Listo para subir!'
+    }
+  },
+  async mounted() {
+    try {
+      const { data } = await charactersAPI.getSummary(this.id)
+      this.character = data
+    } catch {
+      this.showToast('Error al cargar personaje', 'error')
+      this.$router.push('/home')
+    }
+  },
+  methods: {
+    fmtMod(v) { return formatModifier(v) },
+    async adjustHP(delta) {
+      const c = this.character
+      c.hit_points_current = Math.max(0, Math.min(c.hit_points_max, c.hit_points_current + delta))
+      // Guardar solo HP (enviar ficha completa para simplificar)
+      try {
+        const fd = new FormData()
+        Object.keys(c).forEach(k => {
+          if (c[k] !== null && c[k] !== undefined) {
+            fd.append(k, typeof c[k] === 'object' ? JSON.stringify(c[k]) : c[k])
+          }
+        })
+        await charactersAPI.update(this.id, fd)
+      } catch { /* silencioso */ }
+    }
+  }
+}
+</script>
+
+<style scoped>
+.detail-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+.back-btn {
+  font-size: 1.8rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin-top: -0.1rem;
+}
+.hero-img, .hero-placeholder {
+  width: 4rem; height: 4rem;
+  border-radius: 50%;
+  border: 2px solid var(--gold-dark);
+  flex-shrink: 0;
+}
+.hero-img { object-fit: cover; }
+.hero-placeholder {
+  background: var(--bg-surface);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-title); font-size: 1.6rem; color: var(--gold);
+}
+.hero-name {
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+}
+.hero-meta { font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.15rem; }
+.hero-bg   { font-size: 0.75rem; color: var(--text-muted); font-style: italic; }
+
+/* HP */
+.hp-section { margin-bottom: 0.65rem; }
+.hp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.hp-controls { display: flex; align-items: center; gap: 0.4rem; }
+.hp-display { font-family: var(--font-title); display: flex; align-items: baseline; gap: 0.15rem; }
+.hp-current { font-size: 1.4rem; font-weight: 700; }
+.hp-current.ok     { color: #4ade80; }
+.hp-current.warn   { color: #fbbf24; }
+.hp-current.danger { color: #f87171; }
+.hp-sep  { color: var(--text-dim); }
+.hp-max  { font-size: 1rem; color: var(--text-muted); }
+.hp-bar-wrap { height: 8px; background: var(--bg-deep); border-radius: 4px; overflow: hidden; }
+.hp-bar { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.hp-bar.ok     { background: linear-gradient(to right, var(--green), #4ade80); }
+.hp-bar.warn   { background: linear-gradient(to right, #ca8a04, #fbbf24); }
+.hp-bar.danger { background: linear-gradient(to right, var(--red), var(--red-light)); }
+.hp-temp { font-size: 0.75rem; color: #a78bfa; margin-top: 0.35rem; text-align: center; }
+
+/* Combat row */
+.combat-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.combat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 0.5rem 0.25rem;
+}
+.cbox-val {
+  font-family: var(--font-title);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+.cbox-lbl {
+  font-size: 0.55rem;
+  font-family: var(--font-title);
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Row 2 */
+.row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 0.65rem;
+}
+.info-pill {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.6rem;
+}
+.pill-icon { font-size: 1.5rem; }
+.pill-val  { font-family: var(--font-title); font-size: 1.4rem; font-weight: 700; color: var(--gold-light); }
+.pill-lbl  { font-size: 0.65rem; font-family: var(--font-title); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* Quick actions */
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.quick-btn { font-size: 0.8rem; padding: 0.6rem 0.5rem; }
+
+/* XP */
+.xp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.4rem; }
+.xp-bar-wrap { height: 6px; background: var(--bg-deep); border-radius: 3px; overflow: hidden; }
+.xp-bar { height: 100%; background: linear-gradient(to right, var(--purple), #a78bfa); border-radius: 3px; transition: width 0.5s; }
+.xp-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; text-align: right; }
+</style>
