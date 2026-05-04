@@ -178,40 +178,74 @@ export default {
 
       return y + 13
     },
+addParagraph(doc, text, x, y, width = 182, options = {}) {
+  const t = this.pdfTheme()
+  const {
+    fontSize = 9,
+    lineHeight = 4.8,
+    style = 'normal',
+    color = t.text,
+    gapAfter = 2,
+    justify = true,
+  } = options
 
-    addParagraph(doc, text, x, y, width = 182, options = {}) {
-      const t = this.pdfTheme()
-      const {
-        fontSize = 9,
-        lineHeight = 4.8,
-        style = 'normal',
-        color = t.text,
-        gapAfter = 2,
-      } = options
+  const clean = this.sanitizePdfText(text, '')
+  if (!clean.trim()) return y
 
-      const clean = this.sanitizePdfText(text, '')
-      if (!clean.trim()) return y
+  this.setFont(doc, style, fontSize, color)
 
-      this.setFont(doc, style, fontSize, color)
+  const paragraphs = clean.split('\n')
 
-      const paragraphs = clean.split('\n')
+  paragraphs.forEach((paragraph, pIndex) => {
+    const paragraphText = paragraph.trim()
 
-      paragraphs.forEach((paragraph, pIndex) => {
-        const lines = paragraph.trim()
-          ? doc.splitTextToSize(paragraph.trim(), width)
-          : ['']
+    if (!paragraphText) {
+      y += lineHeight
+      return
+    }
 
-        lines.forEach(line => {
-          y = this.ensureSpace(doc, y, lineHeight + 2)
-          doc.text(line, x, y)
-          y += lineHeight
-        })
+    const lines = doc.splitTextToSize(paragraphText, width)
 
-        if (pIndex < paragraphs.length - 1) y += 1.5
+    lines.forEach((line, index) => {
+      y = this.ensureSpace(doc, y, lineHeight + 2)
+
+      const isLastLine = index === lines.length - 1
+
+      doc.text(line, x, y, {
+        maxWidth: width,
+        align: justify && !isLastLine ? 'justify' : 'left',
       })
 
-      return y + gapAfter
-    },
+      y += lineHeight
+    })
+
+    if (pIndex < paragraphs.length - 1) y += 1.5
+  })
+
+  return y + gapAfter
+},
+addBlockText(doc, title, text, x, y, width = 178, options = {}) {
+  const t = this.pdfTheme()
+
+  if (!text) return y
+
+  y = this.addParagraph(doc, `${title}:`, x, y, width, {
+    style: 'bold',
+    fontSize: options.titleSize || 9,
+    color: t.muted,
+    gapAfter: 1,
+    justify: false,
+  })
+
+  y = this.addParagraph(doc, text, x, y, width, {
+    fontSize: options.fontSize || 8.7,
+    lineHeight: options.lineHeight || 4.7,
+    gapAfter: options.gapAfter || 3,
+    justify: true,
+  })
+
+  return y
+},
 
     addKeyValue(doc, label, value, x, y, width = 182, options = {}) {
       const t = this.pdfTheme()
@@ -828,54 +862,79 @@ export default {
         }
 
         if (languages.length) {
-          y = this.addParagraph(doc, 'Idiomas', t.marginX + 2, y, 178, {
-            style: 'bold',
-            color: t.muted,
-            gapAfter: 1,
-          })
-          y = this.addChipList(doc, languages, t.marginX + 2, y, 178)
-        }
+  y = this.addBlockText(
+    doc,
+    'Idiomas',
+    languages.join(', '),
+    t.marginX + 2,
+    y,
+    178
+  )
+}
 
-        if (otherProfs.length) {
-          y = this.addParagraph(doc, 'Competencias', t.marginX + 2, y, 178, {
-            style: 'bold',
-            color: t.muted,
-            gapAfter: 1,
-          })
-          y = this.addChipList(doc, otherProfs, t.marginX + 2, y, 178)
-        }
+if (otherProfs.length) {
+  y = this.addBlockText(
+    doc,
+    'Competencias',
+    otherProfs.join(', '),
+    t.marginX + 2,
+    y,
+    178
+  )
+}
+y = this.addSection(doc, 'Trasfondo', y)
 
-        y = this.addSection(doc, 'Trasfondo', y)
+y = this.addBlockText(
+  doc,
+  'Rasgos de personalidad',
+  c.personality_traits,
+  t.marginX + 2,
+  y,
+  178
+)
 
-        y = this.addKeyValue(doc, 'Rasgos', c.personality_traits, t.marginX + 2, y, 178, {
-          labelWidth: 28,
-        })
+y = this.addBlockText(
+  doc,
+  'Ideales',
+  c.ideals,
+  t.marginX + 2,
+  y,
+  178
+)
 
-        y = this.addKeyValue(doc, 'Ideales', c.ideals, t.marginX + 2, y, 178, {
-          labelWidth: 28,
-        })
+y = this.addBlockText(
+  doc,
+  'Vínculos',
+  c.bonds,
+  t.marginX + 2,
+  y,
+  178
+)
 
-        y = this.addKeyValue(doc, 'Vínculos', c.bonds, t.marginX + 2, y, 178, {
-          labelWidth: 28,
-        })
+y = this.addBlockText(
+  doc,
+  'Defectos',
+  c.flaws,
+  t.marginX + 2,
+  y,
+  178
+)
 
-        y = this.addKeyValue(doc, 'Defectos', c.flaws, t.marginX + 2, y, 178, {
-          labelWidth: 28,
-        })
-
-        if (c.backstory) {
-          y = this.addParagraph(doc, 'Historia', t.marginX + 2, y, 178, {
-            style: 'bold',
-            color: t.muted,
-            gapAfter: 1,
-          })
-
-          y = this.addParagraph(doc, c.backstory, t.marginX + 2, y, 178, {
-            fontSize: 8.7,
-            lineHeight: 4.7,
-            gapAfter: 2,
-          })
-        }
+if (c.backstory) {
+  y = this.addBlockText(
+    doc,
+    'Historia',
+    c.backstory,
+    t.marginX + 2,
+    y,
+    178,
+    {
+      fontSize: 8.7,
+      lineHeight: 4.7,
+      gapAfter: 2,
+    }
+  )
+}
 
         y = this.addSection(doc, 'Apariencia', y)
 
@@ -893,9 +952,14 @@ export default {
         )
 
         if (c.appearance_notes) {
-          y = this.addKeyValue(doc, 'Notas', c.appearance_notes, t.marginX + 2, y, 178, {
-            labelWidth: 24,
-          })
+          y = this.addBlockText(
+  doc,
+  'Notas de apariencia',
+  c.appearance_notes,
+  t.marginX + 2,
+  y,
+  178
+)
         }
 
         y = this.addSection(doc, 'Alianzas', y)
@@ -904,9 +968,14 @@ export default {
           labelWidth: 28,
         })
 
-        y = this.addKeyValue(doc, 'Aliados', c.allies_organizations, t.marginX + 2, y, 178, {
-          labelWidth: 28,
-        })
+        y = this.addBlockText(
+  doc,
+  'Aliados',
+  c.allies_organizations,
+  t.marginX + 2,
+  y,
+  178
+)
 
         this.addPageFooters(doc, c.name)
 
