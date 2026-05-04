@@ -7,13 +7,19 @@ const auth = require('../middleware/auth');
 // ── POST /api/auth/register ──────────────────────────────────
 router.post('/register', async(req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, email, password, role: requestedRole } = req.body;
 
         if (!username || !email || !password)
             return res.status(400).json({ message: 'Todos los campos son obligatorios' });
 
         if (password.length < 6)
             return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres' });
+
+        const allowed = ['jugador', 'dm'];
+        if (requestedRole != null && String(requestedRole).trim() !== '' && !allowed.includes(requestedRole)) {
+            return res.status(400).json({ message: 'Rol inválido. Solo se permite jugador o dm.' });
+        }
+        const role = allowed.includes(requestedRole) ? requestedRole : 'jugador';
 
         const [existing] = await db.query(
             'SELECT id FROM users WHERE email = ? OR username = ?', [email, username]
@@ -23,14 +29,14 @@ router.post('/register', async(req, res) => {
 
         const hash = await bcrypt.hash(password, 12);
         const [result] = await db.query(
-            'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [username, email, hash, 'jugador']
+            'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [username, email, hash, role]
         );
 
-        const token = jwt.sign({ id: result.insertId, username, email, role: 'jugador' },
+        const token = jwt.sign({ id: result.insertId, username, email, role },
             process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
 
-        res.status(201).json({ token, user: { id: result.insertId, username, email, role: 'jugador' } });
+        res.status(201).json({ token, user: { id: result.insertId, username, email, role } });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error del servidor' });

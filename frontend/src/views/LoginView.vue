@@ -1,8 +1,8 @@
 <template>
   <div class="auth-page">
     <div class="auth-logo">
-      <h1 class="logo-title">DnD Vault</h1>
-      <p class="logo-sub">Guarda la leyenda de tus héroes</p>
+      <h1 class="logo-title">Wachines del DnD</h1>
+      <p class="logo-sub">Guardá la leyenda de tus héroes</p>
     </div>
 
     <div class="card auth-card">
@@ -88,7 +88,10 @@ export default {
         localStorage.setItem('dnd_token', data.token)
         localStorage.setItem('dnd_user', JSON.stringify(data.user))
 
-        this.$router.push('/home')
+        const r = data.user?.role
+        if (r === 'administrador') this.$router.push('/admin')
+        else if (r === 'dm') this.$router.push('/dm')
+        else this.$router.push('/home')
       } catch (err) {
         this.error = err.response?.data?.message || 'Error al ingresar'
       } finally {

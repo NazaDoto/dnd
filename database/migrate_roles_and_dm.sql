@@ -1,12 +1,51 @@
+-- ============================================================
+--  DnD Vault — Migración roles + DM (MySQL 5.7 / 8.0)
+--  Idempotente: no borra datos. No usa IF NOT EXISTS en ALTER/INDEX
+--  (no soportado en muchas versiones de MySQL).
+-- ============================================================
+
 USE dnd_vault;
 
-START TRANSACTION;
+-- ------------------------------------------------------------
+-- 1) Columna users.role (solo si no existe)
+-- ------------------------------------------------------------
+SET @db := DATABASE();
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'ALTER TABLE users ADD COLUMN role ENUM(''administrador'',''jugador'',''dm'') NOT NULL DEFAULT ''jugador'' AFTER password',
+    'SELECT ''users.role ya existe'' AS migrate_note'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db
+    AND TABLE_NAME = 'users'
+    AND COLUMN_NAME = 'role'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS role ENUM('administrador','jugador','dm') NOT NULL DEFAULT 'jugador' AFTER password;
+-- ------------------------------------------------------------
+-- 2) Índice users(role) (solo si no existe)
+-- ------------------------------------------------------------
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'CREATE INDEX idx_users_role ON users (role)',
+    'SELECT ''idx_users_role ya existe'' AS migrate_note'
+  )
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = @db
+    AND TABLE_NAME = 'users'
+    AND INDEX_NAME = 'idx_users_role'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-
+-- ------------------------------------------------------------
+-- 3) Tablas nuevas
+-- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS dm_player_links (
   id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   dm_user_id      INT UNSIGNED NOT NULL,
@@ -16,9 +55,6 @@ CREATE TABLE IF NOT EXISTS dm_player_links (
   CONSTRAINT fk_link_dm FOREIGN KEY (dm_user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_link_player FOREIGN KEY (player_user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
-
-CREATE INDEX IF NOT EXISTS idx_links_dm ON dm_player_links(dm_user_id);
-CREATE INDEX IF NOT EXISTS idx_links_player ON dm_player_links(player_user_id);
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -34,6 +70,50 @@ CREATE TABLE IF NOT EXISTS campaigns (
   CONSTRAINT fk_campaign_dm FOREIGN KEY (dm_user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
-CREATE INDEX IF NOT EXISTS idx_campaigns_dm ON campaigns(dm_user_id);
+-- ------------------------------------------------------------
+-- 4) Índices en tablas nuevas (solo si no existen)
+-- ------------------------------------------------------------
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'CREATE INDEX idx_links_dm ON dm_player_links (dm_user_id)',
+    'SELECT ''idx_links_dm ya existe'' AS migrate_note'
+  )
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = @db
+    AND TABLE_NAME = 'dm_player_links'
+    AND INDEX_NAME = 'idx_links_dm'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
-COMMIT;
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'CREATE INDEX idx_links_player ON dm_player_links (player_user_id)',
+    'SELECT ''idx_links_player ya existe'' AS migrate_note'
+  )
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = @db
+    AND TABLE_NAME = 'dm_player_links'
+    AND INDEX_NAME = 'idx_links_player'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'CREATE INDEX idx_campaigns_dm ON campaigns (dm_user_id)',
+    'SELECT ''idx_campaigns_dm ya existe'' AS migrate_note'
+  )
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = @db
+    AND TABLE_NAME = 'campaigns'
+    AND INDEX_NAME = 'idx_campaigns_dm'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

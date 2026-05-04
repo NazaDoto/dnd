@@ -1,7 +1,7 @@
 <template>
   <div class="auth-page">
     <div class="auth-logo">
-      <h1 class="logo-title">DnD Vault</h1>
+      <h1 class="logo-title">Wachines del Dnd</h1>
       <p class="logo-sub">Únete a la aventura</p>
     </div>
 
@@ -26,6 +26,20 @@
           <input v-model="confirm" type="password" placeholder="••••••••" required />
         </div>
 
+        <div class="form-group">
+          <span class="form-label">Tipo de cuenta</span>
+          <div class="role-options">
+            <label class="check-group role-option">
+              <input v-model="role" type="radio" name="role" value="jugador" />
+              <span>Jugador (personajes, notas)</span>
+            </label>
+            <label class="check-group role-option">
+              <input v-model="role" type="radio" name="role" value="dm" />
+              <span>Maestro (DM)</span>
+            </label>
+          </div>
+        </div>
+
         <p v-if="error" class="form-error text-center mt-2">{{ error }}</p>
 
         <button type="submit" class="btn btn-primary btn-full mt-4" :disabled="loading">
@@ -48,9 +62,22 @@ export default {
   name: 'RegisterView',
   inject: ['showToast'],
   data() {
-    return { username: '', email: '', password: '', confirm: '', error: '', loading: false }
+    return {
+      username: '',
+      email: '',
+      password: '',
+      confirm: '',
+      role: 'jugador',
+      error: '',
+      loading: false
+    }
   },
   methods: {
+    homeForRole(r) {
+      if (r === 'administrador') return '/admin'
+      if (r === 'dm') return '/dm'
+      return '/home'
+    },
     async register() {
       this.error = ''
       if (this.password !== this.confirm) {
@@ -59,11 +86,16 @@ export default {
       }
       this.loading = true
       try {
-        const { data } = await authAPI.register({ username: this.username, email: this.email, password: this.password })
+        const { data } = await authAPI.register({
+          username: this.username,
+          email: this.email,
+          password: this.password,
+          role: this.role
+        })
         localStorage.setItem('dnd_token', data.token)
         localStorage.setItem('dnd_user', JSON.stringify(data.user))
-        this.showToast('¡Bienvenido, aventurero!', 'success')
-        this.$router.push('/home')
+        this.showToast('¡Cuenta creada!', 'success')
+        this.$router.push(this.homeForRole(data.user?.role))
       } catch (err) {
         this.error = err.response?.data?.message || 'Error al registrarse'
       } finally {
@@ -97,4 +129,22 @@ export default {
 .logo-sub { color: var(--text-muted); font-style: italic; margin-top: 0.25rem; }
 .auth-card { width: 100%; max-width: 380px; }
 .auth-form { display: flex; flex-direction: column; gap: 0.75rem; }
+.role-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+.role-option {
+  align-items: flex-start;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+}
+.role-option span:last-child {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
 </style>
