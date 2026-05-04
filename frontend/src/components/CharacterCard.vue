@@ -33,7 +33,7 @@
         :disabled="downloadingPdf"
         @click.stop="downloadPdf"
       >
-        {{ downloadingPdf ? '...' : 'PDF' }}
+        {{ downloadingPdf ? "..." : "PDF" }}
       </button>
 
       <span class="action-arrow">›</span>
@@ -42,492 +42,551 @@
 </template>
 
 <script>
-import jsPDF from 'jspdf'
-import { CLASSES, ATTRIBUTES, SKILLS, getModifier, formatModifier } from '../services/dndData.js'
-import { charactersAPI } from '../services/api.js'
+import jsPDF from "jspdf";
+import {
+  CLASSES,
+  ATTRIBUTES,
+  SKILLS,
+  getModifier,
+  formatModifier,
+} from "../services/dndData.js";
+import { charactersAPI } from "../services/api.js";
 
 export default {
-  name: 'CharacterCard',
-  emits: ['click'],
+  name: "CharacterCard",
+  emits: ["click"],
   props: {
-    character: { type: Object, required: true }
+    character: { type: Object, required: true },
   },
   data() {
     return {
-      downloadingPdf: false
-    }
+      downloadingPdf: false,
+    };
   },
   computed: {
     classLabel() {
-      const cls = CLASSES.find(c => c.value === this.character.class)
-      return cls ? cls.label : this.character.class
+      const cls = CLASSES.find((c) => c.value === this.character.class);
+      return cls ? cls.label : this.character.class;
     },
     hpClass() {
-      const max = this.character.hit_points_max || 1
-      const pct = this.character.hit_points_current / max
+      const max = this.character.hit_points_max || 1;
+      const pct = this.character.hit_points_current / max;
 
-      if (pct > 0.5) return 'hp-ok'
-      if (pct > 0.25) return 'hp-warn'
-      return 'hp-danger'
-    }
+      if (pct > 0.5) return "hp-ok";
+      if (pct > 0.25) return "hp-warn";
+      return "hp-danger";
+    },
   },
   methods: {
     safeArray(value) {
-      if (Array.isArray(value)) return value
+      if (Array.isArray(value)) return value;
 
-      if (typeof value === 'string' && value.trim()) {
+      if (typeof value === "string" && value.trim()) {
         try {
-          const parsed = JSON.parse(value)
-          return Array.isArray(parsed) ? parsed : []
+          const parsed = JSON.parse(value);
+          return Array.isArray(parsed) ? parsed : [];
         } catch {
-          return []
+          return [];
         }
       }
 
-      return []
+      return [];
     },
 
     getCharacterId() {
-      return this.character.id || this.character.character_id || this.character.characterId
+      return (
+        this.character.id ||
+        this.character.character_id ||
+        this.character.characterId
+      );
     },
 
     getClassLabel(value) {
-      const cls = CLASSES.find(c => c.value === value)
-      return cls ? cls.label : value || '—'
+      const cls = CLASSES.find((c) => c.value === value);
+      return cls ? cls.label : value || "—";
     },
 
     getAttrLabel(key) {
-      const attr = ATTRIBUTES.find(a => a.key === key)
-      return attr ? attr.label : key
+      const attr = ATTRIBUTES.find((a) => a.key === key);
+      return attr ? attr.label : key;
     },
 
     getSkillLabel(key) {
-      const sk = SKILLS.find(s => s.key === key)
-      return sk ? sk.label : key
+      const sk = SKILLS.find((s) => s.key === key);
+      return sk ? sk.label : key;
     },
 
     getSkillBonus(character, sk) {
-      const skillsProf = this.safeArray(character.skills_prof)
-      const skillsExpertise = this.safeArray(character.skills_expertise)
+      const skillsProf = this.safeArray(character.skills_prof);
+      const skillsExpertise = this.safeArray(character.skills_expertise);
 
-      const mod = getModifier(character?.[sk.attr] || 10)
-      const pb = character?.proficiency_bonus || 2
+      const mod = getModifier(character?.[sk.attr] || 10);
+      const pb = character?.proficiency_bonus || 2;
 
-      let bonus = mod
-      if (skillsExpertise.includes(sk.key)) bonus += pb * 2
-      else if (skillsProf.includes(sk.key)) bonus += pb
+      let bonus = mod;
+      if (skillsExpertise.includes(sk.key)) bonus += pb * 2;
+      else if (skillsProf.includes(sk.key)) bonus += pb;
 
-      return formatModifier(bonus)
+      return formatModifier(bonus);
     },
 
     addSection(doc, title, y) {
       if (y > 260) {
-        doc.addPage()
-        y = 18
+        doc.addPage();
+        y = 18;
       }
 
-      doc.setFillColor(42, 36, 27)
-      doc.rect(14, y, 182, 8, 'F')
+      doc.setFillColor(42, 36, 27);
+      doc.rect(14, y, 182, 8, "F");
 
-      doc.setTextColor(245, 198, 102)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.text(title.toUpperCase(), 18, y + 5.5)
+      doc.setTextColor(245, 198, 102);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(title.toUpperCase(), 18, y + 5.5);
 
-      doc.setTextColor(35, 35, 35)
+      doc.setTextColor(35, 35, 35);
 
-      return y + 14
+      return y + 14;
     },
 
     addTextBlock(doc, text, x, y, maxWidth = 178, lineHeight = 5) {
-      if (!text) return y
+      if (!text) return y;
 
-      const lines = doc.splitTextToSize(String(text), maxWidth)
+      const lines = doc.splitTextToSize(String(text), maxWidth);
 
-      lines.forEach(line => {
+      lines.forEach((line) => {
         if (y > 280) {
-          doc.addPage()
-          y = 18
+          doc.addPage();
+          y = 18;
         }
 
-        doc.text(line, x, y)
-        y += lineHeight
-      })
+        doc.text(line, x, y);
+        y += lineHeight;
+      });
 
-      return y
+      return y;
     },
 
     addKeyValue(doc, label, value, x, y, width = 85) {
-      if (y > 280) {
-        doc.addPage()
-        y = 18
-      }
+  if (y > 280) {
+    doc.addPage()
+    y = 18
+  }
 
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(80, 70, 55)
-      doc.text(label + ': ', x, y)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(80, 70, 55)
 
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(35, 35, 35)
+  const labelText = label + ':'
+  doc.text(labelText, x, y)
 
-      const labelWidth = doc.getTextWidth(label + ': ')
-      const text = value === null || value === undefined || value === '' ? '—' : String(value)
-      const lines = doc.splitTextToSize(text, width - labelWidth)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(35, 35, 35)
 
-      doc.text(lines, x + labelWidth, y)
+  const gap = 2.2
+  const labelWidth = doc.getTextWidth(labelText)
+  const text = value === null || value === undefined || value === '' ? '-' : String(value)
+  const lines = doc.splitTextToSize(text, width - labelWidth - gap)
 
-      return y + Math.max(6, lines.length * 5)
-    },
+  doc.text(lines, x + labelWidth + gap, y)
+
+  return y + Math.max(6, lines.length * 5)
+},
 
     async downloadPdf() {
-      const id = this.getCharacterId()
+      const id = this.getCharacterId();
 
       if (!id) {
-        alert('No se encontró el ID del personaje.')
-        return
+        alert("No se encontró el ID del personaje.");
+        return;
       }
 
-      this.downloadingPdf = true
+      this.downloadingPdf = true;
 
       try {
-        const { data } = await charactersAPI.getFull(id)
-        const c = data
+        const { data } = await charactersAPI.getFull(id);
+        const c = data;
 
         const doc = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        })
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
 
-        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageWidth = doc.internal.pageSize.getWidth();
 
-        const attacks = this.safeArray(c.attacks_spellcasting)
-        const equipment = this.safeArray(c.equipment)
-        const features = this.safeArray(c.features_traits)
-        const languages = this.safeArray(c.languages)
-        const otherProfs = this.safeArray(c.other_proficiencies)
-        const savingThrows = this.safeArray(c.saving_throws_prof)
-        const skillsProf = this.safeArray(c.skills_prof)
-        const skillsExpertise = this.safeArray(c.skills_expertise)
+        const attacks = this.safeArray(c.attacks_spellcasting);
+        const equipment = this.safeArray(c.equipment);
+        const features = this.safeArray(c.features_traits);
+        const languages = this.safeArray(c.languages);
+        const otherProfs = this.safeArray(c.other_proficiencies);
+        const savingThrows = this.safeArray(c.saving_throws_prof);
+        const skillsProf = this.safeArray(c.skills_prof);
+        const skillsExpertise = this.safeArray(c.skills_expertise);
 
-        let y = 18
+        let y = 18;
 
-        doc.setFillColor(31, 27, 20)
-        doc.rect(0, 0, pageWidth, 34, 'F')
+        doc.setFillColor(31, 27, 20);
+        doc.rect(0, 0, pageWidth, 34, "F");
 
-        doc.setTextColor(245, 198, 102)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(22)
-        doc.text(c.name || 'Personaje', 14, 16)
+        doc.setTextColor(245, 198, 102);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(22);
+        doc.text(c.name || "Personaje", 14, 16);
 
-        doc.setFontSize(10)
-        doc.setTextColor(230, 220, 200)
+        doc.setFontSize(10);
+        doc.setTextColor(230, 220, 200);
         doc.text(
-          `${c.race || '—'}${c.subrace ? ` (${c.subrace})` : ''} · ${this.getClassLabel(c.class)} · Nivel ${c.level || 1}`,
+          `${c.race || "—"}${c.subrace ? ` (${c.subrace})` : ""} · ${this.getClassLabel(c.class)} · Nivel ${c.level || 1}`,
           14,
-          24
-        )
+          24,
+        );
 
         if (c.background || c.alignment) {
-          doc.text(`${c.background || '—'} · ${c.alignment || '—'}`, 14, 30)
+          doc.text(`${c.background || "—"} · ${c.alignment || "—"}`, 14, 30);
         }
 
-        y = 44
+        y = 44;
 
-        y = this.addSection(doc, 'Datos principales', y)
-        doc.setFontSize(9)
+        y = this.addSection(doc, "Datos principales", y);
+        doc.setFontSize(9);
 
-        y = this.addKeyValue(doc, 'Nombre', c.name, 16, y)
-        y = this.addKeyValue(doc, 'Raza', `${c.race || '—'}${c.subrace ? ` (${c.subrace})` : ''}`, 16, y)
-        y = this.addKeyValue(doc, 'Clase', this.getClassLabel(c.class), 16, y)
-        y = this.addKeyValue(doc, 'Nivel', c.level, 16, y)
-        y = this.addKeyValue(doc, 'Trasfondo', c.background, 16, y)
-        y = this.addKeyValue(doc, 'Alineamiento', c.alignment, 16, y)
-        y = this.addKeyValue(doc, 'XP', c.experience_points || 0, 16, y)
+        y = this.addKeyValue(doc, "Nombre", c.name, 16, y);
+        y = this.addKeyValue(
+          doc,
+          "Raza",
+          `${c.race || "—"}${c.subrace ? ` (${c.subrace})` : ""}`,
+          16,
+          y,
+        );
+        y = this.addKeyValue(doc, "Clase", this.getClassLabel(c.class), 16, y);
+        y = this.addKeyValue(doc, "Nivel", c.level, 16, y);
+        y = this.addKeyValue(doc, "Trasfondo", c.background, 16, y);
+        y = this.addKeyValue(doc, "Alineamiento", c.alignment, 16, y);
+        y = this.addKeyValue(doc, "XP", c.experience_points || 0, 16, y);
 
-        y += 3
-        y = this.addSection(doc, 'Combate', y)
+        y += 3;
+        y = this.addSection(doc, "Combate", y);
 
         const combat = [
-          ['PV', `${c.hit_points_current || 0}/${c.hit_points_max || 0}`],
-          ['PV temp.', c.hit_points_temp || 0],
-          ['CA', c.armor_class || '—'],
-          ['Iniciativa', formatModifier(c.initiative || 0)],
-          ['Velocidad', `${c.speed || 0} ft`],
-          ['B. competencia', formatModifier(c.proficiency_bonus || 2)]
-        ]
+          ["PV", `${c.hit_points_current || 0}/${c.hit_points_max || 0}`],
+          ["PV temp.", c.hit_points_temp || 0],
+          ["CA", c.armor_class || "—"],
+          ["Iniciativa", formatModifier(c.initiative || 0)],
+          ["Velocidad", `${c.speed || 0} ft`],
+          ["B. competencia", formatModifier(c.proficiency_bonus || 2)],
+        ];
 
-        let x = 16
+        let x = 16;
         combat.forEach((item, index) => {
           if (index > 0 && index % 3 === 0) {
-            x = 16
-            y += 16
+            x = 16;
+            y += 16;
           }
 
-          doc.setFillColor(245, 242, 235)
-          doc.roundedRect(x, y, 55, 11, 2, 2, 'F')
+          doc.setFillColor(245, 242, 235);
+          doc.roundedRect(x, y, 55, 11, 2, 2, "F");
 
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(80, 70, 55)
-          doc.setFontSize(7)
-          doc.text(item[0].toUpperCase(), x + 3, y + 4)
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80, 70, 55);
+          doc.setFontSize(7);
+          doc.text(item[0].toUpperCase(), x + 3, y + 4);
 
-          doc.setFontSize(11)
-          doc.setTextColor(35, 35, 35)
-          doc.text(String(item[1]), x + 3, y + 9)
+          doc.setFontSize(11);
+          doc.setTextColor(35, 35, 35);
+          doc.text(String(item[1]), x + 3, y + 9);
 
-          x += 60
-        })
+          x += 60;
+        });
 
-        y += 20
-        y = this.addSection(doc, 'Atributos', y)
+        y += 20;
+        y = this.addSection(doc, "Atributos", y);
 
-        x = 16
-        ATTRIBUTES.forEach(attr => {
-          const value = c[attr.key] || 10
-          const mod = formatModifier(getModifier(value))
+        x = 16;
+        ATTRIBUTES.forEach((attr) => {
+          const value = c[attr.key] || 10;
+          const mod = formatModifier(getModifier(value));
 
-          doc.setFillColor(245, 242, 235)
-          doc.roundedRect(x, y, 26, 18, 2, 2, 'F')
+          doc.setFillColor(245, 242, 235);
+          doc.roundedRect(x, y, 26, 18, 2, 2, "F");
 
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(80, 70, 55)
-          doc.setFontSize(7)
-          doc.text((attr.short || attr.label).toUpperCase(), x + 13, y + 5, { align: 'center' })
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80, 70, 55);
+          doc.setFontSize(7);
+          doc.text((attr.short || attr.label).toUpperCase(), x + 13, y + 5, {
+            align: "center",
+          });
 
-          doc.setFontSize(13)
-          doc.setTextColor(35, 35, 35)
-          doc.text(String(value), x + 13, y + 11, { align: 'center' })
+          doc.setFontSize(13);
+          doc.setTextColor(35, 35, 35);
+          doc.text(String(value), x + 13, y + 11, { align: "center" });
 
-          doc.setFontSize(8)
-          doc.setTextColor(120, 105, 80)
-          doc.text(mod, x + 13, y + 16, { align: 'center' })
+          doc.setFontSize(8);
+          doc.setTextColor(120, 105, 80);
+          doc.text(mod, x + 13, y + 16, { align: "center" });
 
-          x += 30
-        })
+          x += 30;
+        });
 
-        y += 28
-        y = this.addSection(doc, 'Salvaciones y habilidades', y)
+        y += 28;
+        y = this.addSection(doc, "Salvaciones y habilidades", y);
 
-        doc.setFontSize(9)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(80, 70, 55)
-        doc.text('Salvaciones competentes: ', 16, y)
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(80, 70, 55);
+        doc.text("Salvaciones competentes: ", 16, y);
 
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(35, 35, 35)
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(35, 35, 35);
 
         const savesText = savingThrows.length
-          ? savingThrows.map(this.getAttrLabel).join(', ')
-          : 'Ninguna'
+          ? savingThrows.map(this.getAttrLabel).join(", ")
+          : "Ninguna";
 
-        y = this.addTextBlock(doc, savesText, 16, y + 6, 178)
+        y = this.addTextBlock(doc, savesText, 16, y + 6, 178);
 
-        y += 3
+        y += 3;
 
-        doc.setFont('helvetica', 'bold')
-doc.setTextColor(80, 70, 55)
-doc.text('Habilidades: ', 16, y)
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(80, 70, 55);
+        doc.text("Habilidades: ", 16, y);
 
-y += 6
+        y += 6;
 
-doc.setFont('helvetica', 'italic')
-doc.setTextColor(120, 105, 80)
-doc.text('[P] Competente   [E] Experto   [ ] Sin competencia', 18, y)
-y += 7
+        doc.setFont("helvetica", "italic");
+        doc.setTextColor(120, 105, 80);
+        doc.text("[P] Competente   [E] Experto   [ ] Sin competencia", 18, y);
+        y += 7;
 
-doc.setFont('helvetica', 'normal')
-doc.setTextColor(35, 35, 35)
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(35, 35, 35);
 
-        SKILLS.forEach(sk => {
+        SKILLS.forEach((sk) => {
           if (y > 276) {
-            doc.addPage()
-            y = 18
+            doc.addPage();
+            y = 18;
           }
 
-          const isProf = skillsProf.includes(sk.key)
-const isExpert = skillsExpertise.includes(sk.key)
-const mark = isExpert ? '[E]' : isProf ? '[P]' : '[ ]'
+          const isProf = skillsProf.includes(sk.key);
+          const isExpert = skillsExpertise.includes(sk.key);
+          const mark = isExpert ? "[E]" : isProf ? "[P]" : "[ ]";
 
-doc.text(
-  `${mark} ${sk.label} (${this.getAttrLabel(sk.attr)}) ${this.getSkillBonus(c, sk)}`,
-  18,
-  y
-)
+          doc.text(
+            `${mark} ${sk.label} (${this.getAttrLabel(sk.attr)}) ${this.getSkillBonus(c, sk)}`,
+            18,
+            y,
+          );
 
-          y += 5
-        })
+          y += 5;
+        });
 
-        y += 3
-        y = this.addSection(doc, 'Ataques', y)
+        y += 3;
+        y = this.addSection(doc, "Ataques", y);
 
-        doc.setFontSize(9)
+        doc.setFontSize(9);
         if (attacks.length) {
-          attacks.forEach(atk => {
-            const line = `${atk.name || 'Ataque'} · ${atk.bonus || '+0'} · ${atk.damage || '—'} ${atk.type || ''}`
-            y = this.addTextBlock(doc, line, 16, y, 178)
-            y += 2
-          })
+          attacks.forEach((atk) => {
+            const line = `${atk.name || "Ataque"} · ${atk.bonus || "+0"} · ${atk.damage || "—"} ${atk.type || ""}`;
+            y = this.addTextBlock(doc, line, 16, y, 178);
+            y += 2;
+          });
         } else {
-          y = this.addTextBlock(doc, 'Sin ataques registrados.', 16, y, 178)
+          y = this.addTextBlock(doc, "Sin ataques registrados.", 16, y, 178);
         }
 
-        y += 3
-        y = this.addSection(doc, 'Magia', y)
+        y += 3;
+        y = this.addSection(doc, "Magia", y);
 
-        y = this.addKeyValue(doc, 'Característica', this.getAttrLabel(c.spellcasting_ability), 16, y)
-        y = this.addKeyValue(doc, 'CD salvación', c.spell_save_dc, 16, y)
-        y = this.addKeyValue(doc, 'Ataque conjuro', c.spell_attack_bonus ? `+${c.spell_attack_bonus}` : '—', 16, y)
+        y = this.addKeyValue(
+          doc,
+          "Característica",
+          this.getAttrLabel(c.spellcasting_ability),
+          16,
+          y,
+        );
+        y = this.addKeyValue(doc, "CD salvación", c.spell_save_dc, 16, y);
+        y = this.addKeyValue(
+          doc,
+          "Ataque conjuro",
+          c.spell_attack_bonus ? `+${c.spell_attack_bonus}` : "—",
+          16,
+          y,
+        );
 
         if (c.spells_notes) {
-          y += 2
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(80, 70, 55)
-          doc.text('Conjuros / notas: ', 16, y)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(35, 35, 35)
-          y = this.addTextBlock(doc, c.spells_notes, 16, y + 6, 178)
+          y += 2;
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80, 70, 55);
+          doc.text("Conjuros / notas: ", 16, y);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(35, 35, 35);
+          y = this.addTextBlock(doc, c.spells_notes, 16, y + 6, 178);
         }
 
-        y += 3
-        y = this.addSection(doc, 'Equipo', y)
+        y += 3;
+        y = this.addSection(doc, "Equipo", y);
 
-        y = this.addKeyValue(doc, 'PC', c.copper_pieces || 0, 16, y)
-        y = this.addKeyValue(doc, 'PP', c.silver_pieces || 0, 16, y)
-        y = this.addKeyValue(doc, 'PE', c.electrum_pieces || 0, 16, y)
-        y = this.addKeyValue(doc, 'PO', c.gold_pieces || 0, 16, y)
-        y = this.addKeyValue(doc, 'PPl', c.platinum_pieces || 0, 16, y)
+        y = this.addKeyValue(doc, "PC", c.copper_pieces || 0, 16, y);
+        y = this.addKeyValue(doc, "PP", c.silver_pieces || 0, 16, y);
+        y = this.addKeyValue(doc, "PE", c.electrum_pieces || 0, 16, y);
+        y = this.addKeyValue(doc, "PO", c.gold_pieces || 0, 16, y);
+        y = this.addKeyValue(doc, "PPl", c.platinum_pieces || 0, 16, y);
 
-        y += 2
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(80, 70, 55)
-        doc.text('Equipo: ', 16, y)
+        y += 2;
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(80, 70, 55);
+        doc.text("Equipo: ", 16, y);
 
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(35, 35, 35)
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(35, 35, 35);
 
         const equipmentText = equipment.length
           ? equipment
-              .map(item => {
-                if (typeof item === 'string') return item
-                return `${item.name || 'Objeto'}${item.qty ? ` x${item.qty}` : ''}`
+              .map((item) => {
+                if (typeof item === "string") return item;
+                return `${item.name || "Objeto"}${item.qty ? ` x${item.qty}` : ""}`;
               })
-              .join('\n')
-          : 'Sin equipo registrado.'
+              .join("\n")
+          : "Sin equipo registrado.";
 
-        y = this.addTextBlock(doc, equipmentText, 16, y + 6, 178)
+        y = this.addTextBlock(doc, equipmentText, 16, y + 6, 178);
 
         if (c.treasure) {
-          y += 2
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(80, 70, 55)
-          doc.text('Tesoros: ', 16, y)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(35, 35, 35)
-          y = this.addTextBlock(doc, c.treasure, 16, y + 6, 178)
+          y += 2;
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80, 70, 55);
+          doc.text("Tesoros: ", 16, y);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(35, 35, 35);
+          y = this.addTextBlock(doc, c.treasure, 16, y + 6, 178);
         }
 
-        y += 3
-        y = this.addSection(doc, 'Rasgos, idiomas y competencias', y)
+        y += 3;
+        y = this.addSection(doc, "Rasgos, idiomas y competencias", y);
 
         if (features.length) {
-          features.forEach(feat => {
-            const name = typeof feat === 'string' ? feat : feat.name
-            const desc = typeof feat === 'string' ? '' : feat.description
+          features.forEach((feat) => {
+            const name = typeof feat === "string" ? feat : feat.name;
+            const desc = typeof feat === "string" ? "" : feat.description;
 
-            doc.setFont('helvetica', 'bold')
-            doc.setTextColor(80, 70, 55)
-            y = this.addTextBlock(doc, name || 'Rasgo', 16, y, 178)
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(80, 70, 55);
+            y = this.addTextBlock(doc, name || "Rasgo", 16, y, 178);
 
             if (desc) {
-              doc.setFont('helvetica', 'normal')
-              doc.setTextColor(35, 35, 35)
-              y = this.addTextBlock(doc, desc, 18, y, 174)
+              doc.setFont("helvetica", "normal");
+              doc.setTextColor(35, 35, 35);
+              y = this.addTextBlock(doc, desc, 18, y, 174);
             }
 
-            y += 2
-          })
+            y += 2;
+          });
         } else {
-          y = this.addTextBlock(doc, 'Sin rasgos registrados.', 16, y, 178)
+          y = this.addTextBlock(doc, "Sin rasgos registrados.", 16, y, 178);
         }
 
-        y += 2
-        y = this.addKeyValue(doc, 'Idiomas', languages.length ? languages.join(', ') : '—', 16, y)
-        y = this.addKeyValue(doc, 'Competencias', otherProfs.length ? otherProfs.join(', ') : '—', 16, y)
+        y += 2;
+        y = this.addKeyValue(
+          doc,
+          "Idiomas",
+          languages.length ? languages.join(", ") : "—",
+          16,
+          y,
+        );
+        y = this.addKeyValue(
+          doc,
+          "Competencias",
+          otherProfs.length ? otherProfs.join(", ") : "—",
+          16,
+          y,
+        );
 
-        y += 3
-        y = this.addSection(doc, 'Trasfondo', y)
+        y += 3;
+        y = this.addSection(doc, "Trasfondo", y);
 
-        y = this.addKeyValue(doc, 'Rasgos personalidad', c.personality_traits, 16, y, 178)
-        y = this.addKeyValue(doc, 'Ideales', c.ideals, 16, y, 178)
-        y = this.addKeyValue(doc, 'Vínculos', c.bonds, 16, y, 178)
-        y = this.addKeyValue(doc, 'Defectos', c.flaws, 16, y, 178)
+        y = this.addKeyValue(
+          doc,
+          "Rasgos personalidad",
+          c.personality_traits,
+          16,
+          y,
+          178,
+        );
+        y = this.addKeyValue(doc, "Ideales", c.ideals, 16, y, 178);
+        y = this.addKeyValue(doc, "Vínculos", c.bonds, 16, y, 178);
+        y = this.addKeyValue(doc, "Defectos", c.flaws, 16, y, 178);
 
         if (c.backstory) {
-          y += 2
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(80, 70, 55)
-          doc.text('Historia: ', 16, y)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(35, 35, 35)
-          y = this.addTextBlock(doc, c.backstory, 16, y + 6, 178)
+          y += 2;
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80, 70, 55);
+          doc.text("Historia: ", 16, y);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(35, 35, 35);
+          y = this.addTextBlock(doc, c.backstory, 16, y + 6, 178);
         }
 
-        y += 3
-        y = this.addSection(doc, 'Apariencia', y)
+        y += 3;
+        y = this.addSection(doc, "Apariencia", y);
 
-        y = this.addKeyValue(doc, 'Edad', c.age, 16, y)
-        y = this.addKeyValue(doc, 'Altura', c.height, 16, y)
-        y = this.addKeyValue(doc, 'Peso', c.weight, 16, y)
-        y = this.addKeyValue(doc, 'Ojos', c.eyes, 16, y)
-        y = this.addKeyValue(doc, 'Piel', c.skin, 16, y)
-        y = this.addKeyValue(doc, 'Cabello', c.hair, 16, y)
+        y = this.addKeyValue(doc, "Edad", c.age, 16, y);
+        y = this.addKeyValue(doc, "Altura", c.height, 16, y);
+        y = this.addKeyValue(doc, "Peso", c.weight, 16, y);
+        y = this.addKeyValue(doc, "Ojos", c.eyes, 16, y);
+        y = this.addKeyValue(doc, "Piel", c.skin, 16, y);
+        y = this.addKeyValue(doc, "Cabello", c.hair, 16, y);
 
         if (c.appearance_notes) {
-          y += 2
-          doc.setFont('helvetica', 'bold')
-          doc.setTextColor(80, 70, 55)
-          doc.text('Notas de apariencia: ', 16, y)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(35, 35, 35)
-          y = this.addTextBlock(doc, c.appearance_notes, 16, y + 6, 178)
+          y += 2;
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(80, 70, 55);
+          doc.text("Notas de apariencia: ", 16, y);
+          doc.setFont("helvetica", "normal");
+          doc.setTextColor(35, 35, 35);
+          y = this.addTextBlock(doc, c.appearance_notes, 16, y + 6, 178);
         }
 
-        y += 3
-        y = this.addSection(doc, 'Alianzas', y)
+        y += 3;
+        y = this.addSection(doc, "Alianzas", y);
 
-        y = this.addKeyValue(doc, 'Facción', c.faction, 16, y, 178)
-        y = this.addKeyValue(doc, 'Aliados', c.allies_organizations, 16, y, 178)
+        y = this.addKeyValue(doc, "Facción", c.faction, 16, y, 178);
+        y = this.addKeyValue(
+          doc,
+          "Aliados",
+          c.allies_organizations,
+          16,
+          y,
+          178,
+        );
 
-        const pageCount = doc.internal.getNumberOfPages()
+        const pageCount = doc.internal.getNumberOfPages();
 
         for (let i = 1; i <= pageCount; i++) {
-          doc.setPage(i)
-          doc.setFontSize(8)
-          doc.setTextColor(130, 120, 105)
+          doc.setPage(i);
+          doc.setFontSize(8);
+          doc.setTextColor(130, 120, 105);
           doc.text(
-            `${c.name || 'Personaje'} · Página ${i} de ${pageCount}`,
+            `${c.name || "Personaje"} · Página ${i} de ${pageCount}`,
             pageWidth / 2,
             290,
-            { align: 'center' }
-          )
+            { align: "center" },
+          );
         }
 
-        const filename = `${String(c.name || 'personaje')
+        const filename = `${String(c.name || "personaje")
           .toLowerCase()
-          .replace(/\s+/g, '-')
-          .replace(/[^a-z0-9-_]/g, '')}.pdf`
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-_]/g, "")}.pdf`;
 
-        doc.save(filename)
+        doc.save(filename);
       } catch (error) {
-        console.error(error)
-        alert('No se pudo generar el PDF del personaje.')
+        console.error(error);
+        alert("No se pudo generar el PDF del personaje.");
       } finally {
-        this.downloadingPdf = false
+        this.downloadingPdf = false;
       }
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -548,7 +607,7 @@ doc.text(
 }
 
 .char-card::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 0;
   top: 0;
