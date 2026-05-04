@@ -312,7 +312,7 @@ export default {
         doc.setFontSize(9)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(80, 70, 55)
-        doc.text('Salvaciones competentes:', 16, y)
+        doc.text('Salvaciones competentes: ', 16, y)
 
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(35, 35, 35)
@@ -327,7 +327,7 @@ export default {
 
         doc.setFont('helvetica', 'bold')
 doc.setTextColor(80, 70, 55)
-doc.text('Habilidades:', 16, y)
+doc.text('Habilidades: ', 16, y)
 
 y += 6
 
@@ -383,7 +383,7 @@ doc.text(
           y += 2
           doc.setFont('helvetica', 'bold')
           doc.setTextColor(80, 70, 55)
-          doc.text('Conjuros / notas:', 16, y)
+          doc.text('Conjuros / notas: ', 16, y)
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(35, 35, 35)
           y = this.addTextBlock(doc, c.spells_notes, 16, y + 6, 178)
@@ -401,7 +401,7 @@ doc.text(
         y += 2
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(80, 70, 55)
-        doc.text('Equipo:', 16, y)
+        doc.text('Equipo: ', 16, y)
 
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(35, 35, 35)
@@ -421,7 +421,7 @@ doc.text(
           y += 2
           doc.setFont('helvetica', 'bold')
           doc.setTextColor(80, 70, 55)
-          doc.text('Tesoros:', 16, y)
+          doc.text('Tesoros: ', 16, y)
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(35, 35, 35)
           y = this.addTextBlock(doc, c.treasure, 16, y + 6, 178)
@@ -467,7 +467,7 @@ doc.text(
           y += 2
           doc.setFont('helvetica', 'bold')
           doc.setTextColor(80, 70, 55)
-          doc.text('Historia:', 16, y)
+          doc.text('Historia: ', 16, y)
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(35, 35, 35)
           y = this.addTextBlock(doc, c.backstory, 16, y + 6, 178)
@@ -487,7 +487,7 @@ doc.text(
           y += 2
           doc.setFont('helvetica', 'bold')
           doc.setTextColor(80, 70, 55)
-          doc.text('Notas de apariencia:', 16, y)
+          doc.text('Notas de apariencia: ', 16, y)
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(35, 35, 35)
           y = this.addTextBlock(doc, c.appearance_notes, 16, y + 6, 178)
