@@ -29,6 +29,7 @@ api.interceptors.response.use(
 export const authAPI = {
     register: (data) => api.post('/auth/register', data),
     login: (data) => api.post('/auth/login', data),
+    me: () => api.get('/auth/me'),
 }
 
 // ── Characters ───────────────────────────────────────────────
@@ -47,6 +48,23 @@ export const notesAPI = {
     create: (charId, data) => api.post(`/notes/${charId}`, data),
     update: (noteId, data) => api.put(`/notes/${noteId}`, data),
     delete: (noteId) => api.delete(`/notes/${noteId}`),
+}
+
+export const adminAPI = {
+    getUsers: () => api.get('/admin/users'),
+    updateUserRole: (id, role) => api.put(`/admin/users/${id}/role`, { role }),
+    getLinks: () => api.get('/admin/dm-links'),
+    createLink: (dm_user_id, player_user_id) => api.post('/admin/dm-links', { dm_user_id, player_user_id }),
+    deleteLink: (id) => api.delete(`/admin/dm-links/${id}`),
+}
+
+export const dmAPI = {
+    getCampaigns: () => api.get('/dm/campaigns'),
+    createCampaign: (payload) => api.post('/dm/campaigns', payload),
+    updateCampaign: (id, payload) => api.put(`/dm/campaigns/${id}`, payload),
+    deleteCampaign: (id) => api.delete(`/dm/campaigns/${id}`),
+    getPlayers: () => api.get('/dm/players'),
+    getCharacters: () => api.get('/dm/characters'),
 }
 
 export default api

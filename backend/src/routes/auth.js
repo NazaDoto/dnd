@@ -2,6 +2,7 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../config/db');
+const auth = require('../middleware/auth');
 
 // ── POST /api/auth/register ──────────────────────────────────
 router.post('/register', async(req, res) => {
@@ -22,14 +23,14 @@ router.post('/register', async(req, res) => {
 
         const hash = await bcrypt.hash(password, 12);
         const [result] = await db.query(
-            'INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hash]
+            'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [username, email, hash, 'jugador']
         );
 
-        const token = jwt.sign({ id: result.insertId, username, email },
+        const token = jwt.sign({ id: result.insertId, username, email, role: 'jugador' },
             process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
 
-        res.status(201).json({ token, user: { id: result.insertId, username, email } });
+        res.status(201).json({ token, user: { id: result.insertId, username, email, role: 'jugador' } });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error del servidor' });
@@ -57,7 +58,7 @@ router.post('/login', async(req, res) => {
             return res.status(401).json({ message: 'Credenciales incorrectas' });
 
         const token = jwt.sign(
-            { id: user.id, username: user.username, email: user.email },
+            { id: user.id, username: user.username, email: user.email, role: user.role || 'jugador' },
             process.env.JWT_SECRET,
             { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
         );
@@ -67,9 +68,24 @@ router.post('/login', async(req, res) => {
             user: {
                 id: user.id,
                 username: user.username,
-                email: user.email
+                email: user.email,
+                role: user.role || 'jugador'
             }
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+});
+
+router.get('/me', auth, async(req, res) => {
+    try {
+        const [rows] = await db.query(
+            'SELECT id, username, email, role, created_at FROM users WHERE id = ?',
+            [req.user.id]
+        );
+        if (!rows.length) return res.status(404).json({ message: 'Usuario no encontrado' });
+        res.json(rows[0]);
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error del servidor' });

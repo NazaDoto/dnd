@@ -4,7 +4,6 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-console.log(process.env.DB_PASSWORD);
 // ── CORS ─────────────────────────────────────────────────────
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -22,6 +21,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/characters', require('./routes/characters'));
 app.use('/api/notes', require('./routes/notes'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/dm', require('./routes/dm'));
 
 // ── Health check ─────────────────────────────────────────────
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date() }));

@@ -53,6 +53,14 @@ export default {
   async mounted() {
     const stored = localStorage.getItem('dnd_user')
     if (stored) this.user = JSON.parse(stored)
+    if (this.user?.role === 'administrador') {
+      this.$router.replace('/admin')
+      return
+    }
+    if (this.user?.role === 'dm') {
+      this.$router.replace('/dm')
+      return
+    }
     await this.loadCharacters()
   },
   methods: {

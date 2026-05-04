@@ -1,10 +1,10 @@
 <template>
   <nav class="navbar">
-    <RouterLink to="/home" class="nav-item" active-class="active">
+    <RouterLink :to="homePath" class="nav-item" active-class="active">
       <span class="nav-icon">⚔️</span>
-      <span class="nav-label">Personajes</span>
+      <span class="nav-label">{{ homeLabel }}</span>
     </RouterLink>
-    <RouterLink to="/character/new" class="nav-item nav-create" active-class="active">
+    <RouterLink v-if="isPlayer" to="/character/new" class="nav-item nav-create" active-class="active">
       <span class="nav-icon-create">＋</span>
     </RouterLink>
     <button class="nav-item" @click="logout">
@@ -17,6 +17,32 @@
 <script>
 export default {
   name: 'NavBar',
+  computed: {
+    user() {
+      const raw = localStorage.getItem('dnd_user')
+      try {
+        return raw ? JSON.parse(raw) : null
+      } catch {
+        return null
+      }
+    },
+    role() {
+      return this.user?.role || 'jugador'
+    },
+    isPlayer() {
+      return this.role === 'jugador'
+    },
+    homePath() {
+      if (this.role === 'administrador') return '/admin'
+      if (this.role === 'dm') return '/dm'
+      return '/home'
+    },
+    homeLabel() {
+      if (this.role === 'administrador') return 'Admin'
+      if (this.role === 'dm') return 'DM'
+      return 'Personajes'
+    }
+  },
   methods: {
     logout() {
       localStorage.removeItem('dnd_token')
