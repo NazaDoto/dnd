@@ -88,6 +88,7 @@ export default {
         })
         localStorage.setItem('dnd_token', data.token)
         localStorage.setItem('dnd_user', JSON.stringify(data.user))
+        window.dispatchEvent(new Event('dnd-auth-changed'))
         this.showToast('¡Cuenta creada!', 'success')
         this.$router.push(this.homeForRole(data.user?.role))
       } catch (err) {

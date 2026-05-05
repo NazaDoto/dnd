@@ -87,6 +87,7 @@ export default {
 
         localStorage.setItem('dnd_token', data.token)
         localStorage.setItem('dnd_user', JSON.stringify(data.user))
+        window.dispatchEvent(new Event('dnd-auth-changed'))
 
         const r = data.user?.role
         if (r === 'administrador') this.$router.push('/admin')

@@ -155,9 +155,17 @@
         <div v-if="!roster.active.length" class="text-muted">Nadie aceptado aún. Los jugadores pueden pedir ingreso con el código.</div>
         <div v-else class="roster-list">
           <div v-for="row in roster.active" :key="row.id" class="roster-row">
-            <div>
+            <div class="roster-main">
               <strong>{{ row.name }}</strong>
               <p class="text-muted">{{ row.player_username }} · {{ row.race }} {{ row.class }} Nv.{{ row.level }}</p>
+              <div class="roster-stats">
+                <span class="stat-pill stat-pill-ca">CA {{ row.armor_class ?? '-' }}</span>
+                <div class="stat-pill stat-pill-hp">
+                  <button type="button" class="hp-step" @click="adjustMemberHp(row, -1)">-</button>
+                  <span>PV {{ row.hit_points_current ?? 0 }}/{{ row.hit_points_max ?? 0 }}</span>
+                  <button type="button" class="hp-step" @click="adjustMemberHp(row, 1)">+</button>
+                </div>
+              </div>
             </div>
             <div class="roster-actions">
               <RouterLink :to="`/dm/campaign/${cid}/character/${row.id}`" class="btn btn-secondary">Ver ficha</RouterLink>
@@ -354,6 +362,15 @@ export default {
       } catch {
         this.showToast('No se pudo quitar', 'error')
       }
+    },
+    async adjustMemberHp(row, delta) {
+      try {
+        const { data } = await dmAPI.adjustCharacterHp(this.cid, row.id, delta)
+        row.hit_points_current = data.hit_points_current
+        row.hit_points_max = data.hit_points_max
+      } catch (err) {
+        this.showToast(err.response?.data?.message || 'No se pudo actualizar PV', 'error')
+      }
     }
   }
 }
@@ -494,6 +511,51 @@ export default {
   flex-wrap: wrap;
   border-bottom: 1px solid var(--border);
   padding-bottom: 0.45rem;
+}
+.roster-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.roster-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+.stat-pill {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  font-family: var(--font-title);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+}
+.stat-pill-ca {
+  color: var(--gold-light);
+}
+.stat-pill-hp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.hp-step {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  width: 1.2rem;
+  height: 1.2rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hp-step:hover {
+  color: var(--gold-light);
+  border-color: var(--gold-dark);
 }
 .roster-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
 .mt-2 { margin-top: 0.5rem; }

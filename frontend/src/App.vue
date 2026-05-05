@@ -1,6 +1,6 @@
 <template>
   <div id="dnd-app">
-    <NavBar v-if="isAuthenticated" />
+    <NavBar v-if="isAuthenticated" :user="authUser" />
     <main
       :class="[
         'main-content',
@@ -27,11 +27,11 @@ export default {
   name: 'App',
   components: { NavBar },
   data() {
-    return { toasts: [] }
+    return { toasts: [], authUser: null, authToken: '' }
   },
   computed: {
     isAuthenticated() {
-      return !!localStorage.getItem('dnd_token')
+      return !!this.authToken
     },
     /** Rutas del panel DM: ancho de lectura mayor en escritorio */
     isDmLayout() {
@@ -39,7 +39,29 @@ export default {
       return p === '/dm' || p.startsWith('/dm/')
     }
   },
+  created() {
+    this.syncAuthState()
+    window.addEventListener('storage', this.syncAuthState)
+    window.addEventListener('dnd-auth-changed', this.syncAuthState)
+  },
+  beforeUnmount() {
+    window.removeEventListener('storage', this.syncAuthState)
+    window.removeEventListener('dnd-auth-changed', this.syncAuthState)
+  },
   methods: {
+    syncAuthState() {
+      this.authToken = localStorage.getItem('dnd_token') || ''
+      const raw = localStorage.getItem('dnd_user')
+      if (!raw) {
+        this.authUser = null
+        return
+      }
+      try {
+        this.authUser = JSON.parse(raw)
+      } catch {
+        this.authUser = null
+      }
+    },
     showToast(msg, type = 'info') {
       const id = Date.now()
       this.toasts.push({ id, msg, type })

@@ -17,6 +17,7 @@ api.interceptors.response.use(
         if (err.response && err.response.status === 401) {
             localStorage.removeItem('dnd_token')
             localStorage.removeItem('dnd_user')
+            window.dispatchEvent(new Event('dnd-auth-changed'))
             window.location.href = '/login'
         }
         return Promise.reject(err)
@@ -76,6 +77,7 @@ export const dmAPI = {
     rosterReject: (campaignId, linkId) => api.patch(`/dm/campaigns/${campaignId}/roster/${linkId}`, { action: 'reject' }),
     removeRosterMember: (campaignId, linkId) => api.delete(`/dm/campaigns/${campaignId}/roster/${linkId}`),
     getCampaignCharacter: (campaignId, characterId) => api.get(`/dm/campaigns/${campaignId}/characters/${characterId}`),
+    adjustCharacterHp: (campaignId, characterId, delta) => api.patch(`/dm/campaigns/${campaignId}/characters/${characterId}/hp`, { delta }),
 }
 
 export default api

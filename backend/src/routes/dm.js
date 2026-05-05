@@ -303,4 +303,43 @@ router.get('/campaigns/:campaignId/characters/:characterId', async(req, res) => 
     }
 });
 
+router.patch('/campaigns/:campaignId/characters/:characterId/hp', async(req, res) => {
+    try {
+        const camp = await assertOwnCampaign(req, req.params.campaignId);
+        if (!camp) return res.status(404).json({ message: 'Campaña no encontrada' });
+
+        const delta = Number(req.body?.delta);
+        if (!Number.isInteger(delta) || delta === 0) {
+            return res.status(400).json({ message: 'Delta inválido' });
+        }
+
+        const [rows] = await db.query(
+            `SELECT c.id, c.hit_points_current, c.hit_points_max
+       FROM characters c
+       INNER JOIN campaign_characters cc
+         ON cc.character_id = c.id
+        AND cc.campaign_id = ?
+        AND cc.status = 'active'
+       WHERE c.id = ?`,
+            [req.params.campaignId, req.params.characterId]
+        );
+        if (!rows.length) return res.status(404).json({ message: 'Personaje no encontrado en esta campaña' });
+
+        const ch = rows[0];
+        const maxHp = Math.max(1, Number(ch.hit_points_max) || 1);
+        const currentHp = Number(ch.hit_points_current) || 0;
+        const nextHp = Math.max(0, Math.min(maxHp, currentHp + delta));
+
+        await db.query(
+            'UPDATE characters SET hit_points_current = ? WHERE id = ?',
+            [nextHp, req.params.characterId]
+        );
+
+        res.json({ message: 'PV actualizados', hit_points_current: nextHp, hit_points_max: maxHp });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error al actualizar PV' });
+    }
+});
+
 module.exports = router;

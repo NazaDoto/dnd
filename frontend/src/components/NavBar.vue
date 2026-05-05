@@ -15,15 +15,13 @@
 <script>
 export default {
   name: 'NavBar',
+  props: {
+    user: {
+      type: Object,
+      default: null
+    }
+  },
   computed: {
-    user() {
-      const raw = localStorage.getItem('dnd_user')
-      try {
-        return raw ? JSON.parse(raw) : null
-      } catch {
-        return null
-      }
-    },
     role() {
       return this.user?.role || 'jugador'
     },
@@ -36,15 +34,14 @@ export default {
       return '/home'
     },
     homeLabel() {
-      if (this.role === 'administrador') return 'Admin'
-      if (this.role === 'dm') return 'DM'
-      return 'Personajes'
+      return 'Inicio'
     }
   },
   methods: {
     logout() {
       localStorage.removeItem('dnd_token')
       localStorage.removeItem('dnd_user')
+      window.dispatchEvent(new Event('dnd-auth-changed'))
       this.$router.push('/login')
     }
   }

@@ -11,47 +11,49 @@
       </RouterLink>
     </div>
 
-    <div v-if="!loading && myRequests.length" class="card requests-only">
-      <p class="section-title">Tus solicitudes a campañas</p>
-      <ul class="requests-list">
-        <li v-for="r in myRequests" :key="r.link_id">
-          <span>{{ r.character_name }}</span> → {{ r.campaign_name }}
-          <span class="req-status">{{ statusLabel(r.status) }}</span>
-        </li>
-      </ul>
-    </div>
-
-    <div v-if="!loading && characters.length" class="card join-block">
-      <p class="section-title">Unir personaje a una campaña</p>
-      <p class="join-hint">
-        Pedí ingreso con el código que te pase el DM. Él acepta o rechaza desde su panel de campaña.
-      </p>
-      <div class="join-grid">
-        <div class="form-group">
-          <label class="form-label" for="invite-code">Código de invitación</label>
-          <input id="invite-code" v-model.trim="inviteCode" placeholder="Ej. A1B2C3D4E" autocomplete="off" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="join-char">Personaje</label>
-          <select id="join-char" v-model.number="joinCharacterId">
-            <option :value="null">Elegir personaje</option>
-            <option v-for="ch in characters" :key="'j-' + ch.id" :value="ch.id">{{ ch.name }}</option>
-          </select>
-        </div>
-        <div class="join-actions">
-          <button type="button" class="btn btn-secondary" :disabled="joinPreviewing" @click="previewInvite">
-            {{ joinPreviewing ? '...' : 'Ver campaña' }}
-          </button>
-          <button type="button" class="btn btn-primary" :disabled="joinSending" @click="sendJoinRequest">
-            {{ joinSending ? 'Enviando...' : 'Solicitar ingreso' }}
-          </button>
-        </div>
+    <div v-if="!loading && (myRequests.length || characters.length)" class="home-top-grid">
+      <div v-if="myRequests.length" class="card requests-only">
+        <p class="section-title">Tus solicitudes a campañas</p>
+        <ul class="requests-list">
+          <li v-for="r in myRequests" :key="r.link_id">
+            <span>{{ r.character_name }}</span> → {{ r.campaign_name }}
+            <span class="req-status">{{ statusLabel(r.status) }}</span>
+          </li>
+        </ul>
       </div>
-      <p v-if="previewInfo" class="preview-box text-muted">
-        <strong class="text-gold">{{ previewInfo.name }}</strong>
-        · DM: {{ previewInfo.dm_username }}
-        <span v-if="previewInfo.setting_name"> · {{ previewInfo.setting_name }}</span>
-      </p>
+
+      <div v-if="characters.length" class="card join-block">
+        <p class="section-title">Unir personaje a una campaña</p>
+        <p class="join-hint">
+          Pedí ingreso con el código que te pase el DM. Él acepta o rechaza desde su panel de campaña.
+        </p>
+        <div class="join-grid">
+          <div class="form-group">
+            <label class="form-label" for="invite-code">Código de invitación</label>
+            <input id="invite-code" v-model.trim="inviteCode" placeholder="Ej. A1B2C3D4E" autocomplete="off" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="join-char">Personaje</label>
+            <select id="join-char" v-model.number="joinCharacterId">
+              <option :value="null">Elegir personaje</option>
+              <option v-for="ch in characters" :key="'j-' + ch.id" :value="ch.id">{{ ch.name }}</option>
+            </select>
+          </div>
+          <div class="join-actions">
+            <button type="button" class="btn btn-secondary" :disabled="joinPreviewing" @click="previewInvite">
+              {{ joinPreviewing ? '...' : 'Ver campaña' }}
+            </button>
+            <button type="button" class="btn btn-primary" :disabled="joinSending" @click="sendJoinRequest">
+              {{ joinSending ? 'Enviando...' : 'Solicitar ingreso' }}
+            </button>
+          </div>
+        </div>
+        <p v-if="previewInfo" class="preview-box text-muted">
+          <strong class="text-gold">{{ previewInfo.name }}</strong>
+          · DM: {{ previewInfo.dm_username }}
+          <span v-if="previewInfo.setting_name"> · {{ previewInfo.setting_name }}</span>
+        </p>
+      </div>
     </div>
 
     <!-- Loading -->
@@ -81,13 +83,19 @@
     </div>
 
     <!-- Lista -->
-    <div v-else class="char-list">
+    <div v-else class="char-list-wrap">
+      <div class="char-list-head">
+        <p class="section-title">Tus personajes</p>
+        <span class="char-count">{{ characters.length }}</span>
+      </div>
+      <div class="char-list">
       <CharacterCard
         v-for="char in characters"
         :key="char.id"
         :character="char"
         @click="$router.push(`/character/${char.id}`)"
       />
+      </div>
     </div>
   </div>
 </template>
@@ -208,7 +216,36 @@ export default {
 }
 .home-sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.15rem; }
 
+.home-top-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
 .char-list { display: flex; flex-direction: column; gap: 0.65rem; }
+.char-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.char-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.char-count {
+  min-width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--gold-light);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+}
 
 .empty-state {
   text-align: center;
@@ -259,5 +296,26 @@ export default {
   font-size: 0.65rem;
   text-transform: uppercase;
   color: var(--gold-light);
+}
+
+@media (min-width: 860px) {
+  .home-top-grid {
+    grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.35fr);
+    align-items: start;
+  }
+  .requests-only,
+  .join-block {
+    margin-bottom: 0;
+  }
+  .join-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.65rem;
+    align-items: end;
+  }
+  .join-actions {
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+  }
 }
 </style>
