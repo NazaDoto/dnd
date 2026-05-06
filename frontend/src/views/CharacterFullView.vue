@@ -97,22 +97,25 @@
             </template>
           </div>
         </div>
-        <div class="skill-list">
-          <label v-for="attr in ATTRIBUTES" :key="attr.key" class="skill-row skill-row-editable">
-            <template v-if="!isEditing('skills_saves')">
-              <span :class="['prof-dot', hasSavingThrow(attr.key) ? 'filled' : '']"></span>
-              <span class="skill-name">{{ attr.label }}</span>
-              <span class="skill-bonus">{{ getSavingThrowBonus(attr.key) }}</span>
-            </template>
-            <template v-else>
-              <input
-                type="checkbox"
-                :checked="Array.isArray(fieldDraft) && fieldDraft.includes(attr.key)"
-                @change="toggleDraftRootArrayValue(attr.key)"
-              />
-              <span class="skill-name">{{ attr.label }}</span>
-              <span class="skill-bonus">{{ getSavingThrowBonus(attr.key) }}</span>
-            </template>
+        <div v-if="!isEditing('skills_saves')" class="skill-list">
+          <div v-for="attr in ATTRIBUTES" :key="attr.key" class="skill-row">
+            <span :class="['prof-dot', hasSavingThrow(attr.key) ? 'filled' : '']"></span>
+            <span class="skill-name">{{ attr.label }}</span>
+            <span class="skill-bonus">{{ getSavingThrowBonus(attr.key) }}</span>
+          </div>
+        </div>
+        <div v-else class="chips-grid">
+          <label
+            v-for="attr in ATTRIBUTES"
+            :key="attr.key"
+            :class="['chip-check', { active: Array.isArray(fieldDraft) && fieldDraft.includes(attr.key) }]"
+          >
+            <input
+              type="checkbox"
+              :checked="Array.isArray(fieldDraft) && fieldDraft.includes(attr.key)"
+              @change="toggleDraftRootArrayValue(attr.key)"
+            />
+            <span>{{ attr.label }}</span>
           </label>
         </div>
       </div>
@@ -127,42 +130,45 @@
             </template>
           </div>
         </div>
-        <div class="skill-list">
-          <label v-for="sk in SKILLS" :key="sk.key" class="skill-row skill-row-editable">
-            <template v-if="!isEditing('skills_skills')">
-              <span :class="[
-                'prof-dot',
-                hasExpertise(sk.key)
-                  ? 'expertise'
-                  : hasSkill(sk.key)
-                    ? 'filled'
-                    : '',
-              ]"></span>
-              <span class="skill-name">{{ sk.label }}
-                <span class="skill-attr">({{ attrShort(sk.attr) }})</span></span>
-              <span class="skill-bonus">{{ getSkillBonus(sk) }}</span>
-            </template>
-            <template v-else>
-              <div class="skills-check-wrap">
-                <input
-                  type="checkbox"
-                  :checked="fieldDraft?.prof?.includes(sk.key)"
-                  @change="toggleDraftArrayValue('prof', sk.key)"
-                  title="Proficiencia"
-                />
-                <input
-                  type="checkbox"
-                  :checked="fieldDraft?.expertise?.includes(sk.key)"
-                  @change="toggleDraftArrayValue('expertise', sk.key)"
-                  title="Experticia"
-                />
-              </div>
-              <span class="skill-name">{{ sk.label }} <span class="skill-attr">({{ attrShort(sk.attr) }})</span></span>
-              <span class="skill-bonus">{{ getSkillBonus(sk) }}</span>
-            </template>
-          </label>
+        <div v-if="!isEditing('skills_skills')" class="skill-list">
+          <div v-for="sk in SKILLS" :key="sk.key" class="skill-row">
+            <span :class="[
+              'prof-dot',
+              hasExpertise(sk.key)
+                ? 'expertise'
+                : hasSkill(sk.key)
+                  ? 'filled'
+                  : '',
+            ]"></span>
+            <span class="skill-name">{{ sk.label }}
+              <span class="skill-attr">({{ attrShort(sk.attr) }})</span></span>
+            <span class="skill-bonus">{{ getSkillBonus(sk) }}</span>
+          </div>
         </div>
-        <p v-if="isEditing('skills_skills')" class="form-label mt-2">Izquierda = proficiencia, derecha = experticia.</p>
+        <div v-else class="skill-edit-list">
+          <div v-for="sk in SKILLS" :key="sk.key" class="skill-edit-row">
+            <span class="skill-name">
+              {{ sk.label }}
+              <span class="skill-attr">({{ attrShort(sk.attr) }})</span>
+            </span>
+            <label :class="['mini-check', 'prof-check', { active: fieldDraft?.prof?.includes(sk.key) }]">
+              <input
+                type="checkbox"
+                :checked="fieldDraft?.prof?.includes(sk.key)"
+                @change="toggleDraftArrayValue('prof', sk.key)"
+              />
+              Prof.
+            </label>
+            <label :class="['mini-check', 'expert-check', { active: fieldDraft?.expertise?.includes(sk.key) }]">
+              <input
+                type="checkbox"
+                :checked="fieldDraft?.expertise?.includes(sk.key)"
+                @change="toggleDraftArrayValue('expertise', sk.key)"
+              />
+              Experto
+            </label>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1498,28 +1504,6 @@ normalizeSpells(value) {
   gap: 0.4rem;
 }
 
-.skill-row-editable {
-  cursor: default;
-}
-
-.skill-row-editable input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--gold);
-}
-
-.skills-check-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.skills-check-wrap input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--gold);
-}
-
 .inline-editor select {
   background: var(--bg-surface);
   color: var(--text-secondary);
@@ -1529,8 +1513,8 @@ normalizeSpells(value) {
 }
 
 .chips-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
 }
 
@@ -1538,15 +1522,74 @@ normalizeSpells(value) {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+}
+
+.chip-check input {
+  display: none;
 }
 
 .chip-check.active {
-  border-color: var(--gold-mid);
-  background: color-mix(in srgb, var(--gold-mid) 12%, transparent);
+  color: var(--bg-deep);
+  border-color: var(--gold);
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  box-shadow: var(--shadow-gold);
+}
+
+.mini-check {
+  position: relative;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    color 0.2s,
+    box-shadow 0.2s;
+}
+
+.mini-check input {
+  display: none;
+}
+
+.mini-check.active {
+  color: var(--bg-deep);
+  border-color: var(--gold);
+  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+  box-shadow: var(--shadow-gold);
+}
+
+.expert-check.active {
+  border-color: var(--gold-light);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
+}
+
+.skill-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.skill-edit-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--bg-deep);
 }
 
 .attack-edit-row {
