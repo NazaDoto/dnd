@@ -292,15 +292,7 @@
         </div>
       </div>
       <div v-if="activeTab === 'notes'" class="tab-content">
-        <div class="card">
-          <p class="section-title">Notas de campaña</p>
-          <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0.75rem;">
-            Abrí tus notas vinculadas a este personaje para registrar sesiones, NPCs y pistas.
-          </p>
-          <RouterLink :to="`/character/${id}/notes`" class="btn btn-primary">
-            Ir a notas
-          </RouterLink>
-        </div>
+        <CharacterNotesPanel :char-id="id" />
       </div>
     </div>
 
@@ -313,6 +305,7 @@
 <script>
 import { charactersAPI, dmAPI } from "../services/api.js";
 import { exportCharacterPdf } from "../services/pdfExport.js";
+import CharacterNotesPanel from "../components/CharacterNotesPanel.vue";
 import {
   ATTRIBUTES,
   SKILLS,
@@ -323,6 +316,7 @@ import {
 
 export default {
   name: "CharacterFullView",
+  components: { CharacterNotesPanel },
   inject: ["showToast"],
   data() {
     return {
