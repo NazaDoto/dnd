@@ -568,6 +568,7 @@ export default {
       fieldDraft: "",
       ATTRIBUTES,
       SKILLS,
+      SPELLCASTING_ABILITIES,
       tabs: [
         { id: "skills", label: "Habilidades" },
         { id: "combat", label: "Combate" },
@@ -1501,6 +1502,12 @@ normalizeSpells(value) {
   cursor: default;
 }
 
+.skill-row-editable input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--gold);
+}
+
 .skills-check-wrap {
   display: inline-flex;
   align-items: center;
@@ -1510,6 +1517,15 @@ normalizeSpells(value) {
 .skills-check-wrap input[type="checkbox"] {
   width: 14px;
   height: 14px;
+  accent-color: var(--gold);
+}
+
+.inline-editor select {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.5rem;
 }
 
 .chips-grid {
