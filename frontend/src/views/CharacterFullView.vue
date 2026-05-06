@@ -1,50 +1,8 @@
 <template>
   <div class="full-view" v-if="character">
-    <div class="full-top-sticky">
     <div class="full-header">
       <button type="button" class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
-      <div class="full-header-main">
-        <h2 class="full-title">{{ character.name }}</h2>
-        <p class="hero-meta">
-          {{ character.race }}
-          <span v-if="character.subrace"> ({{ character.subrace }})</span>
-          · {{ character.class }} Nv.{{ character.level }}
-        </p>
-        <div class="quick-state-grid">
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">PV</span>
-            <span class="state-val">{{ character.hit_points_current }}/{{ character.hit_points_max }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">CA</span>
-            <span class="state-val">{{ character.armor_class ?? '-' }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">Ini</span>
-            <span class="state-val">{{ fmtMod(character.initiative) }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">Vel</span>
-            <span class="state-val">{{ character.speed }}ft</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">Prof</span>
-            <span class="state-val">{{ fmtMod(character.proficiency_bonus) }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
-            <span class="state-key">Insp</span>
-            <span class="state-val">{{ character.inspiration ? 'Si' : 'No' }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
-            <span class="state-key">P. Pasiva</span>
-            <span class="state-val">{{ character.passive_perception ?? '-' }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">XP</span>
-            <span class="state-val">{{ character.experience_points || 0 }}</span>
-          </button>
-        </div>
-      </div>
+      <h2 class="full-title">{{ character.name }}</h2>
       <div class="full-header-actions">
         <template v-if="isDmCampaignReader">
           <RouterLink
@@ -66,14 +24,60 @@
       </div>
     </div>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
-        @click="activeTab = tab.id">
-        {{ tab.label }}
-      </button>
-    </div>
-    </div>
+    <div class="full-layout">
+      <aside class="full-sidebar">
+        <div class="sidebar-title card">
+          <p class="sidebar-name">{{ character.name }}</p>
+          <p class="sidebar-meta">
+            {{ character.race }}
+            <span v-if="character.subrace"> ({{ character.subrace }})</span>
+            · {{ character.class }} Nv.{{ character.level }}
+          </p>
+        </div>
+        <div class="tabs">
+          <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
+            @click="activeTab = tab.id">
+            {{ tab.label }}
+          </button>
+        </div>
+      </aside>
+      <section class="full-content">
+      <div class="quick-states-wrap card">
+        <div class="quick-state-grid">
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">PV</span>
+            <span class="state-val">{{ character.hit_points_current }}/{{ character.hit_points_max }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">CA</span>
+            <span class="state-val">{{ character.armor_class ?? '-' }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">Iniciativa</span>
+            <span class="state-val">{{ fmtMod(character.initiative) }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">Velocidad</span>
+            <span class="state-val">{{ character.speed }}ft</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">Prof</span>
+            <span class="state-val">{{ fmtMod(character.proficiency_bonus) }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
+            <span class="state-key">Insp</span>
+            <span class="state-val">{{ character.inspiration ? 'Si' : 'No' }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
+            <span class="state-key">P. Pasiva</span>
+            <span class="state-val">{{ character.passive_perception ?? '-' }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">XP</span>
+            <span class="state-val">{{ character.experience_points || 0 }}</span>
+          </button>
+        </div>
+      </div>
 
     <!-- ── PESTAÑA: Habilidades ── -->
     <div v-if="activeTab === 'skills'" class="tab-content">
@@ -388,6 +392,8 @@
       <div v-if="activeTab === 'notes'" class="tab-content">
         <CharacterNotesPanel :char-id="id" />
       </div>
+      </section>
+    </div>
     </div>
 
     <div v-else class="loading-screen">
@@ -792,16 +798,8 @@ normalizeSpells(value) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.75rem;
   gap: 0.5rem;
-}
-.full-top-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: var(--bg-deep);
-  padding-bottom: 0.5rem;
-  margin-bottom: 0.55rem;
 }
 
 .full-header-actions {
@@ -817,33 +815,46 @@ normalizeSpells(value) {
   color: var(--text-primary);
   text-align: left;
 }
-.full-header-main {
-  flex: 1;
-  min-width: 0;
+.full-layout {
+  display: block;
 }
-.hero-meta {
-  font-size: 0.8rem;
+.full-sidebar {
+  margin-bottom: 0.75rem;
+}
+.sidebar-title {
+  margin-bottom: 0.6rem;
+}
+.sidebar-name {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+.sidebar-meta {
+  margin-top: 0.25rem;
   color: var(--text-secondary);
-  margin-top: 0.2rem;
-  margin-bottom: 0.55rem;
+  font-size: 0.82rem;
+}
+.quick-states-wrap {
+  margin-bottom: 0.7rem;
 }
 .quick-state-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 .state-pill {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
-  min-height: 2.4rem;
-  padding: 0.3rem 0.45rem;
+  min-height: 2.5rem;
+  padding: 0.35rem 0.45rem;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 }
 .state-pill:hover {
@@ -851,13 +862,13 @@ normalizeSpells(value) {
   color: var(--gold-light);
 }
 .state-key {
-  font-size: 0.58rem;
+  font-size: 0.55rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .state-val {
   font-family: var(--font-title);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   line-height: 1.15;
 }
 
@@ -1257,11 +1268,9 @@ normalizeSpells(value) {
   .full-header {
     flex-wrap: wrap;
   }
-  .full-header-main {
-    order: 3;
-    width: 100%;
+  .quick-state-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .quick-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inline-grid { grid-template-columns: 1fr; }
   .attack-row {
     grid-template-columns: 1fr auto;
@@ -1283,9 +1292,26 @@ normalizeSpells(value) {
 }
 
 @media (min-width: 980px) {
-  .full-top-sticky { top: 0; }
-  .tabs { gap: 0.4rem; }
+  .full-layout {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+  }
+  .full-sidebar {
+    position: sticky;
+    top: 5.4rem;
+    margin-bottom: 0;
+  }
+  .tabs {
+    flex-direction: column;
+    overflow: visible;
+    gap: 0.35rem;
+    margin-bottom: 0;
+  }
   .tab-btn {
+    width: 100%;
+    text-align: left;
     font-size: 0.8rem;
     letter-spacing: 0.02em;
     padding: 0.5rem 0.7rem;
