@@ -1,0 +1,7 @@
+Pega el archivo:
+5E_CharacterSheet_Fillable.pdf
+
+en esta carpeta para habilitar el PDF estilizado con plantilla.
+
+Ruta final esperada:
+frontend/public/pdf/5E_CharacterSheet_Fillable.pdf

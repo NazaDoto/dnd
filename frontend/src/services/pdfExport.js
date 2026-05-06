@@ -221,60 +221,122 @@ function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHei
 }
 
 export async function exportCharacterPdfStyled(character) {
-    const templateUrl = '/pdf/dnd_blankcharactersheet_es.pdf'
-    const res = await fetch(templateUrl)
-    if (!res.ok) throw new Error('Plantilla PDF no encontrada')
-    const bytes = await res.arrayBuffer()
-    const pdfDoc = await PDFDocument.load(bytes)
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
-    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-    const pages = pdfDoc.getPages()
-    const page1 = pages[0]
-    const page2 = pages[1]
-    const page3 = pages[2]
-    const black = rgb(0.08, 0.08, 0.08)
-    const BASE_W = 612
-    const BASE_H = 792
-    const p1 = page1.getSize()
-    const scaleX = p1.width / BASE_W
-    const scaleY = p1.height / BASE_H
-    const tx = (x) => x * scaleX
-    const ty = (y) => y * scaleY
-    const ts = (s) => s * ((scaleX + scaleY) / 2)
+    const coordSources = [
+        '/pdf/5E_CharacterSheetFillable.pdf',
+        '/pdf/5E_CharacterSheet_Fillable.pdf'
+    ]
+    let sourcePdfDoc = null
+    let lastErr = null
+    for (const u of coordSources) {
+        try {
+            const r = await fetch(u)
+            if (!r.ok) continue
+            sourcePdfDoc = await PDFDocument.load(await r.arrayBuffer())
+            break
+        } catch (e) {
+            lastErr = e
+        }
+    }
+    if (!sourcePdfDoc) throw (lastErr || new Error('No se pudo cargar PDF fuente de coordenadas'))
 
-    const toPdfSafe = (value) => {
-        const raw = sanitize(value, '')
-        return raw
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^ -~]/g, '')
+    const norm = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const toPdfSafe = (value) => sanitize(value, '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^ -~]/g, '')
+
+    const sourcePages = sourcePdfDoc.getPages()
+    const sourceForm = sourcePdfDoc.getForm()
+    const sourceFields = sourceForm.getFields().map((f) => {
+        const widgets = f.acroField.getWidgets()
+        if (!widgets?.length) return null
+        const w = widgets[0]
+        const rect = w.getRectangle()
+        const page = sourcePages.findIndex((p) => p.ref === w.P())
+        return {
+            name: f.getName(),
+            norm: norm(f.getName()),
+            page: page >= 0 ? page : 0,
+            rect
+        }
+    }).filter(Boolean)
+
+    const targetPages = pdfDoc.getPages()
+    const black = rgb(0.08, 0.08, 0.08)
+
+    const projectRect = (srcRect, pageIndex) => {
+        const sp = sourcePages[pageIndex]
+        const tp = targetPages[pageIndex]
+        const sw = sp.getWidth()
+        const sh = sp.getHeight()
+        const tw = tp.getWidth()
+        const th = tp.getHeight()
+        return {
+            x: (srcRect.x / sw) * tw,
+            y: (srcRect.y / sh) * th,
+            w: (srcRect.width / sw) * tw,
+            h: (srcRect.height / sh) * th
+        }
     }
-    const draw = (page, text, x, y, size = 9, isBold = false) => {
-        const val = toPdfSafe(text)
-        if (!val) return
-        page.drawText(val, { x: tx(x), y: ty(y), size: ts(size), font: isBold ? bold : font, color: black })
+
+    const findField = (hints = [], page = null) => {
+        const hs = hints.map(norm).filter(Boolean)
+        let best = null
+        for (const f of sourceFields) {
+            if (page !== null && f.page !== page) continue
+            const score = hs.reduce((acc, h) => acc + (f.norm.includes(h) ? 1 : 0), 0)
+            if (!score) continue
+            if (!best || score > best.score) best = { field: f, score }
+        }
+        return best?.field || null
     }
-    const wrap = (page, text, x, y, width, size = 8.2, line = 9.2) => {
-        const val = toPdfSafe(text)
-        if (!val) return y
-        const words = val.split(/\s+/)
-        let current = ''
-        let yy = y
-        const fontSize = ts(size)
-        const wrapWidth = width * scaleX
-        const lineStep = line * scaleY
+
+    const drawAtField = (hints, value, opts = {}) => {
+        const field = findField(Array.isArray(hints) ? hints : [hints], opts.page ?? null)
+        if (!field) return false
+        const rect = projectRect(field.rect, field.page)
+        const page = targetPages[field.page]
+        const text = toPdfSafe(value)
+        if (!text) return false
+        const fontSize = opts.fontSize || Math.max(7, Math.min(11, rect.h * 0.65))
+        page.drawText(text, {
+            x: rect.x + (opts.padX ?? 1.5),
+            y: rect.y + Math.max(1, (rect.h - fontSize) / 2),
+            size: fontSize,
+            font: opts.bold ? bold : font,
+            color: black
+        })
+        return true
+    }
+
+    const drawMultilineAtField = (hints, value, opts = {}) => {
+        const field = findField(Array.isArray(hints) ? hints : [hints], opts.page ?? null)
+        if (!field) return false
+        const rect = projectRect(field.rect, field.page)
+        const page = targetPages[field.page]
+        const text = toPdfSafe(value)
+        if (!text) return false
+        const fontSize = opts.fontSize || 7.8
+        const lineStep = opts.lineStep || (fontSize + 1.2)
+        const words = text.split(/\s+/)
+        let line = ''
+        let y = rect.y + rect.h - fontSize - 1
+        const maxWidth = rect.w - 2
         for (const w of words) {
-            const test = current ? `${current} ${w}` : w
-            if (font.widthOfTextAtSize(test, fontSize) > wrapWidth) {
-                draw(page, current, x, yy, size)
-                yy -= lineStep
-                current = w
+            const test = line ? `${line} ${w}` : w
+            if (font.widthOfTextAtSize(test, fontSize) > maxWidth) {
+                page.drawText(line, { x: rect.x + 1, y, size: fontSize, font, color: black })
+                y -= lineStep
+                if (y < rect.y) break
+                line = w
             } else {
-                current = test
+                line = test
             }
         }
-        if (current) draw(page, current, x, yy, size)
-        return yy - lineStep
+        if (line && y >= rect.y) {
+            page.drawText(line, { x: rect.x + 1, y, size: fontSize, font, color: black })
+        }
+        return true
     }
 
     const skills = safeArray(character.skills_prof)
@@ -283,94 +345,87 @@ export async function exportCharacterPdfStyled(character) {
     const attacks = normalizeAttacks(character)
     const spells = normalizeSpells(character)
 
-    // Pagina 1
-    draw(page1, character.name, 38, 742, 11, true)
-    draw(page1, `${classLabel(character.class)} ${character.level || 1}`, 38, 775, 9)
-    draw(page1, character.background, 165, 775, 9)
-    draw(page1, character.race, 327, 775, 9)
-    draw(page1, character.alignment, 489, 775, 9)
-    draw(page1, String(character.experience_points || 0), 548, 775, 9)
+    drawAtField(['character', 'name'], character.name, { bold: true, fontSize: 10.5 })
+    drawAtField(['class', 'level'], `${classLabel(character.class)} ${character.level || 1}`)
+    drawAtField(['background'], character.background)
+    drawAtField(['race'], character.race)
+    drawAtField(['experience', 'points'], String(character.experience_points || 0))
+    drawAtField(['alignment'], character.alignment)
 
-    const scorePos = { strength: [70, 638], dexterity: [70, 570], constitution: [70, 502], intelligence: [70, 434], wisdom: [70, 365], charisma: [70, 297] }
     ATTRIBUTES.forEach((attr) => {
-        const [x, y] = scorePos[attr.key]
-        const score = Number(character[attr.key] || 10)
-        draw(page1, String(score), x, y, 14, true)
-        draw(page1, formatModifier(getModifier(score)), x - 2, y - 26, 10)
+        drawAtField([attr.key], String(character[attr.key] || 10), { bold: true })
     })
-    draw(page1, String(character.armor_class || 10), 245, 602, 13, true)
-    draw(page1, formatModifier(character.initiative || 0), 307, 602, 11, true)
-    draw(page1, String(character.speed || 0), 370, 602, 11, true)
-    draw(page1, String(character.hit_points_max || 0), 482, 664, 11)
-    draw(page1, String(character.hit_points_current || 0), 482, 602, 12, true)
-    draw(page1, String(character.hit_points_temp || 0), 482, 560, 10)
-    draw(page1, formatModifier(character.proficiency_bonus || 2), 244, 512, 11, true)
-    draw(page1, character.inspiration ? 'X' : '', 244, 456, 11, true)
-    draw(page1, String(character.passive_perception || 10), 243, 242, 11, true)
+    drawAtField(['armor', 'class'], String(character.armor_class || 10), { bold: true })
+    drawAtField(['initiative'], formatModifier(character.initiative || 0), { bold: true })
+    drawAtField(['speed'], String(character.speed || 0))
+    drawAtField(['hit', 'point', 'maximum'], String(character.hit_points_max || 0))
+    drawAtField(['current', 'hit', 'points'], String(character.hit_points_current || 0), { bold: true })
+    drawAtField(['temporary', 'hit', 'points'], String(character.hit_points_temp || 0))
+    drawAtField(['proficiency', 'bonus'], formatModifier(character.proficiency_bonus || 2), { bold: true })
+    drawAtField(['inspiration'], character.inspiration ? 'X' : '')
+    drawAtField(['passive', 'perception'], String(character.passive_perception || 10), { bold: true })
 
-    draw(page1, String(character.copper_pieces || 0), 82, 125, 9)
-    draw(page1, String(character.silver_pieces || 0), 82, 110, 9)
-    draw(page1, String(character.electrum_pieces || 0), 82, 95, 9)
-    draw(page1, String(character.gold_pieces || 0), 82, 80, 9)
-    draw(page1, String(character.platinum_pieces || 0), 82, 65, 9)
+    drawAtField(['cp'], String(character.copper_pieces || 0))
+    drawAtField(['sp'], String(character.silver_pieces || 0))
+    drawAtField(['ep'], String(character.electrum_pieces || 0))
+    drawAtField(['gp'], String(character.gold_pieces || 0))
+    drawAtField(['pp'], String(character.platinum_pieces || 0))
 
-    const equipment = safeArray(character.equipment).map((i) => (typeof i === 'string' ? i : i?.name || '')).filter(Boolean).join(', ')
-    wrap(page1, equipment, 138, 154, 155, 8.2, 8.6)
-    const profsAndLangs = [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', ')
-    wrap(page1, profsAndLangs, 303, 154, 240, 8.2, 8.6)
-    wrap(page1, safeArray(character.features_traits).map((f) => (typeof f === 'string' ? f : f?.name || '')).join(', '), 326, 238, 230, 8.1, 8.4)
-    let ay = 352
-    attacks.slice(0, 3).forEach((a) => {
-        draw(page1, a.name || '', 326, ay, 8)
-        draw(page1, a.bonus || '', 448, ay, 8)
-        draw(page1, `${a.damage || ''} ${a.type || ''}`.trim(), 490, ay, 8)
-        ay -= 20
-    })
+    drawMultilineAtField(['equipment'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
+    drawMultilineAtField(['other', 'proficiencies', 'languages'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
+    drawMultilineAtField(['features', 'traits'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
+    drawMultilineAtField(['attacks', 'spellcasting'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
 
-    // Marcas de salvaciones/habilidades
-    const saveY = { strength: 470, dexterity: 452, constitution: 434, intelligence: 416, wisdom: 398, charisma: 380 }
-    Object.keys(saveY).forEach((k) => draw(page1, saves.includes(k) ? 'X' : '', 203, saveY[k], 8, true))
-    const skillY = {
-        acrobatics: 344, animal_handling: 326, arcana: 308, athletics: 290, deception: 272, history: 254,
-        insight: 236, intimidation: 218, investigation: 200, medicine: 182, nature: 164, perception: 146,
-        performance: 128, persuasion: 110, religion: 92, sleight_of_hand: 74, stealth: 56, survival: 38
+    const skillLabels = {
+        acrobatics: ['acrobatics'], animal_handling: ['animal', 'handling'], arcana: ['arcana'],
+        athletics: ['athletics'], deception: ['deception'], history: ['history'], insight: ['insight'],
+        intimidation: ['intimidation'], investigation: ['investigation'], medicine: ['medicine'],
+        nature: ['nature'], perception: ['perception'], performance: ['performance'],
+        persuasion: ['persuasion'], religion: ['religion'], sleight_of_hand: ['sleight', 'hand'],
+        stealth: ['stealth'], survival: ['survival']
     }
-    Object.keys(skillY).forEach((k) => {
+    Object.entries(skillLabels).forEach(([k, hints]) => {
         const mark = expertise.includes(k) ? 'E' : skills.includes(k) ? 'P' : ''
-        draw(page1, mark, 203, skillY[k], 7.5)
+        if (mark) drawAtField(hints, mark, { page: 0, fontSize: 7.2, bold: true })
+    })
+    const saveLabels = {
+        strength: ['saving', 'throw', 'strength'],
+        dexterity: ['saving', 'throw', 'dexterity'],
+        constitution: ['saving', 'throw', 'constitution'],
+        intelligence: ['saving', 'throw', 'intelligence'],
+        wisdom: ['saving', 'throw', 'wisdom'],
+        charisma: ['saving', 'throw', 'charisma']
+    }
+    Object.entries(saveLabels).forEach(([k, hints]) => {
+        if (saves.includes(k)) drawAtField(hints, 'P', { page: 0, fontSize: 7.2, bold: true })
     })
 
-    // Pagina 2
-    draw(page2, character.name, 38, 774, 10, true)
-    draw(page2, character.age, 66, 735, 9)
-    draw(page2, character.height, 160, 735, 9)
-    draw(page2, character.weight, 248, 735, 9)
-    draw(page2, character.eyes, 350, 774, 9)
-    draw(page2, character.skin, 350, 735, 9)
-    draw(page2, character.hair, 510, 735, 9)
-    wrap(page2, character.personality_traits, 38, 505, 250, 8.2, 8.8)
-    wrap(page2, character.ideals, 38, 420, 250, 8.2, 8.8)
-    wrap(page2, character.bonds, 38, 336, 250, 8.2, 8.8)
-    wrap(page2, character.flaws, 38, 252, 250, 8.2, 8.8)
-    wrap(page2, character.backstory, 305, 640, 255, 8.1, 8.5)
-    wrap(page2, character.appearance_notes, 305, 410, 255, 8.1, 8.5)
-    wrap(page2, safeArray(character.features_traits).map((f) => (typeof f === 'string' ? f : f?.name || '')).join(', '), 305, 185, 255, 8.1, 8.5)
-    wrap(page2, character.allies_organizations, 38, 160, 250, 8.2, 8.8)
-    wrap(page2, character.treasure, 38, 70, 250, 8.2, 8.8)
+    drawAtField(['character', 'name'], character.name, { page: 1, bold: true })
+    drawAtField(['age'], character.age, { page: 1 })
+    drawAtField(['height'], character.height, { page: 1 })
+    drawAtField(['weight'], character.weight, { page: 1 })
+    drawAtField(['eyes'], character.eyes, { page: 1 })
+    drawAtField(['skin'], character.skin, { page: 1 })
+    drawAtField(['hair'], character.hair, { page: 1 })
+    drawMultilineAtField(['personality', 'traits'], character.personality_traits, { page: 1 })
+    drawMultilineAtField(['ideals'], character.ideals, { page: 1 })
+    drawMultilineAtField(['bonds'], character.bonds, { page: 1 })
+    drawMultilineAtField(['flaws'], character.flaws, { page: 1 })
+    drawMultilineAtField(['character', 'backstory'], character.backstory, { page: 1 })
+    drawMultilineAtField(['character', 'appearance'], character.appearance_notes, { page: 1 })
+    drawMultilineAtField(['allies', 'organizations'], character.allies_organizations, { page: 1 })
+    drawMultilineAtField(['treasure'], character.treasure, { page: 1 })
 
-    // Pagina 3
-    draw(page3, classLabel(character.class), 39, 775, 9)
-    draw(page3, character.spellcasting_ability, 70, 710, 9)
-    draw(page3, String(character.spell_save_dc || ''), 144, 710, 9)
-    draw(page3, String(character.spell_attack_bonus || ''), 214, 710, 9)
-    wrap(page3, spells.cantrips.join(', '), 36, 638, 160, 8, 8.5)
-    let sy = 618
+    drawAtField(['spellcasting', 'class'], classLabel(character.class), { page: 2 })
+    drawAtField(['spellcasting', 'ability'], character.spellcasting_ability, { page: 2 })
+    drawAtField(['spell', 'save', 'dc'], String(character.spell_save_dc || ''), { page: 2 })
+    drawAtField(['spell', 'attack', 'bonus'], String(character.spell_attack_bonus || ''), { page: 2 })
+    drawMultilineAtField(['cantrips'], spells.cantrips.join(', '), { page: 2 })
     for (let i = 1; i <= 9; i++) {
         const lvl = spells[`level${i}`]
-        draw(page3, String(lvl.slots || 0), 230, sy + 3, 8)
-        draw(page3, String(lvl.slots_used || 0), 252, sy + 3, 8)
-        wrap(page3, (lvl.spells || []).join(', '), 280, sy + 3, 280, 8, 8.4)
-        sy -= 58
+        drawAtField([`level${i}`, 'slots', 'total'], String(lvl.slots || 0), { page: 2, fontSize: 7.5 })
+        drawAtField([`level${i}`, 'slots', 'expended'], String(lvl.slots_used || 0), { page: 2, fontSize: 7.5 })
+        drawMultilineAtField([`level${i}`, 'spells', 'known'], (lvl.spells || []).join(', '), { page: 2, fontSize: 7.2 })
     }
 
     const out = await pdfDoc.save()
