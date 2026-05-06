@@ -1180,7 +1180,6 @@ normalizeSpells(value) {
 }
 .full-sidebar {
   margin-bottom: 0.75rem;
-  align-self: start;
 }
 .sidebar-title {
   margin-bottom: 0.6rem;
@@ -1930,7 +1929,6 @@ normalizeSpells(value) {
     position: sticky;
     top: 5.4rem;
     margin-bottom: 0;
-    align-self: start;
   }
   .tabs {
     flex-direction: column;
