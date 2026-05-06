@@ -235,14 +235,11 @@ export async function exportCharacterPdfStyled(character) {
     const black = rgb(0.08, 0.08, 0.08)
     const BASE_W = 612
     const BASE_H = 792
-    const TRIM_X = 14.1732
-    const TRIM_Y = 14.1732
-    const TRIM_W = 594
-    const TRIM_H = 783
-    const scaleX = TRIM_W / BASE_W
-    const scaleY = TRIM_H / BASE_H
-    const tx = (x) => TRIM_X + (x * scaleX)
-    const ty = (y) => TRIM_Y + (y * scaleY)
+    const p1 = page1.getSize()
+    const scaleX = p1.width / BASE_W
+    const scaleY = p1.height / BASE_H
+    const tx = (x) => x * scaleX
+    const ty = (y) => y * scaleY
     const ts = (s) => s * ((scaleX + scaleY) / 2)
 
     const toPdfSafe = (value) => {
