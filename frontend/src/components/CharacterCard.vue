@@ -15,7 +15,12 @@
     </div>
 
     <div class="char-info">
-      <h3 class="char-name">{{ character.name }}</h3>
+      <div class="char-name-row">
+        <h3 class="char-name">{{ character.name }}</h3>
+        <span v-if="character.linked_campaign_name" class="campaign-pill">
+          {{ character.linked_campaign_name }}
+        </span>
+      </div>
       <p class="char-subtitle">
         <span class="badge badge-gold">Nv.{{ character.level }}</span>
         {{ character.race }} · {{ classLabel }}
@@ -219,6 +224,28 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.char-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.campaign-pill {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid var(--purple);
+  background: rgba(124, 58, 237, 0.14);
+  color: #c4b5fd;
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.62rem;
+  font-family: var(--font-title);
+  letter-spacing: 0.04em;
 }
 
 .char-subtitle {

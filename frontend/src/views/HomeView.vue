@@ -11,17 +11,7 @@
       </RouterLink>
     </div>
 
-    <div v-if="!loading && (myRequests.length || characters.length)" class="home-top-grid">
-      <div v-if="myRequests.length" class="card requests-only">
-        <p class="section-title">Tus solicitudes a campañas</p>
-        <ul class="requests-list">
-          <li v-for="r in myRequests" :key="r.link_id">
-            <span>{{ r.character_name }}</span> → {{ r.campaign_name }}
-            <span class="req-status">{{ statusLabel(r.status) }}</span>
-          </li>
-        </ul>
-      </div>
-
+    <div v-if="!loading && characters.length" class="home-top-grid">
       <div v-if="characters.length" class="card join-block">
         <p class="section-title">Unir personaje a una campaña</p>
         <p class="join-hint">
@@ -92,7 +82,7 @@
       <CharacterCard
         v-for="char in characters"
         :key="char.id"
-        :character="char"
+        :character="{ ...char, linked_campaign_name: campaignByCharacterId[char.id] || null }"
         @click="$router.push(`/character/${char.id}`)"
       />
       </div>
@@ -121,6 +111,18 @@ export default {
       myRequests: []
     }
   },
+  computed: {
+    campaignByCharacterId() {
+      const map = {}
+      for (const req of this.myRequests || []) {
+        if (req?.status !== 'active') continue
+        const id = Number(req.character_id)
+        if (!id) continue
+        map[id] = req.campaign_name || null
+      }
+      return map
+    }
+  },
   async mounted() {
     const stored = localStorage.getItem('dnd_user')
     if (stored) this.user = JSON.parse(stored)
@@ -136,12 +138,6 @@ export default {
     await this.loadMyRequests()
   },
   methods: {
-    statusLabel(s) {
-      if (s === 'pending') return 'pendiente'
-      if (s === 'active') return 'aceptada'
-      if (s === 'rejected') return 'rechazada'
-      return s
-    },
     async loadMyRequests() {
       try {
         const { data } = await campaignsAPI.myRequests()
@@ -283,23 +279,6 @@ export default {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
-.requests-only { margin-bottom: 1rem; }
-.requests-list {
-  list-style: none;
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-.req-status {
-  margin-left: 0.35rem;
-  font-family: var(--font-title);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  color: var(--gold-light);
-}
-
 @media (min-width: 860px) {
   .home-header {
     flex-wrap: nowrap;
@@ -308,7 +287,6 @@ export default {
     grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.35fr);
     align-items: start;
   }
-  .requests-only,
   .join-block {
     margin-bottom: 0;
   }
