@@ -228,7 +228,7 @@ export async function exportCharacterPdfStyled(character) {
     const targetRes = await fetch(targetTemplateUrl)
     if (!targetRes.ok) throw new Error(`No se pudo cargar plantilla destino (${targetRes.status})`)
     const targetBytes = await targetRes.arrayBuffer()
-    const pdfDoc = await PDFDocument.load(targetBytes)
+    const pdfDoc = await PDFDocument.load(targetBytes, { ignoreEncryption: true })
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
@@ -243,7 +243,7 @@ export async function exportCharacterPdfStyled(character) {
             debug('loading coordinate source', u)
             const r = await fetch(u)
             if (!r.ok) continue
-            sourcePdfDoc = await PDFDocument.load(await r.arrayBuffer())
+            sourcePdfDoc = await PDFDocument.load(await r.arrayBuffer(), { ignoreEncryption: true })
             debug('coordinate source loaded', u)
             break
         } catch (e) {
@@ -251,7 +251,9 @@ export async function exportCharacterPdfStyled(character) {
             console.error('[pdf-styled] source load error', u, e)
         }
     }
-    if (!sourcePdfDoc) throw (lastErr || new Error('No se pudo cargar PDF fuente de coordenadas'))
+    if (!sourcePdfDoc) {
+        throw (lastErr || new Error('No se pudo cargar PDF fuente de coordenadas (posible cifrado/proteccion)'))
+    }
 
     const norm = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '')
     const toPdfSafe = (value) => sanitize(value, '')
