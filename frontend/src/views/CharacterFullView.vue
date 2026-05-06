@@ -1077,7 +1077,13 @@ export default {
     async downloadCharacterPdfByFormat(format) {
       this.pdfModalOpen = false;
       if (!this.character) return;
-      await exportCharacterPdf(this.character, { format });
+      try {
+        console.log("[pdf-ui] CharacterFullView download", { format, id: this.character?.id, name: this.character?.name });
+        await exportCharacterPdf(this.character, { format });
+      } catch (error) {
+        console.error("[pdf-ui] CharacterFullView download failed", error);
+        this.showToast("No se pudo generar el PDF del personaje", "error");
+      }
     },
     hasSavingThrow(attr) {
       return (this.character?.saving_throws_prof || []).includes(attr);

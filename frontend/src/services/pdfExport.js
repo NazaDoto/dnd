@@ -221,6 +221,17 @@ function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHei
 }
 
 export async function exportCharacterPdfStyled(character) {
+    const debug = (...args) => console.log('[pdf-styled]', ...args)
+    debug('start', { id: character?.id, name: character?.name })
+    const targetTemplateUrl = '/pdf/dnd_blankcharactersheet_es.pdf'
+    debug('loading target template', targetTemplateUrl)
+    const targetRes = await fetch(targetTemplateUrl)
+    if (!targetRes.ok) throw new Error(`No se pudo cargar plantilla destino (${targetRes.status})`)
+    const targetBytes = await targetRes.arrayBuffer()
+    const pdfDoc = await PDFDocument.load(targetBytes)
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
     const coordSources = [
         '/pdf/5E_CharacterSheetFillable.pdf',
         '/pdf/5E_CharacterSheet_Fillable.pdf'
@@ -229,12 +240,15 @@ export async function exportCharacterPdfStyled(character) {
     let lastErr = null
     for (const u of coordSources) {
         try {
+            debug('loading coordinate source', u)
             const r = await fetch(u)
             if (!r.ok) continue
             sourcePdfDoc = await PDFDocument.load(await r.arrayBuffer())
+            debug('coordinate source loaded', u)
             break
         } catch (e) {
             lastErr = e
+            console.error('[pdf-styled] source load error', u, e)
         }
     }
     if (!sourcePdfDoc) throw (lastErr || new Error('No se pudo cargar PDF fuente de coordenadas'))
@@ -260,6 +274,7 @@ export async function exportCharacterPdfStyled(character) {
             rect
         }
     }).filter(Boolean)
+    debug('source fields count', sourceFields.length)
 
     const targetPages = pdfDoc.getPages()
     const black = rgb(0.08, 0.08, 0.08)
@@ -428,7 +443,9 @@ export async function exportCharacterPdfStyled(character) {
         drawMultilineAtField([`level${i}`, 'spells', 'known'], (lvl.spells || []).join(', '), { page: 2, fontSize: 7.2 })
     }
 
+    debug('saving output')
     const out = await pdfDoc.save()
+    debug('output bytes', out?.byteLength || 0)
     const blob = new Blob([out], { type: 'application/pdf' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -436,13 +453,20 @@ export async function exportCharacterPdfStyled(character) {
     a.href = url
     a.download = filename
     a.click()
+    debug('download triggered')
     URL.revokeObjectURL(url)
 }
 
 export async function exportCharacterPdf(character, opts = {}) {
     const format = opts.format || 'plain'
+    console.log('[pdf-export] format', format, { id: character?.id, name: character?.name })
     if (format === 'styled') {
-        return exportCharacterPdfStyled(character)
+        try {
+            return await exportCharacterPdfStyled(character)
+        } catch (err) {
+            console.error('[pdf-export] styled generation failed', err)
+            throw err
+        }
     }
     return exportCharacterPdfPlain(character)
 }

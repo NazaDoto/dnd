@@ -347,7 +347,13 @@ export default {
       if (!this.pdfCharacter) return
       const character = this.pdfCharacter
       this.closePdfModal()
-      await exportCharacterPdf(character, { format })
+      try {
+        console.log('[pdf-ui] DmCampaignDetailView download', { format, id: character?.id, name: character?.name })
+        await exportCharacterPdf(character, { format })
+      } catch (error) {
+        console.error('[pdf-ui] DmCampaignDetailView download failed', error)
+        this.showToast('No se pudo generar el PDF del personaje', 'error')
+      }
     },
     addNpc() {
       this.npcList.push({ name: '', role: '', notes: '' })

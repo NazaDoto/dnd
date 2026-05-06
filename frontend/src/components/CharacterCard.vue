@@ -120,8 +120,10 @@ export default {
       if (!this.pdfPayload) return;
       this.pdfModalOpen = false;
       try {
+        console.log("[pdf-ui] CharacterCard download", { format, id: this.pdfPayload?.id, name: this.pdfPayload?.name });
         await exportCharacterPdf(this.pdfPayload, { format });
-      } catch {
+      } catch (error) {
+        console.error("[pdf-ui] CharacterCard download failed", error);
         alert("No se pudo generar el PDF del personaje.");
       } finally {
         this.pdfPayload = null;
