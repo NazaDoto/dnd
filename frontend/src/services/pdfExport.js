@@ -347,6 +347,70 @@ export async function exportCharacterPdfStyled(character) {
         return false
     }
 
+    const setChecksByNormalizedName = () => {
+        const checkFields = fields.filter((f) => f.kind === 'check')
+        const skillsSet = new Set(skills.map((s) => String(s || '').toLowerCase()))
+        const savesSet = new Set(saves.map((s) => String(s || '').toLowerCase()))
+        const inspirationOn = !!character.inspiration
+        const skillAliases = {
+            acrobatics: ['acrobatics', 'acrobacias'],
+            animal_handling: ['animalhandling', 'tratoconanimales', 'tconanimales'],
+            arcana: ['arcana', 'carcano'],
+            athletics: ['athletics', 'atletismo'],
+            deception: ['deception', 'engano'],
+            history: ['history', 'historia'],
+            insight: ['insight', 'perspicacia'],
+            intimidation: ['intimidation', 'intimidacion'],
+            investigation: ['investigation', 'investigacion'],
+            medicine: ['medicine', 'medicina'],
+            nature: ['nature', 'naturaleza'],
+            perception: ['perception', 'percepcion'],
+            performance: ['performance', 'interpretacion'],
+            persuasion: ['persuasion'],
+            religion: ['religion'],
+            sleight_of_hand: ['sleightofhand', 'juegodemanos'],
+            stealth: ['stealth', 'sigilo'],
+            survival: ['survival', 'supervivencia'],
+        }
+        const saveAliases = {
+            strength: ['strength', 'fuerza'],
+            dexterity: ['dexterity', 'destreza'],
+            constitution: ['constitution', 'constitucion'],
+            intelligence: ['intelligence', 'inteligencia'],
+            wisdom: ['wisdom', 'sabiduria'],
+            charisma: ['charisma', 'carisma'],
+        }
+
+        checkFields.forEach((f) => {
+            const n = f.norm
+            let checked = false
+            if (n.includes('inspiration') || n.includes('inspiracion')) {
+                checked = inspirationOn
+            } else if (n.includes('save') || n.includes('salv') || n.includes('tirada')) {
+                for (const [key, aliases] of Object.entries(saveAliases)) {
+                    if (aliases.some((a) => n.includes(a))) {
+                        checked = savesSet.has(key)
+                        break
+                    }
+                }
+            } else if (n.includes('prof') || n.includes('compet')) {
+                for (const [key, aliases] of Object.entries(skillAliases)) {
+                    if (aliases.some((a) => n.includes(a))) {
+                        checked = skillsSet.has(key)
+                        break
+                    }
+                }
+            }
+
+            try {
+                if (checked) f.field.check()
+                else if (typeof f.field.uncheck === 'function') f.field.uncheck()
+            } catch (err) {
+                console.error('[pdf-styled] checkbox set failed', f.name, err)
+            }
+        })
+    }
+
     const setImage = async (hints, imageUrl, opts = {}) => {
         const url = toPdfSafe(imageUrl)
         if (!url) return false
@@ -510,6 +574,7 @@ export async function exportCharacterPdfStyled(character) {
             missingAssignments.push({ kind: 'check', page: 0, hints: [`${k}saveprof`], value: saves.includes(k) })
         }
     })
+    setChecksByNormalizedName()
 
     // PÁGINA 2: personalidad y detalles físicos
     fillAny([['charactername2'], ['nombrepersonajep2'], ['nombrepersonaje']], character.name, { page: 1, strict: true })

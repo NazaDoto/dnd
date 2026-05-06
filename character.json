@@ -1,0 +1,151 @@
+{
+  "name": "Axios Bladkeel",
+  "class": "wizard",
+  "subclass": "evocation",
+  "level": 5,
+  "background": "sage",
+  "race": "elf",
+  "alignment": "neutral_good",
+  "experience_points": 6500,
+  "strength": 8,
+  "dexterity": 14,
+  "constitution": 13,
+  "intelligence": 18,
+  "wisdom": 12,
+  "charisma": 10,
+  "armor_class": 13,
+  "initiative": 2,
+  "speed": 30,
+  "hit_points_max": 28,
+  "hit_points_current": 24,
+  "hit_points_temp": 0,
+  "hit_dice": "5d6",
+  "saving_throws_prof": [
+    "intelligence",
+    "wisdom"
+  ],
+  "skills_prof": [
+    "arcana",
+    "history",
+    "investigation",
+    "insight"
+  ],
+  "skills_expertise": [],
+  "inspiration": 0,
+  "proficiency_bonus": 3,
+  "passive_perception": 11,
+  "personality_traits": "Siempre tomo notas detalladas.",
+  "ideals": "El conocimiento debe preservarse.",
+  "bonds": "Mi mentor desaparecio en circunstancias extranas.",
+  "flaws": "Me cuesta confiar en desconocidos.",
+  "backstory": "Nacido en una ciudad academica, dedico su vida al estudio de la magia.",
+  "age": "120",
+  "height": "1.78 m",
+  "weight": "68 kg",
+  "eyes": "Verdes",
+  "skin": "Clara",
+  "hair": "Plateado",
+  "appearance_notes": "Tunica azul con simbolos arcanos.",
+  "equipment": [
+    "Baston",
+    "Libro de conjuros",
+    "Componente arcano"
+  ],
+  "copper_pieces": 12,
+  "silver_pieces": 35,
+  "electrum_pieces": 0,
+  "gold_pieces": 142,
+  "platinum_pieces": 3,
+  "attacks_spellcasting": [
+    {
+      "name": "Baston",
+      "bonus": "+2",
+      "damage": "1d6",
+      "type": "contundente"
+    },
+    {
+      "name": "Rayo de fuego",
+      "bonus": "+7",
+      "damage": "2d10",
+      "type": "fuego"
+    }
+  ],
+  "features_traits": [
+    "Recuperacion Arcana",
+    "Especialista en Evocacion"
+  ],
+  "spellcasting_ability": "intelligence",
+  "spell_save_dc": 15,
+  "spell_attack_bonus": 7,
+  "spells": {
+    "cantrips": [
+      "rayo de fuego",
+      "mano de mago",
+      "ilusion menor"
+    ],
+    "level1": {
+      "slots": 4,
+      "slots_used": 1,
+      "spells": [
+        "misil magico",
+        "escudo"
+      ]
+    },
+    "level2": {
+      "slots": 3,
+      "slots_used": 0,
+      "spells": [
+        "inmovilizar persona"
+      ]
+    },
+    "level3": {
+      "slots": 2,
+      "slots_used": 0,
+      "spells": [
+        "bola de fuego"
+      ]
+    },
+    "level4": {
+      "slots": 0,
+      "slots_used": 0,
+      "spells": []
+    },
+    "level5": {
+      "slots": 0,
+      "slots_used": 0,
+      "spells": []
+    },
+    "level6": {
+      "slots": 0,
+      "slots_used": 0,
+      "spells": []
+    },
+    "level7": {
+      "slots": 0,
+      "slots_used": 0,
+      "spells": []
+    },
+    "level8": {
+      "slots": 0,
+      "slots_used": 0,
+      "spells": []
+    },
+    "level9": {
+      "slots": 0,
+      "slots_used": 0,
+      "spells": []
+    }
+  },
+  "languages": [
+    "comun",
+    "elfico",
+    "draconico"
+  ],
+  "other_proficiencies": [
+    "dagas",
+    "ballestas ligeras"
+  ],
+  "allies_organizations": "Circulo de Sabios de Neverwinter",
+  "faction": "Harpers",
+  "treasure": "Anillo menor de proteccion"
+}
