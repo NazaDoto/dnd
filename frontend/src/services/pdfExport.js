@@ -228,13 +228,35 @@ export async function exportCharacterPdfStyled(character) {
     const pdfDoc = await PDFDocument.load(bytes)
     const form = pdfDoc.getForm()
 
-    const setText = (names, value) => {
+    const fields = form.getFields()
+    const norm = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const fieldNames = fields.map((f) => f.getName())
+    const fieldNorm = fieldNames.map((n) => ({ raw: n, norm: norm(n) }))
+    const used = new Set()
+
+    const findByHints = (hints = []) => {
+        const normalizedHints = hints.map(norm).filter(Boolean)
+        let best = null
+        for (const f of fieldNorm) {
+            const score = normalizedHints.reduce((acc, h) => acc + (f.norm.includes(h) ? 1 : 0), 0)
+            if (!score) continue
+            const penalty = used.has(f.raw) ? 0.25 : 0
+            const finalScore = score - penalty
+            if (!best || finalScore > best.score) best = { name: f.raw, score: finalScore }
+        }
+        return best?.name || null
+    }
+
+    const setText = (hints, value) => {
+        const name = Array.isArray(hints) ? findByHints(hints) : findByHints([hints])
+        if (!name) return false
         const val = sanitize(value, '')
-        for (const n of names) {
-            try {
-                form.getTextField(n).setText(val)
-                return
-            } catch { }
+        try {
+            form.getTextField(name).setText(val)
+            used.add(name)
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -244,30 +266,30 @@ export async function exportCharacterPdfStyled(character) {
     const attacks = normalizeAttacks(character)
     const spells = normalizeSpells(character)
 
-    setText(['CHARACTER NAME'], character.name)
-    setText(['CLASS & LEVEL'], `${classLabel(character.class)} ${character.level || 1}`)
-    setText(['BACKGROUND'], character.background)
-    setText(['RACE'], character.race)
-    setText(['EXPERIENCE POINTS'], String(character.experience_points || 0))
-    setText(['ALIGNMENT'], character.alignment)
-    setText(['PLAYER NAME'], character.player_username || '')
+    setText(['character', 'name'], character.name)
+    setText(['class', 'level'], `${classLabel(character.class)} ${character.level || 1}`)
+    setText(['background'], character.background)
+    setText(['race'], character.race)
+    setText(['experience', 'xp'], String(character.experience_points || 0))
+    setText(['alignment'], character.alignment)
+    setText(['player', 'name'], character.player_username || '')
 
-    setText(['Strength', 'STRENGTH'], String(character.strength || 10))
-    setText(['Dexterity', 'DEXTERITY'], String(character.dexterity || 10))
-    setText(['Constitution', 'CONSTITUTION'], String(character.constitution || 10))
-    setText(['Intelligence', 'INTELLIGENCE'], String(character.intelligence || 10))
-    setText(['Wisdom', 'WISDOM'], String(character.wisdom || 10))
-    setText(['Charisma', 'CHARISMA'], String(character.charisma || 10))
+    setText(['strength', 'score'], String(character.strength || 10))
+    setText(['dexterity', 'score'], String(character.dexterity || 10))
+    setText(['constitution', 'score'], String(character.constitution || 10))
+    setText(['intelligence', 'score'], String(character.intelligence || 10))
+    setText(['wisdom', 'score'], String(character.wisdom || 10))
+    setText(['charisma', 'score'], String(character.charisma || 10))
 
-    setText(['ARMOR CLASS', 'ARMOR'], String(character.armor_class || 10))
+    setText(['armor', 'class'], String(character.armor_class || 10))
     setText(['INITIATIVE'], formatModifier(character.initiative || 0))
     setText(['SPEED'], String(character.speed || 0))
-    setText(['Hit Point Maximum'], String(character.hit_points_max || 0))
-    setText(['CURRENT HIT POINTS'], String(character.hit_points_current || 0))
-    setText(['TEMPORARY HIT POINTS'], String(character.hit_points_temp || 0))
-    setText(['PROFICIENCY BONUS'], formatModifier(character.proficiency_bonus || 2))
+    setText(['hit', 'point', 'maximum'], String(character.hit_points_max || 0))
+    setText(['current', 'hit', 'points'], String(character.hit_points_current || 0))
+    setText(['temporary', 'hit', 'points'], String(character.hit_points_temp || 0))
+    setText(['proficiency', 'bonus'], formatModifier(character.proficiency_bonus || 2))
     setText(['INSPIRATION'], character.inspiration ? 'X' : '')
-    setText(['PASSIVE WISDOM (PERCEPTION)'], String(character.passive_perception || 10))
+    setText(['passive', 'perception'], String(character.passive_perception || 10))
 
     setText(['CP'], String(character.copper_pieces || 0))
     setText(['SP'], String(character.silver_pieces || 0))
@@ -287,18 +309,18 @@ export async function exportCharacterPdfStyled(character) {
     const saveMap = [['strength', 'STRENGTH'], ['dexterity', 'DEXTERITY'], ['constitution', 'CONSTITUTION'], ['intelligence', 'INTELLIGENCE'], ['wisdom', 'WISDOM'], ['charisma', 'CHARISMA']]
     for (const [k, n] of saveMap) setText([n], saves.includes(k) ? 'P' : '')
 
-    setText(['EQUIPMENT'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
-    setText(['OTHER PROFICIENCIES & LANGUAGES'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
-    setText(['FEATURES & TRAITS'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
-    setText(['ATTACKS & SPELLCASTING'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
+    setText(['equipment'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
+    setText(['other', 'proficiencies', 'languages'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
+    setText(['features', 'traits'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
+    setText(['attacks', 'spellcasting'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
 
-    setText(['PERSONALITY TRAITS'], character.personality_traits)
+    setText(['personality', 'traits'], character.personality_traits)
     setText(['IDEALS'], character.ideals)
     setText(['BONDS'], character.bonds)
     setText(['FLAWS'], character.flaws)
-    setText(['CHARACTER BACKSTORY'], character.backstory)
-    setText(['CHARACTER APPEARANCE'], character.appearance_notes)
-    setText(['ALLIES & ORGANIZATIONS'], character.allies_organizations)
+    setText(['character', 'backstory'], character.backstory)
+    setText(['character', 'appearance'], character.appearance_notes)
+    setText(['allies', 'organizations'], character.allies_organizations)
     setText(['TREASURE'], character.treasure)
     setText(['AGE'], character.age)
     setText(['HEIGHT'], character.height)
@@ -307,10 +329,10 @@ export async function exportCharacterPdfStyled(character) {
     setText(['SKIN'], character.skin)
     setText(['HAIR'], character.hair)
 
-    setText(['SPELLCASTING CLASS'], classLabel(character.class))
-    setText(['SPELLCASTING ABILITY'], character.spellcasting_ability)
-    setText(['SPELL SAVE DC'], String(character.spell_save_dc || ''))
-    setText(['SPELL ATTACK BONUS'], String(character.spell_attack_bonus || ''))
+    setText(['spellcasting', 'class'], classLabel(character.class))
+    setText(['spellcasting', 'ability'], character.spellcasting_ability)
+    setText(['spell', 'save', 'dc'], String(character.spell_save_dc || ''))
+    setText(['spell', 'attack', 'bonus'], String(character.spell_attack_bonus || ''))
     setText(['CANTRIPS'], spells.cantrips.join(', '))
     for (let i = 1; i <= 9; i++) {
         const lvl = spells[`level${i}`]
