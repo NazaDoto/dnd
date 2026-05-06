@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -10,6 +11,16 @@ from urllib.parse import urljoin, urlparse
 
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, NumberObject, TextStringObject
+
+# Compatibility patch:
+# Some server builds raise TypeError for hashlib.md5(usedforsecurity=...).
+_orig_md5 = hashlib.md5
+
+def _md5_compat(*args, **kwargs):
+    kwargs.pop("usedforsecurity", None)
+    return _orig_md5(*args, **kwargs)
+
+hashlib.md5 = _md5_compat  # type: ignore
 
 try:
     from reportlab.pdfgen import canvas  # type: ignore

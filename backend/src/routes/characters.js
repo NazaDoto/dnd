@@ -164,8 +164,8 @@ function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) 
             });
             child.on('close', (code) => {
                 if (code === 0) resolve({ cmd, args, stdout, stderr });
-                else if (idx < candidates.length - 1) {
-                    console.error(`[styled-pdf][python] command failed: ${cmd} exit=${code} stderr=${(stderr || '').trim()}`);
+                else if (idx < candidates.length - 1 && !(stderr || '').trim()) {
+                    console.error(`[styled-pdf][python] command failed without stderr: ${cmd} exit=${code}`);
                     tryAt(idx + 1);
                 }
                 else reject(new Error(stderr || `Generador Python finalizó con código ${code}`));
