@@ -135,7 +135,9 @@ function normalizePatchField(field, value) {
 }
 
 function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) {
+    const customPython = process.env.PYTHON_BIN ? [[process.env.PYTHON_BIN, [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]]] : [];
     const candidates = [
+        ...customPython,
         ['python', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
         ['python3', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
         ['py', ['-3', scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
@@ -162,6 +164,36 @@ function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) 
 
         tryAt(0);
     });
+}
+
+function resolveTemplateCandidates() {
+    const envPath = process.env.PDF_TEMPLATE_PATH;
+    const candidates = [
+        envPath,
+        path.join(__dirname, '../../templates/editable_es.pdf'),
+        path.join(__dirname, '../../../frontend/public/editable_es.pdf'),
+        path.join(process.cwd(), 'templates/editable_es.pdf'),
+        path.join(process.cwd(), 'frontend/public/editable_es.pdf')
+    ].filter(Boolean);
+    return candidates;
+}
+
+async function getTemplatePath(tempDir) {
+    const candidates = resolveTemplateCandidates();
+    const found = candidates.find((p) => fs.existsSync(p));
+    if (found) return found;
+
+    const remoteUrl = process.env.PDF_TEMPLATE_URL;
+    if (remoteUrl) {
+        const outPath = path.join(tempDir, 'editable_es.pdf');
+        const resp = await fetch(remoteUrl);
+        if (!resp.ok) throw new Error(`No se pudo descargar plantilla remota (${resp.status})`);
+        const arr = await resp.arrayBuffer();
+        await fsp.writeFile(outPath, Buffer.from(arr));
+        return outPath;
+    }
+
+    throw new Error(`Plantilla editable_es.pdf no encontrada. Probadas rutas: ${candidates.join(' | ')}`);
 }
 
 // ── GET /api/characters ──────────────────────────────────────
@@ -416,8 +448,8 @@ router.post('/pdf/styled', auth, async (req, res) => {
         };
 
         const scriptPath = path.join(__dirname, '../../scripts/fill_character_sheet.py');
-        const templatePath = path.join(__dirname, '../../../frontend/public/editable_es.pdf');
         tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'dnd-pdf-'));
+        const templatePath = await getTemplatePath(tempDir);
         const jsonPath = path.join(tempDir, 'character.json');
         const outputPath = path.join(tempDir, 'styled.pdf');
 
