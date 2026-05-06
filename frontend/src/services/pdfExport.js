@@ -223,7 +223,7 @@ function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHei
 export async function exportCharacterPdfStyled(character) {
     const debug = (...args) => console.log('[pdf-styled]', ...args)
     debug('start', { id: character?.id, name: character?.name })
-    const targetTemplateUrl = '/pdf/dnd_blankcharactersheet_es.pdf'
+    const targetTemplateUrl = '/editable_es.pdf'
     debug('loading target template', targetTemplateUrl)
     const targetRes = await fetch(targetTemplateUrl)
     if (!targetRes.ok) throw new Error(`No se pudo cargar plantilla destino (${targetRes.status})`)
@@ -233,6 +233,7 @@ export async function exportCharacterPdfStyled(character) {
     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
     const coordSources = [
+        '/editable_es.pdf',
         '/pdf/5E_CharacterSheet_Fillable.pdf'
     ]
     let sourcePdfDoc = null
@@ -372,25 +373,25 @@ export async function exportCharacterPdfStyled(character) {
     const attacks = normalizeAttacks(character)
     const spells = normalizeSpells(character)
 
-    drawAtField(['character', 'name'], character.name, { bold: true, fontSize: 10.5 })
-    drawAtField(['class', 'level'], `${classLabel(character.class)} ${character.level || 1}`)
-    drawAtField(['background'], character.background)
-    drawAtField(['race'], character.race)
-    drawAtField(['experience', 'points'], String(character.experience_points || 0))
-    drawAtField(['alignment'], character.alignment)
+    drawAtField(['character', 'name', 'nombre', 'personaje'], character.name, { bold: true, fontSize: 10.5 })
+    drawAtField(['class', 'level', 'clase', 'nivel'], `${classLabel(character.class)} ${character.level || 1}`)
+    drawAtField(['background', 'trasfondo'], character.background)
+    drawAtField(['race', 'raza'], character.race)
+    drawAtField(['experience', 'points', 'experiencia', 'puntos'], String(character.experience_points || 0))
+    drawAtField(['alignment', 'alineamiento'], character.alignment)
 
     ATTRIBUTES.forEach((attr) => {
         drawAtField([attr.key], String(character[attr.key] || 10), { bold: true })
     })
-    drawAtField(['armor', 'class'], String(character.armor_class || 10), { bold: true })
-    drawAtField(['initiative'], formatModifier(character.initiative || 0), { bold: true })
-    drawAtField(['speed'], String(character.speed || 0))
-    drawAtField(['hit', 'point', 'maximum'], String(character.hit_points_max || 0))
-    drawAtField(['current', 'hit', 'points'], String(character.hit_points_current || 0), { bold: true })
-    drawAtField(['temporary', 'hit', 'points'], String(character.hit_points_temp || 0))
-    drawAtField(['proficiency', 'bonus'], formatModifier(character.proficiency_bonus || 2), { bold: true })
-    drawAtField(['inspiration'], character.inspiration ? 'X' : '')
-    drawAtField(['passive', 'perception'], String(character.passive_perception || 10), { bold: true })
+    drawAtField(['armor', 'class', 'clase', 'armadura'], String(character.armor_class || 10), { bold: true })
+    drawAtField(['initiative', 'iniciativa'], formatModifier(character.initiative || 0), { bold: true })
+    drawAtField(['speed', 'velocidad'], String(character.speed || 0))
+    drawAtField(['hit', 'point', 'maximum', 'puntos', 'golpe', 'maximos'], String(character.hit_points_max || 0))
+    drawAtField(['current', 'hit', 'points', 'puntos', 'golpe', 'actuales'], String(character.hit_points_current || 0), { bold: true })
+    drawAtField(['temporary', 'hit', 'points', 'temporales'], String(character.hit_points_temp || 0))
+    drawAtField(['proficiency', 'bonus', 'bonificador', 'competencia'], formatModifier(character.proficiency_bonus || 2), { bold: true })
+    drawAtField(['inspiration', 'inspiracion'], character.inspiration ? 'X' : '')
+    drawAtField(['passive', 'perception', 'pasiva', 'percepcion'], String(character.passive_perception || 10), { bold: true })
 
     drawAtField(['cp'], String(character.copper_pieces || 0))
     drawAtField(['sp'], String(character.silver_pieces || 0))
@@ -398,10 +399,10 @@ export async function exportCharacterPdfStyled(character) {
     drawAtField(['gp'], String(character.gold_pieces || 0))
     drawAtField(['pp'], String(character.platinum_pieces || 0))
 
-    drawMultilineAtField(['equipment'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
-    drawMultilineAtField(['other', 'proficiencies', 'languages'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
-    drawMultilineAtField(['features', 'traits'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
-    drawMultilineAtField(['attacks', 'spellcasting'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
+    drawMultilineAtField(['equipment', 'equipo'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
+    drawMultilineAtField(['other', 'proficiencies', 'languages', 'otras', 'competencias', 'idiomas'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
+    drawMultilineAtField(['features', 'traits', 'rasgos', 'atributos'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
+    drawMultilineAtField(['attacks', 'spellcasting', 'ataques', 'conjuros'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
 
     const skillLabels = {
         acrobatics: ['acrobatics'], animal_handling: ['animal', 'handling'], arcana: ['arcana'],
@@ -427,27 +428,27 @@ export async function exportCharacterPdfStyled(character) {
         if (saves.includes(k)) drawAtField(hints, 'P', { page: 0, fontSize: 7.2, bold: true })
     })
 
-    drawAtField(['character', 'name'], character.name, { page: 1, bold: true })
-    drawAtField(['age'], character.age, { page: 1 })
-    drawAtField(['height'], character.height, { page: 1 })
-    drawAtField(['weight'], character.weight, { page: 1 })
-    drawAtField(['eyes'], character.eyes, { page: 1 })
-    drawAtField(['skin'], character.skin, { page: 1 })
-    drawAtField(['hair'], character.hair, { page: 1 })
+    drawAtField(['character', 'name', 'nombre', 'personaje'], character.name, { page: 1, bold: true })
+    drawAtField(['age', 'edad'], character.age, { page: 1 })
+    drawAtField(['height', 'altura'], character.height, { page: 1 })
+    drawAtField(['weight', 'peso'], character.weight, { page: 1 })
+    drawAtField(['eyes', 'ojos'], character.eyes, { page: 1 })
+    drawAtField(['skin', 'piel'], character.skin, { page: 1 })
+    drawAtField(['hair', 'pelo'], character.hair, { page: 1 })
     drawMultilineAtField(['personality', 'traits'], character.personality_traits, { page: 1 })
     drawMultilineAtField(['ideals'], character.ideals, { page: 1 })
     drawMultilineAtField(['bonds'], character.bonds, { page: 1 })
     drawMultilineAtField(['flaws'], character.flaws, { page: 1 })
     drawMultilineAtField(['character', 'backstory'], character.backstory, { page: 1 })
     drawMultilineAtField(['character', 'appearance'], character.appearance_notes, { page: 1 })
-    drawMultilineAtField(['allies', 'organizations'], character.allies_organizations, { page: 1 })
-    drawMultilineAtField(['treasure'], character.treasure, { page: 1 })
+    drawMultilineAtField(['allies', 'organizations', 'aliados', 'organizaciones'], character.allies_organizations, { page: 1 })
+    drawMultilineAtField(['treasure', 'tesoro'], character.treasure, { page: 1 })
 
-    drawAtField(['spellcasting', 'class'], classLabel(character.class), { page: 2 })
-    drawAtField(['spellcasting', 'ability'], character.spellcasting_ability, { page: 2 })
-    drawAtField(['spell', 'save', 'dc'], String(character.spell_save_dc || ''), { page: 2 })
-    drawAtField(['spell', 'attack', 'bonus'], String(character.spell_attack_bonus || ''), { page: 2 })
-    drawMultilineAtField(['cantrips'], spells.cantrips.join(', '), { page: 2 })
+    drawAtField(['spellcasting', 'class', 'clase', 'lanzadora', 'conjuros'], classLabel(character.class), { page: 2 })
+    drawAtField(['spellcasting', 'ability', 'aptitud', 'magica'], character.spellcasting_ability, { page: 2 })
+    drawAtField(['spell', 'save', 'dc', 'tirada', 'salvacion'], String(character.spell_save_dc || ''), { page: 2 })
+    drawAtField(['spell', 'attack', 'bonus', 'ataque', 'conjuros'], String(character.spell_attack_bonus || ''), { page: 2 })
+    drawMultilineAtField(['cantrips', 'trucos'], spells.cantrips.join(', '), { page: 2 })
     for (let i = 1; i <= 9; i++) {
         const lvl = spells[`level${i}`]
         drawAtField([`level${i}`, 'slots', 'total'], String(lvl.slots || 0), { page: 2, fontSize: 7.5 })
