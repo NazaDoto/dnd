@@ -266,6 +266,23 @@ export async function exportCharacterPdfStyled(character) {
     debug('template fields count', fields.length)
     debug('template field names', fields.map((f) => ({ page: f.pageIndex + 1, type: f.type, name: f.name })))
     const missingAssignments = []
+    const downloadFieldList = () => {
+        try {
+            const content = fields
+                .map((f, i) => `${String(i + 1).padStart(3, '0')} | p${f.pageIndex + 1} | ${f.type} | ${f.name}`)
+                .join('\n')
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
+            const link = document.createElement('a')
+            link.href = URL.createObjectURL(blob)
+            link.download = 'editable_es_fields.txt'
+            link.click()
+            URL.revokeObjectURL(link.href)
+            debug('field list downloaded', { count: fields.length })
+        } catch (err) {
+            console.error('[pdf-styled] failed to download field list', err)
+        }
+    }
+    downloadFieldList()
 
     const findBestField = (hints = [], opts = {}) => {
         const hs = hints.map(norm).filter(Boolean)
