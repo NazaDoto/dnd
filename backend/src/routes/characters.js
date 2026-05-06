@@ -138,6 +138,8 @@ function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) 
     const customPython = process.env.PYTHON_BIN ? [[process.env.PYTHON_BIN, [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]]] : [];
     const candidates = [
         ...customPython,
+        ['/usr/bin/python3', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
+        ['/usr/local/bin/python3', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
         ['python', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
         ['python3', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
         ['py', ['-3', scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
@@ -156,10 +158,16 @@ function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) 
 
             child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
             child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
-            child.on('error', () => tryAt(idx + 1));
+            child.on('error', (err) => {
+                console.error(`[styled-pdf][python] spawn failed: ${cmd}`, err?.message || err);
+                tryAt(idx + 1);
+            });
             child.on('close', (code) => {
                 if (code === 0) resolve({ cmd, args, stdout, stderr });
-                else if (idx < candidates.length - 1) tryAt(idx + 1);
+                else if (idx < candidates.length - 1) {
+                    console.error(`[styled-pdf][python] command failed: ${cmd} exit=${code} stderr=${(stderr || '').trim()}`);
+                    tryAt(idx + 1);
+                }
                 else reject(new Error(stderr || `Generador Python finalizó con código ${code}`));
             });
         };
