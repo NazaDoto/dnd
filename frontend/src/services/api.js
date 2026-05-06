@@ -38,6 +38,7 @@ export const charactersAPI = {
     update: (id, fd) => api.put(`/characters/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
     updateFields: (id, fields) => api.patch(`/characters/${id}/fields`, fields),
     updateField: (id, field, value) => api.patch(`/characters/${id}/fields`, { [field]: value }),
+    downloadStyledPdf: (character) => api.post('/characters/pdf/styled', { character }, { responseType: 'blob' }),
     delete: (id) => api.delete(`/characters/${id}`),
 }
 

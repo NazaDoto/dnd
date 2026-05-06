@@ -4,6 +4,9 @@ const auth = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const fsp = require('fs/promises');
+const { spawn } = require('child_process');
 
 // ── Multer config ────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -129,6 +132,36 @@ function normalizePatchField(field, value) {
 
     if (value === undefined) return null;
     return value;
+}
+
+function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) {
+    const candidates = [
+        ['python', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
+        ['python3', [scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
+        ['py', ['-3', scriptPath, '--json', jsonPath, '--template', templatePath, '--output', outputPath]],
+    ];
+
+    return new Promise((resolve, reject) => {
+        const tryAt = (idx) => {
+            if (idx >= candidates.length) {
+                reject(new Error('No se pudo ejecutar Python. Instala Python y pypdf en el servidor.'));
+                return;
+            }
+            const [cmd, args] = candidates[idx];
+            const child = spawn(cmd, args, { windowsHide: true });
+            let stderr = '';
+
+            child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+            child.on('error', () => tryAt(idx + 1));
+            child.on('close', (code) => {
+                if (code === 0) resolve();
+                else if (idx < candidates.length - 1) tryAt(idx + 1);
+                else reject(new Error(stderr || `Generador Python finalizó con código ${code}`));
+            });
+        };
+
+        tryAt(0);
+    });
 }
 
 // ── GET /api/characters ──────────────────────────────────────
@@ -364,6 +397,52 @@ router.patch('/:id/fields', auth, async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error al actualizar campos', detail: err.message });
+    }
+});
+
+// ── POST /api/characters/pdf/styled ───────────────────────────
+router.post('/pdf/styled', auth, async (req, res) => {
+    let tempDir = null;
+    try {
+        const payload = req.body && typeof req.body === 'object' ? req.body : {};
+        const rawCharacter = payload.character && typeof payload.character === 'object' ? payload.character : payload;
+        if (!rawCharacter || typeof rawCharacter !== 'object') {
+            return res.status(400).json({ message: 'Faltan datos del personaje para generar el PDF' });
+        }
+
+        const character = {
+            ...rawCharacter,
+            player_username: rawCharacter.player_username || req.user?.username || '',
+        };
+
+        const scriptPath = path.join(__dirname, '../../scripts/fill_character_sheet.py');
+        const templatePath = path.join(__dirname, '../../../frontend/public/editable_es.pdf');
+        tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'dnd-pdf-'));
+        const jsonPath = path.join(tempDir, 'character.json');
+        const outputPath = path.join(tempDir, 'styled.pdf');
+
+        await fsp.writeFile(jsonPath, JSON.stringify(character), 'utf8');
+        await runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath });
+
+        const pdfBytes = await fsp.readFile(outputPath);
+        const safeName = String(character.name || 'personaje')
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-_]/g, '');
+        const filename = `${safeName || 'personaje'}-estilizado.pdf`;
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        return res.send(pdfBytes);
+    } catch (err) {
+        console.error('[characters][styled-pdf] error', err);
+        return res.status(500).json({ message: 'No se pudo generar el PDF estilizado', detail: err.message });
+    } finally {
+        if (tempDir) {
+            try {
+                await fsp.rm(tempDir, { recursive: true, force: true });
+            } catch { }
+        }
     }
 });
 
