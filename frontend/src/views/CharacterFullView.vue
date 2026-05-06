@@ -27,12 +27,63 @@
     <div class="full-layout">
       <aside class="full-sidebar">
         <div class="sidebar-title card">
-          <p class="sidebar-name">{{ character.name }}</p>
-          <p class="sidebar-meta">
-            {{ character.race }}
-            <span v-if="character.subrace"> ({{ character.subrace }})</span>
-            · {{ character.class }} Nv.{{ character.level }}
-          </p>
+          <div class="sidebar-identity">
+            <div class="sidebar-photo-wrap">
+              <img v-if="character.photo_url" :src="character.photo_url" :alt="character.name" class="sidebar-photo" />
+              <div v-else class="sidebar-photo sidebar-photo-placeholder">{{ (character.name || "?")[0] }}</div>
+              <button
+                v-if="!isDmCampaignReader"
+                type="button"
+                class="icon-action edit photo-edit-btn"
+                @click="triggerPhotoPicker"
+                title="Editar foto"
+              >✎</button>
+              <input ref="sidebarPhotoInput" type="file" accept="image/*" class="sr-only" @change="onSidebarPhotoSelected" />
+            </div>
+            <div class="sidebar-main">
+              <div class="section-title-row">
+                <p v-if="!isEditing('sidebar_name')" class="sidebar-name">{{ character.name }}</p>
+                <input v-else v-model="fieldDraft" />
+                <div v-if="!isDmCampaignReader" class="mini-edit-actions">
+                  <button v-if="!isEditing('sidebar_name')" type="button" class="icon-action edit" @click="startFieldEdit('sidebar_name', character.name || '')">✎</button>
+                  <template v-else>
+                    <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                    <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+                  </template>
+                </div>
+              </div>
+              <div class="section-title-row sidebar-meta-row">
+                <p v-if="!isEditing('sidebar_race')" class="sidebar-meta">
+                  {{ character.race }}<span v-if="character.subrace"> ({{ character.subrace }})</span>
+                </p>
+                <div v-else class="inline-grid">
+                  <input v-model="fieldDraft.race" placeholder="Raza" />
+                  <input v-model="fieldDraft.subrace" placeholder="Subraza (opcional)" />
+                </div>
+                <div v-if="!isDmCampaignReader" class="mini-edit-actions">
+                  <button v-if="!isEditing('sidebar_race')" type="button" class="icon-action edit" @click="startFieldEdit('sidebar_race')">✎</button>
+                  <template v-else>
+                    <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                    <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+                  </template>
+                </div>
+              </div>
+              <div class="section-title-row sidebar-meta-row">
+                <p v-if="!isEditing('sidebar_class')" class="sidebar-meta">{{ character.class }} · Nv.{{ character.level }}</p>
+                <div v-else class="inline-grid">
+                  <input v-model="fieldDraft.class" placeholder="Clase" />
+                  <input v-model.number="fieldDraft.level" type="number" min="1" max="20" placeholder="Nivel" />
+                </div>
+                <div v-if="!isDmCampaignReader" class="mini-edit-actions">
+                  <button v-if="!isEditing('sidebar_class')" type="button" class="icon-action edit" @click="startFieldEdit('sidebar_class')">✎</button>
+                  <template v-else>
+                    <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                    <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="tabs">
           <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
@@ -752,6 +803,20 @@ export default {
         };
         return;
       }
+      if (key === "sidebar_race") {
+        this.fieldDraft = {
+          race: this.character?.race || "",
+          subrace: this.character?.subrace || ""
+        };
+        return;
+      }
+      if (key === "sidebar_class") {
+        this.fieldDraft = {
+          class: this.character?.class || "",
+          level: Number(this.character?.level || 1)
+        };
+        return;
+      }
       if (key === "features_competencies") {
         this.fieldDraft = {
           languages: (this.character?.languages || []).join(", "),
@@ -802,6 +867,18 @@ export default {
           await this.persistCharacterPatch({ passive_perception: Number(value || 0) });
         } else if (key === "state_xp") {
           await this.persistCharacterPatch({ experience_points: Number(value || 0) });
+        } else if (key === "sidebar_name") {
+          await this.persistCharacterPatch({ name: String(value || "").trim() });
+        } else if (key === "sidebar_race") {
+          await this.persistCharacterPatch({
+            race: String(this.fieldDraft?.race || "").trim(),
+            subrace: String(this.fieldDraft?.subrace || "").trim() || null
+          });
+        } else if (key === "sidebar_class") {
+          await this.persistCharacterPatch({
+            class: String(this.fieldDraft?.class || "").trim(),
+            level: Math.max(1, Number(this.fieldDraft?.level || 1))
+          });
         } else if (key === "skills_saves") {
           await this.persistCharacterPatch({ saving_throws_prof: Array.isArray(this.fieldDraft) ? this.fieldDraft : [] });
         } else if (key === "skills_skills") {
@@ -916,6 +993,34 @@ export default {
         this.fieldDraft.cantrips.splice(idx, 1);
       } else {
         this.fieldDraft[levelKey].spells.splice(idx, 1);
+      }
+    },
+    triggerPhotoPicker() {
+      this.$refs.sidebarPhotoInput?.click();
+    },
+    buildCharacterFormData(extra = {}) {
+      const fd = new FormData();
+      const merged = { ...(this.character || {}), ...extra };
+      Object.keys(merged).forEach((k) => {
+        const v = merged[k];
+        if (v === null || v === undefined) return;
+        fd.append(k, typeof v === "object" ? JSON.stringify(v) : v);
+      });
+      return fd;
+    },
+    async onSidebarPhotoSelected(e) {
+      const file = e?.target?.files?.[0];
+      if (!file) return;
+      try {
+        const fd = this.buildCharacterFormData();
+        fd.append("photo", file);
+        const { data } = await charactersAPI.update(this.id, fd);
+        this.character = data;
+        this.showToast("Foto actualizada", "success");
+      } catch {
+        this.showToast("No se pudo actualizar la foto", "error");
+      } finally {
+        if (e?.target) e.target.value = "";
       }
     },
     downloadDmPdf() {
@@ -1039,6 +1144,44 @@ normalizeSpells(value) {
 .sidebar-title {
   margin-bottom: 0.6rem;
 }
+.sidebar-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+.sidebar-photo-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.sidebar-photo {
+  width: 3.9rem;
+  height: 3.9rem;
+  border-radius: 50%;
+  border: 2px solid var(--gold-dark);
+  object-fit: cover;
+}
+.sidebar-photo-placeholder {
+  background: var(--bg-surface);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 1.35rem;
+  text-transform: uppercase;
+}
+.photo-edit-btn {
+  position: absolute;
+  right: -0.15rem;
+  bottom: -0.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.65rem;
+}
+.sidebar-main {
+  min-width: 0;
+  flex: 1;
+}
 .sidebar-name {
   font-family: var(--font-display);
   font-size: 1.1rem;
@@ -1046,9 +1189,21 @@ normalizeSpells(value) {
   line-height: 1.15;
 }
 .sidebar-meta {
-  margin-top: 0.25rem;
   color: var(--text-secondary);
   font-size: 0.82rem;
+}
+.sidebar-meta-row {
+  margin-top: 0.2rem;
+}
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
 }
 .quick-states-wrap {
   margin-bottom: 0.7rem;

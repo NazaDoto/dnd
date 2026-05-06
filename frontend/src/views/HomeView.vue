@@ -255,6 +255,9 @@ export default {
 .empty-state p  { font-size: 0.9rem; }
 
 .join-block { margin-bottom: 1rem; }
+.join-block {
+  overflow: visible;
+}
 .join-hint {
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -292,7 +295,7 @@ export default {
   }
   .join-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, auto);
     gap: 0.65rem;
     align-items: end;
   }
