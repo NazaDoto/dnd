@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf'
+import { PDFDocument } from 'pdf-lib'
 import { CLASSES, ATTRIBUTES, getModifier, formatModifier } from './dndData.js'
 
 function pdfTheme() {
@@ -220,64 +221,113 @@ function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHei
 }
 
 export async function exportCharacterPdfStyled(character) {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-    const t = pdfTheme()
+    const templateUrl = '/pdf/5E_CharacterSheet_Fillable.pdf'
+    const res = await fetch(templateUrl)
+    if (!res.ok) throw new Error('Plantilla PDF no encontrada')
+    const bytes = await res.arrayBuffer()
+    const pdfDoc = await PDFDocument.load(bytes)
+    const form = pdfDoc.getForm()
+
+    const setText = (names, value) => {
+        const val = sanitize(value, '')
+        for (const n of names) {
+            try {
+                form.getTextField(n).setText(val)
+                return
+            } catch { }
+        }
+    }
+
+    const skills = safeArray(character.skills_prof)
+    const expertise = safeArray(character.skills_expertise)
+    const saves = safeArray(character.saving_throws_prof)
     const attacks = normalizeAttacks(character)
     const spells = normalizeSpells(character)
 
-    doc.setFillColor(24, 20, 16)
-    doc.rect(0, 0, 210, 297, 'F')
-    doc.setFillColor(248, 244, 235)
-    doc.roundedRect(8, 8, 194, 281, 3, 3, 'F')
+    setText(['CHARACTER NAME'], character.name)
+    setText(['CLASS & LEVEL'], `${classLabel(character.class)} ${character.level || 1}`)
+    setText(['BACKGROUND'], character.background)
+    setText(['RACE'], character.race)
+    setText(['EXPERIENCE POINTS'], String(character.experience_points || 0))
+    setText(['ALIGNMENT'], character.alignment)
+    setText(['PLAYER NAME'], character.player_username || '')
 
-    setFont(doc, 'bold', 20, [60, 44, 20])
-    doc.text(sanitize(character.name || 'Personaje'), 14, 20)
-    setFont(doc, 'normal', 10, [95, 85, 70])
-    doc.text(`${sanitize(character.race)} · ${classLabel(character.class)} · Nivel ${character.level || 1}`, 14, 27)
-    doc.text(`XP ${character.experience_points || 0} · ${sanitize(character.alignment, '')}`, 14, 33)
+    setText(['Strength', 'STRENGTH'], String(character.strength || 10))
+    setText(['Dexterity', 'DEXTERITY'], String(character.dexterity || 10))
+    setText(['Constitution', 'CONSTITUTION'], String(character.constitution || 10))
+    setText(['Intelligence', 'INTELLIGENCE'], String(character.intelligence || 10))
+    setText(['Wisdom', 'WISDOM'], String(character.wisdom || 10))
+    setText(['Charisma', 'CHARISMA'], String(character.charisma || 10))
 
-    let y = 42
-    y = addSection(doc, 'Atributos y combate', y)
-    y = addTwoCols(doc, [
-        ['FUE', `${character.strength || 10} (${formatModifier(getModifier(character.strength || 10))})`],
-        ['DES', `${character.dexterity || 10} (${formatModifier(getModifier(character.dexterity || 10))})`],
-        ['CON', `${character.constitution || 10} (${formatModifier(getModifier(character.constitution || 10))})`],
-        ['INT', `${character.intelligence || 10} (${formatModifier(getModifier(character.intelligence || 10))})`],
-        ['SAB', `${character.wisdom || 10} (${formatModifier(getModifier(character.wisdom || 10))})`],
-        ['CAR', `${character.charisma || 10} (${formatModifier(getModifier(character.charisma || 10))})`],
-        ['PV', `${character.hit_points_current || 0}/${character.hit_points_max || 0}`],
-        ['CA', `${character.armor_class || 10}`],
-        ['Iniciativa', formatModifier(character.initiative || 0)],
-        ['Velocidad', `${character.speed || 0} ft`],
-        ['PB', formatModifier(character.proficiency_bonus || 2)],
-        ['Percep. pasiva', `${character.passive_perception || 10}`],
-    ], y)
+    setText(['ARMOR CLASS', 'ARMOR'], String(character.armor_class || 10))
+    setText(['INITIATIVE'], formatModifier(character.initiative || 0))
+    setText(['SPEED'], String(character.speed || 0))
+    setText(['Hit Point Maximum'], String(character.hit_points_max || 0))
+    setText(['CURRENT HIT POINTS'], String(character.hit_points_current || 0))
+    setText(['TEMPORARY HIT POINTS'], String(character.hit_points_temp || 0))
+    setText(['PROFICIENCY BONUS'], formatModifier(character.proficiency_bonus || 2))
+    setText(['INSPIRATION'], character.inspiration ? 'X' : '')
+    setText(['PASSIVE WISDOM (PERCEPTION)'], String(character.passive_perception || 10))
 
-    y = addSection(doc, 'Ataques y conjuros', y + 1)
-    y = addParagraph(doc, `Ataques: ${attacks.map((a) => `${a.name || '-'} (${a.bonus || ''}, ${a.damage || ''} ${a.type || ''})`).join(' · ') || 'Sin ataques'}`, 16, y, 176, { fontSize: 8.4 })
-    y = addParagraph(doc, `Conjuros (trucos): ${spells.cantrips.join(', ') || '-'}`, 16, y, 176, { fontSize: 8.4 })
-    y = addParagraph(doc, `Habilidad de lanzamiento: ${sanitize(character.spellcasting_ability, '-')} · CD ${character.spell_save_dc || '-'} · Ataque ${character.spell_attack_bonus || '-'}`, 16, y, 176, { fontSize: 8.4 })
+    setText(['CP'], String(character.copper_pieces || 0))
+    setText(['SP'], String(character.silver_pieces || 0))
+    setText(['EP'], String(character.electrum_pieces || 0))
+    setText(['GP'], String(character.gold_pieces || 0))
+    setText(['PP'], String(character.platinum_pieces || 0))
 
-    y = addSection(doc, 'Trasfondo y descripcion', y + 1)
-    y = addParagraph(doc, `Rasgos: ${sanitize(character.personality_traits, '-')}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Ideales: ${sanitize(character.ideals, '-')}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Vinculos: ${sanitize(character.bonds, '-')}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Defectos: ${sanitize(character.flaws, '-')}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Historia: ${sanitize(character.backstory, '-')}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Apariencia: ${sanitize(character.appearance_notes, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    const skillMap = [
+        ['acrobatics', 'Acrobatics (Dex)'], ['animal_handling', 'Animal Handling (Wis)'], ['arcana', 'Arcana (Int)'],
+        ['athletics', 'Athletics (Str)'], ['deception', 'Deception (Cha)'], ['history', 'History (Int)'],
+        ['insight', 'Insight (Wis)'], ['intimidation', 'Intimidation (Cha)'], ['investigation', 'Investigation (Int)'],
+        ['medicine', 'Medicine (Wis)'], ['nature', 'Nature (Int)'], ['perception', 'Perception (Wis)'],
+        ['performance', 'Performance (Cha)'], ['persuasion', 'Persuasion (Cha)'], ['religion', 'Religion (Int)'],
+        ['sleight_of_hand', 'Sleight of Hand (Dex)'], ['stealth', 'Stealth (Dex)'], ['survival', 'Survival (Wis)'],
+    ]
+    for (const [k, n] of skillMap) setText([n], expertise.includes(k) ? 'E' : skills.includes(k) ? 'P' : '')
+    const saveMap = [['strength', 'STRENGTH'], ['dexterity', 'DEXTERITY'], ['constitution', 'CONSTITUTION'], ['intelligence', 'INTELLIGENCE'], ['wisdom', 'WISDOM'], ['charisma', 'CHARISMA']]
+    for (const [k, n] of saveMap) setText([n], saves.includes(k) ? 'P' : '')
 
-    y = addSection(doc, 'Equipo, rasgos y recursos', y + 1)
-    y = addParagraph(doc, `Equipo: ${safeArray(character.equipment).map((i) => (typeof i === 'string' ? i : i?.name || '')).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Rasgos y capacidades: ${safeArray(character.features_traits).map((f) => (typeof f === 'string' ? f : f?.name || '')).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Idiomas: ${safeArray(character.languages).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Otras competencias: ${safeArray(character.other_proficiencies).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Monedas: CP ${character.copper_pieces || 0} · SP ${character.silver_pieces || 0} · EP ${character.electrum_pieces || 0} · GP ${character.gold_pieces || 0} · PP ${character.platinum_pieces || 0}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Tesoro: ${sanitize(character.treasure, '-')}`, 16, y, 176, { fontSize: 8.2 })
-    y = addParagraph(doc, `Alianzas: ${sanitize(character.allies_organizations, '-')} · Faccion: ${sanitize(character.faction, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    setText(['EQUIPMENT'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
+    setText(['OTHER PROFICIENCIES & LANGUAGES'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
+    setText(['FEATURES & TRAITS'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
+    setText(['ATTACKS & SPELLCASTING'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
 
-    addFooter(doc, `${character.name || 'Personaje'} · Estilizado`)
+    setText(['PERSONALITY TRAITS'], character.personality_traits)
+    setText(['IDEALS'], character.ideals)
+    setText(['BONDS'], character.bonds)
+    setText(['FLAWS'], character.flaws)
+    setText(['CHARACTER BACKSTORY'], character.backstory)
+    setText(['CHARACTER APPEARANCE'], character.appearance_notes)
+    setText(['ALLIES & ORGANIZATIONS'], character.allies_organizations)
+    setText(['TREASURE'], character.treasure)
+    setText(['AGE'], character.age)
+    setText(['HEIGHT'], character.height)
+    setText(['WEIGHT'], character.weight)
+    setText(['EYES'], character.eyes)
+    setText(['SKIN'], character.skin)
+    setText(['HAIR'], character.hair)
+
+    setText(['SPELLCASTING CLASS'], classLabel(character.class))
+    setText(['SPELLCASTING ABILITY'], character.spellcasting_ability)
+    setText(['SPELL SAVE DC'], String(character.spell_save_dc || ''))
+    setText(['SPELL ATTACK BONUS'], String(character.spell_attack_bonus || ''))
+    setText(['CANTRIPS'], spells.cantrips.join(', '))
+    for (let i = 1; i <= 9; i++) {
+        const lvl = spells[`level${i}`]
+        setText([`LEVEL ${i} SLOTS TOTAL`], String(lvl.slots || 0))
+        setText([`LEVEL ${i} SLOTS EXPENDED`], String(lvl.slots_used || 0))
+        setText([`LEVEL ${i} SPELLS KNOWN`], (lvl.spells || []).join(', '))
+    }
+
+    const out = await pdfDoc.save()
+    const blob = new Blob([out], { type: 'application/pdf' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
     const filename = `${String(character.name || 'personaje').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')}-estilizado.pdf`
-    doc.save(filename)
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
 }
 
 export async function exportCharacterPdf(character, opts = {}) {
