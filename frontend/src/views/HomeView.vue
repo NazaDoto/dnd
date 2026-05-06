@@ -269,10 +269,20 @@ export default {
   flex-direction: column;
   gap: 0.65rem;
 }
+.join-grid .form-group {
+  min-width: 0;
+}
+.join-grid input,
+.join-grid select {
+  width: 100%;
+}
 .join-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+.join-actions .btn {
+  white-space: nowrap;
 }
 .preview-box {
   margin-top: 0.65rem;
@@ -287,7 +297,7 @@ export default {
     flex-wrap: nowrap;
   }
   .home-top-grid {
-    grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.35fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
   .join-block {
@@ -295,12 +305,13 @@ export default {
   }
   .join-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(220px, auto);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 0.65rem;
     align-items: end;
   }
   .join-actions {
-    flex-wrap: nowrap;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
     justify-content: flex-end;
   }
 }

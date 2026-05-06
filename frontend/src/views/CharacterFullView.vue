@@ -27,6 +27,14 @@
     <div class="full-layout">
       <aside class="full-sidebar">
         <div class="sidebar-title card">
+          <div v-if="!isDmCampaignReader" class="sidebar-edit-top">
+            <button
+              type="button"
+              class="icon-action edit"
+              @click="openSidebarEditor"
+              title="Editar perfil"
+            >✎</button>
+          </div>
           <div class="sidebar-identity">
             <div class="sidebar-photo-wrap">
               <img v-if="character.photo_url" :src="character.photo_url" :alt="character.name" class="sidebar-photo" />
@@ -41,14 +49,6 @@
                 {{ character.class }}<span v-if="character.subclass"> · {{ character.subclass }}</span> · Nv.{{ character.level }}
               </p>
               <p class="sidebar-meta">XP: {{ character.experience_points || 0 }}</p>
-              <button
-                v-if="!isDmCampaignReader"
-                type="button"
-                class="btn btn-secondary sidebar-edit-btn"
-                @click="openSidebarEditor"
-              >
-                Editar perfil
-              </button>
             </div>
           </div>
         </div>
@@ -1235,9 +1235,10 @@ normalizeSpells(value) {
 .sidebar-meta-row {
   margin-top: 0.2rem;
 }
-.sidebar-edit-btn {
-  margin-top: 0.45rem;
-  width: 100%;
+.sidebar-edit-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.35rem;
 }
 .sr-only {
   position: absolute;
