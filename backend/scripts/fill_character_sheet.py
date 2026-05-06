@@ -10,7 +10,7 @@ from typing import Any, Dict
 from urllib.parse import urljoin, urlparse
 
 from pypdf import PdfReader, PdfWriter
-from pypdf.generic import NameObject, NumberObject, TextStringObject
+from pypdf.generic import ArrayObject, NameObject, NumberObject, TextStringObject
 
 # Compatibility patch:
 # Some server builds raise TypeError for hashlib.md5(usedforsecurity=...).
@@ -600,7 +600,7 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
                 removed += 1
                 continue
             filtered_annots.append(annot_ref)
-        writer_page[NameObject("/Annots")] = filtered_annots
+        writer_page[NameObject("/Annots")] = ArrayObject(filtered_annots)
         print(f"[styled-pdf][image] removed image annotations: {removed}", file=sys.stderr)
     print("[styled-pdf][image] image overlay merged on page 2", file=sys.stderr)
 
