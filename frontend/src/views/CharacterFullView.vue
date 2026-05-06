@@ -94,9 +94,17 @@
             <span class="state-head"><span class="state-key">XP</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.experience_points || 0 }}</span>
           </button>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_alignment', character.alignment || '')">
+            <span class="state-head"><span class="state-key">Alineam.</span><span class="state-edit">✎</span></span>
+            <span class="state-val">{{ character.alignment || "—" }}</span>
+          </button>
         </div>
         <div v-if="fieldEditKey && fieldEditKey.startsWith('state_')" class="inline-state-editor">
-          <input v-model="fieldDraft" @keydown.enter.prevent="saveFieldEdit" />
+          <select v-if="fieldEditKey === 'state_alignment'" v-model="fieldDraft">
+            <option value="">Sin especificar</option>
+            <option v-for="a in alignments" :key="'al-'+a" :value="a">{{ a }}</option>
+          </select>
+          <input v-else v-model="fieldDraft" @keydown.enter.prevent="saveFieldEdit" />
           <button type="button" class="icon-action save" @click="saveFieldEdit" title="Guardar">✓</button>
           <button type="button" class="icon-action cancel" @click="cancelFieldEdit" title="Cancelar">✕</button>
         </div>
@@ -678,6 +686,17 @@ export default {
         { id: "features", label: "Rasgos" },
         { id: "notes", label: "Notas" },
       ],
+      alignments: [
+        "Legal bueno",
+        "Neutral bueno",
+        "Caótico bueno",
+        "Legal neutral",
+        "Neutral",
+        "Caótico neutral",
+        "Legal malvado",
+        "Neutral malvado",
+        "Caótico malvado",
+      ],
       coins: [
         { key: "copper_pieces", label: "PC", icon: "🟤", color: "#92400e" },
         { key: "silver_pieces", label: "PP", icon: "⚪", color: "#9ca3af" },
@@ -944,6 +963,8 @@ export default {
           await this.persistCharacterPatch({ passive_perception: Number(value || 0) });
         } else if (key === "state_xp") {
           await this.persistCharacterPatch({ experience_points: Number(value || 0) });
+        } else if (key === "state_alignment") {
+          await this.persistCharacterPatch({ alignment: String(value || "").trim() || null });
         } else if (key === "skills_saves") {
           await this.persistCharacterPatch({ saving_throws_prof: Array.isArray(this.fieldDraft) ? this.fieldDraft : [] });
         } else if (key === "skills_skills") {

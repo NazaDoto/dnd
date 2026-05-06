@@ -40,6 +40,24 @@ def join_lines(values: Any) -> str:
     return "\n".join(as_str(v) for v in values if v is not None and as_str(v).strip())
 
 
+def join_feature_names(values: Any) -> str:
+    if not isinstance(values, list):
+        return ""
+    lines = []
+    for value in values:
+        if isinstance(value, dict):
+            name = as_str(value.get("name", "")).strip()
+            description = as_str(value.get("description", "")).strip()
+            line = f"{name}: {description}".strip(": ").strip()
+            if line:
+                lines.append(line)
+        else:
+            txt = as_str(value).strip()
+            if txt:
+                lines.append(txt)
+    return "\n".join(lines)
+
+
 def join_csv(values: Any) -> str:
     if not isinstance(values, list):
         return ""
@@ -80,11 +98,83 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
     level8 = get_spell_block(char, 8)
     level9 = get_spell_block(char, 9)
 
+    skills_prof = set(as_str(v).strip().lower() for v in char.get("skills_prof", []) if as_str(v).strip())
+    skills_expertise = set(as_str(v).strip().lower() for v in char.get("skills_expertise", []) if as_str(v).strip())
+    saves_prof = set(as_str(v).strip().lower() for v in char.get("saving_throws_prof", []) if as_str(v).strip())
+
+    def to_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def signed(value: int) -> str:
+        return f"+{value}" if value >= 0 else str(value)
+
+    str_mod = math.floor((to_int(char.get("strength"), 10) - 10) / 2)
+    dex_mod = math.floor((to_int(char.get("dexterity"), 10) - 10) / 2)
+    con_mod = math.floor((to_int(char.get("constitution"), 10) - 10) / 2)
+    int_mod = math.floor((to_int(char.get("intelligence"), 10) - 10) / 2)
+    wis_mod = math.floor((to_int(char.get("wisdom"), 10) - 10) / 2)
+    cha_mod = math.floor((to_int(char.get("charisma"), 10) - 10) / 2)
+    pb = to_int(char.get("proficiency_bonus"), 2)
+
+    attr_mod = {
+        "strength": str_mod,
+        "dexterity": dex_mod,
+        "constitution": con_mod,
+        "intelligence": int_mod,
+        "wisdom": wis_mod,
+        "charisma": cha_mod,
+    }
+    skill_to_attr = {
+        "acrobatics": "dexterity",
+        "animal_handling": "wisdom",
+        "arcana": "intelligence",
+        "athletics": "strength",
+        "deception": "charisma",
+        "history": "intelligence",
+        "insight": "wisdom",
+        "intimidation": "charisma",
+        "investigation": "intelligence",
+        "medicine": "wisdom",
+        "nature": "intelligence",
+        "perception": "wisdom",
+        "performance": "charisma",
+        "persuasion": "charisma",
+        "religion": "intelligence",
+        "sleight_of_hand": "dexterity",
+        "stealth": "dexterity",
+        "survival": "wisdom",
+    }
+
+    def skill_bonus(skill_key: str) -> str:
+        base = attr_mod.get(skill_to_attr.get(skill_key, "strength"), 0)
+        if skill_key in skills_expertise:
+            return signed(base + pb * 2)
+        if skill_key in skills_prof:
+            return signed(base + pb)
+        return signed(base)
+
+    def save_bonus(save_key: str) -> str:
+        base = attr_mod.get(save_key, 0)
+        if save_key in saves_prof:
+            return signed(base + pb)
+        return signed(base)
+
+    attacks_text = []
+    for i in range(len(attacks)):
+        line = f"{atk(i, 'name')} {atk(i, 'bonus')} {atk_damage(i)}".strip()
+        if line:
+            attacks_text.append(line)
+
     field_mapping: Dict[str, str] = {
         "CharacterName": as_str(char.get("name", "")),
+        "PlayerName": as_str(char.get("player_username", "")),
         "ClassLevel": f"{as_str(char.get('class', '')).capitalize()} {as_str(char.get('level', ''))}".strip(),
         "Background": as_str(char.get("background", "")),
         "Race": as_str(char.get("race", "")),
+        "Race ": as_str(char.get("race", "")),
         "Alignment": as_str(char.get("alignment", "")).replace("_", " ").title(),
         "XP": as_str(char.get("experience_points", "")),
         "ProfBonus": as_str(char.get("proficiency_bonus", "")),
@@ -97,6 +187,7 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         "HDTotal": as_str(char.get("hit_dice", "")),
         "HD": as_str(char.get("hit_dice", "")),
         "PersonalityTraits": as_str(char.get("personality_traits", "")),
+        "PersonalityTraits ": as_str(char.get("personality_traits", "")),
         "Ideals": as_str(char.get("ideals", "")),
         "Bonds": as_str(char.get("bonds", "")),
         "Flaws": as_str(char.get("flaws", "")),
@@ -127,9 +218,15 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         "Wpn2 Damage": atk_damage(1),
         "Wpn Name 3": atk(2, "name"),
         "Wpn3 AtkBonus": atk(2, "bonus"),
+        "Wpn3 AtkBonus  ": atk(2, "bonus"),
         "Wpn3 Damage": atk_damage(2),
-        "Features and Traits": join_lines(char.get("features_traits", [])),
+        "Wpn3 Damage ": atk_damage(2),
+        "Wpn2 AtkBonus ": atk(1, "bonus"),
+        "Wpn2 Damage ": atk_damage(1),
+        "AttacksSpellcasting": "\n".join(attacks_text),
+        "Features and Traits": join_feature_names(char.get("features_traits", [])),
         "Equipment": join_lines(char.get("equipment", [])),
+        "Equipment 2": join_lines(char.get("equipment", [])),
         "ProficienciesLang": join_csv(char.get("languages", [])) + (
             ", " if char.get("languages") and char.get("other_proficiencies") else ""
         ) + join_csv(char.get("other_proficiencies", [])),
@@ -144,7 +241,9 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         "Allies": as_str(char.get("allies_organizations", "")),
         "Allies 2": as_str(char.get("faction", "")),
         "Treasure": as_str(char.get("treasure", "")),
+        "Treasure 2": as_str(char.get("treasure", "")),
         "Feat+Traits": as_str(char.get("appearance_notes", "")),
+        "Feat+Traits 2": join_feature_names(char.get("features_traits", [])),
         "Spellcasting Class 2": as_str(char.get("class", "")).capitalize(),
         "SpellcastingAbility 2": as_str(char.get("spellcasting_ability", "")).capitalize(),
         "SpellSaveDC  2": as_str(char.get("spell_save_dc", "")),
@@ -167,6 +266,54 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         "SlotsRemaining 26": as_str(level8.get("slots_used", 0)),
         "SlotsTotal 27": as_str(level9.get("slots", 0)),
         "SlotsRemaining 27": as_str(level9.get("slots_used", 0)),
+        "Acrobatics": skill_bonus("acrobatics"),
+        "Athletics": skill_bonus("athletics"),
+        "Arcana": skill_bonus("arcana"),
+        "Deception": skill_bonus("deception"),
+        "History": skill_bonus("history"),
+        "Performance": skill_bonus("performance"),
+        "Intimidation": skill_bonus("intimidation"),
+        "Investigation": skill_bonus("investigation"),
+        "SleightofHand": skill_bonus("sleight_of_hand"),
+        "Medicine": skill_bonus("medicine"),
+        "Nature": skill_bonus("nature"),
+        "Perception": skill_bonus("perception"),
+        "Insight": skill_bonus("insight"),
+        "Persuasion": skill_bonus("persuasion"),
+        "Religion": skill_bonus("religion"),
+        "Stealth": skill_bonus("stealth"),
+        "Survival": skill_bonus("survival"),
+        "AnHan": skill_bonus("animal_handling"),
+        "STRsave": save_bonus("strength"),
+        "DEXsave": save_bonus("dexterity"),
+        "CONsave": save_bonus("constitution"),
+        "INTsave": save_bonus("intelligence"),
+        "WISsave": save_bonus("wisdom"),
+        "CHAsave": save_bonus("charisma"),
+        "STRsavePROF": "X" if "strength" in saves_prof else "",
+        "DEXsavePROF": "X" if "dexterity" in saves_prof else "",
+        "CONsavePROF": "X" if "constitution" in saves_prof else "",
+        "INTsavePROF": "X" if "intelligence" in saves_prof else "",
+        "WISsavePROF": "X" if "wisdom" in saves_prof else "",
+        "CHAsavePROF": "X" if "charisma" in saves_prof else "",
+        "acroPROF": "X" if "acrobatics" in skills_prof else "",
+        "athPROF": "X" if "athletics" in skills_prof else "",
+        "arcanaPROF": "X" if "arcana" in skills_prof else "",
+        "decepPROF": "X" if "deception" in skills_prof else "",
+        "histPROF": "X" if "history" in skills_prof else "",
+        "perfPROF": "X" if "performance" in skills_prof else "",
+        "intimPROF": "X" if "intimidation" in skills_prof else "",
+        "investPROF": "X" if "investigation" in skills_prof else "",
+        "sohPROF": "X" if "sleight_of_hand" in skills_prof else "",
+        "medPROF": "X" if "medicine" in skills_prof else "",
+        "naturePROF": "X" if "nature" in skills_prof else "",
+        "perPROF": "X" if "perception" in skills_prof else "",
+        "insightPROF": "X" if "insight" in skills_prof else "",
+        "persPROF": "X" if "persuasion" in skills_prof else "",
+        "religPROF": "X" if "religion" in skills_prof else "",
+        "stealthPROF": "X" if "stealth" in skills_prof else "",
+        "survPROF": "X" if "survival" in skills_prof else "",
+        "anhanPROF": "X" if "animal_handling" in skills_prof else "",
     }
 
     cantrip_fields = [f"Spells {n}" for n in range(1014, 1023)]
@@ -273,12 +420,26 @@ def fill_character_sheet(char: Dict[str, Any], input_pdf: str, output_pdf: str) 
     writer.append(reader)
     # Force PDF viewers to regenerate field appearances so values are visible.
     writer.set_need_appearances_writer(True)
-    merged = {**build_field_mapping(char), **build_checkbox_mapping(reader, char)}
+    raw_mapping = build_field_mapping(char)
+    merged = {**raw_mapping, **build_checkbox_mapping(reader, char)}
+    existing = reader.get_fields() or {}
+    norm_to_real = {norm_name(k): k for k in existing.keys()}
+    final_mapping: Dict[str, str] = {}
+    for key, value in merged.items():
+        if key in existing:
+            final_mapping[key] = value
+            continue
+        nkey = norm_name(key)
+        real_key = norm_to_real.get(nkey)
+        if real_key:
+            final_mapping[real_key] = value
+        else:
+            final_mapping[key] = value
 
     for page_num in range(len(writer.pages)):
         writer.update_page_form_field_values(
             writer.pages[page_num],
-            merged,
+            final_mapping,
             auto_regenerate=False,
         )
 
