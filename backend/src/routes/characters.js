@@ -448,7 +448,8 @@ router.post('/pdf/styled', auth, async (req, res) => {
             __base_url: `${req.protocol}://${req.get('host')}`,
         };
         if (character.photo_url && typeof character.photo_url === 'string' && character.photo_url.startsWith('/uploads/')) {
-            const localPhotoPath = path.join(__dirname, '../../', character.photo_url);
+            const relativePhotoPath = character.photo_url.replace(/^\/+/, '');
+            const localPhotoPath = path.join(__dirname, '../../', relativePhotoPath);
             if (fs.existsSync(localPhotoPath)) {
                 character.__photo_abs_path = localPhotoPath;
             }

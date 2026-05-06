@@ -3,7 +3,7 @@ import json
 import math
 from io import BytesIO
 from typing import Any, Dict
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import NameObject, NumberObject, TextStringObject
@@ -173,10 +173,18 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         return signed(base)
 
     attacks_text = []
+    extra_attacks_text = []
     for i in range(len(attacks)):
         line = f"{atk(i, 'name')} {atk(i, 'bonus')} {atk_damage(i)}".strip()
         if line:
             attacks_text.append(line)
+            if i >= 3:
+                extra_attacks_text.append(line)
+
+    prof_lang_text = (
+        f"Competencias: {join_csv(char.get('other_proficiencies', []))}\n"
+        f"Idiomas: {join_csv(char.get('languages', []))}"
+    ).strip()
 
     field_mapping: Dict[str, str] = {
         "CharacterName": as_str(char.get("name", "")),
@@ -233,16 +241,14 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         "Wpn3 Damage ": atk_damage(2),
         "Wpn2 AtkBonus ": atk(1, "bonus"),
         "Wpn2 Damage ": atk_damage(1),
-        "AttacksSpellcasting": "\n".join(attacks_text),
+        "AttacksSpellcasting": "\n".join(extra_attacks_text),
         "Features and Traits": join_feature_names(char.get("features_traits", [])),
         "Equipment": join_lines(char.get("equipment", [])),
-        "Equipment 2": "",
+        "Equipment 2": "\n".join(extra_attacks_text),
         "ProficienciesLang": join_csv(char.get("languages", [])) + (
             ", " if char.get("languages") and char.get("other_proficiencies") else ""
         ) + join_csv(char.get("other_proficiencies", [])),
-        "ProficienciesLang ": join_csv(char.get("languages", [])) + (
-            ", " if char.get("languages") and char.get("other_proficiencies") else ""
-        ) + join_csv(char.get("other_proficiencies", [])),
+        "ProficienciesLang ": prof_lang_text,
         "CharacterName 2": as_str(char.get("name", "")),
         "Age": as_str(char.get("age", "")),
         "Height": as_str(char.get("height", "")),
@@ -482,10 +488,10 @@ def set_widget_style(writer: PdfWriter, field_names: list, font_size: int, multi
 
 def apply_field_styles(writer: PdfWriter) -> None:
     # Campos largos con fuente más chica para evitar overflow.
-    set_widget_style(writer, ["PersonalityTraits", "Ideals", "Bonds", "Flaws"], 7, multiline=True)
-    set_widget_style(writer, ["Backstory", "Allies", "Allies 2", "Treasure", "Treasure 2"], 7, multiline=True)
-    set_widget_style(writer, ["Features and Traits", "Feat+Traits", "Feat+Traits 2"], 6, multiline=True)
-    set_widget_style(writer, ["Equipment", "Equipment 2", "AttacksSpellcasting", "ProficienciesLang", "ProficienciesLang "], 6, multiline=True)
+    set_widget_style(writer, ["PersonalityTraits", "Ideals", "Bonds", "Flaws"], 6, multiline=True)
+    set_widget_style(writer, ["Backstory", "Allies", "Allies 2", "Treasure", "Treasure 2"], 6, multiline=True)
+    set_widget_style(writer, ["Features and Traits", "Feat+Traits", "Feat+Traits 2"], 5, multiline=True)
+    set_widget_style(writer, ["Equipment", "Equipment 2", "AttacksSpellcasting", "ProficienciesLang", "ProficienciesLang "], 5, multiline=True)
     # Conjuros en grilla necesitan fuente pequeña.
     spell_fields = [f"Spells {n}" for n in range(1014, 1100)] + [f"Spells 1010{n}" for n in range(0, 14)]
     set_widget_style(writer, spell_fields, 6, multiline=False)
@@ -513,13 +519,14 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
     if not image_url:
         return
     try:
-        if image_url.startswith("/") or image_url.startswith(".") or ":" in image_url:
-            with open(image_url, "rb") as image_file:
-                image_bytes = image_file.read()
-        else:
+        parsed = urlparse(image_url)
+        if parsed.scheme in ("http", "https"):
             import urllib.request
             with urllib.request.urlopen(image_url, timeout=10) as response:  # nosec - controlled URL
                 image_bytes = response.read()
+        else:
+            with open(image_url, "rb") as image_file:
+                image_bytes = image_file.read()
     except Exception:
         return
 
