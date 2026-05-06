@@ -271,6 +271,8 @@ def fill_character_sheet(char: Dict[str, Any], input_pdf: str, output_pdf: str) 
     reader = PdfReader(input_pdf)
     writer = PdfWriter()
     writer.append(reader)
+    # Force PDF viewers to regenerate field appearances so values are visible.
+    writer.set_need_appearances_writer(True)
     merged = {**build_field_mapping(char), **build_checkbox_mapping(reader, char)}
 
     for page_num in range(len(writer.pages)):
