@@ -31,57 +31,24 @@
             <div class="sidebar-photo-wrap">
               <img v-if="character.photo_url" :src="character.photo_url" :alt="character.name" class="sidebar-photo" />
               <div v-else class="sidebar-photo sidebar-photo-placeholder">{{ (character.name || "?")[0] }}</div>
+            </div>
+            <div class="sidebar-main">
+              <p class="sidebar-name">{{ character.name }}</p>
+              <p class="sidebar-meta">
+                {{ character.race }}<span v-if="character.subrace"> ({{ character.subrace }})</span>
+              </p>
+              <p class="sidebar-meta">
+                {{ character.class }}<span v-if="character.subclass"> · {{ character.subclass }}</span> · Nv.{{ character.level }}
+              </p>
+              <p class="sidebar-meta">XP: {{ character.experience_points || 0 }}</p>
               <button
                 v-if="!isDmCampaignReader"
                 type="button"
-                class="icon-action edit photo-edit-btn"
-                @click="triggerPhotoPicker"
-                title="Editar foto"
-              >✎</button>
-              <input ref="sidebarPhotoInput" type="file" accept="image/*" class="sr-only" @change="onSidebarPhotoSelected" />
-            </div>
-            <div class="sidebar-main">
-              <div class="section-title-row">
-                <p v-if="!isEditing('sidebar_name')" class="sidebar-name">{{ character.name }}</p>
-                <input v-else v-model="fieldDraft" />
-                <div v-if="!isDmCampaignReader" class="mini-edit-actions">
-                  <button v-if="!isEditing('sidebar_name')" type="button" class="icon-action edit" @click="startFieldEdit('sidebar_name', character.name || '')">✎</button>
-                  <template v-else>
-                    <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
-                    <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
-                  </template>
-                </div>
-              </div>
-              <div class="section-title-row sidebar-meta-row">
-                <p v-if="!isEditing('sidebar_race')" class="sidebar-meta">
-                  {{ character.race }}<span v-if="character.subrace"> ({{ character.subrace }})</span>
-                </p>
-                <div v-else class="inline-grid">
-                  <input v-model="fieldDraft.race" placeholder="Raza" />
-                  <input v-model="fieldDraft.subrace" placeholder="Subraza (opcional)" />
-                </div>
-                <div v-if="!isDmCampaignReader" class="mini-edit-actions">
-                  <button v-if="!isEditing('sidebar_race')" type="button" class="icon-action edit" @click="startFieldEdit('sidebar_race')">✎</button>
-                  <template v-else>
-                    <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
-                    <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
-                  </template>
-                </div>
-              </div>
-              <div class="section-title-row sidebar-meta-row">
-                <p v-if="!isEditing('sidebar_class')" class="sidebar-meta">{{ character.class }} · Nv.{{ character.level }}</p>
-                <div v-else class="inline-grid">
-                  <input v-model="fieldDraft.class" placeholder="Clase" />
-                  <input v-model.number="fieldDraft.level" type="number" min="1" max="20" placeholder="Nivel" />
-                </div>
-                <div v-if="!isDmCampaignReader" class="mini-edit-actions">
-                  <button v-if="!isEditing('sidebar_class')" type="button" class="icon-action edit" @click="startFieldEdit('sidebar_class')">✎</button>
-                  <template v-else>
-                    <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
-                    <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
-                  </template>
-                </div>
-              </div>
+                class="btn btn-secondary sidebar-edit-btn"
+                @click="openSidebarEditor"
+              >
+                Editar perfil
+              </button>
             </div>
           </div>
         </div>
@@ -593,6 +560,60 @@
       </div>
       </section>
     </div>
+
+    <div v-if="sidebarEditorOpen && !isDmCampaignReader" class="modal-backdrop" @click.self="closeSidebarEditor">
+      <div class="modal-card">
+        <div class="section-title-row">
+          <p class="section-title">Editar perfil del personaje</p>
+          <button type="button" class="icon-action cancel" @click="closeSidebarEditor">✕</button>
+        </div>
+        <div class="photo-picker">
+          <div class="photo-preview">
+            <img v-if="sidebarPhotoPreview" :src="sidebarPhotoPreview" alt="Preview" class="sidebar-photo" />
+            <div v-else class="sidebar-photo sidebar-photo-placeholder">{{ (sidebarForm.name || "?")[0] }}</div>
+          </div>
+          <input ref="sidebarEditorPhotoInput" type="file" accept="image/*" @change="onSidebarEditorPhotoSelected" />
+        </div>
+        <div class="inline-grid">
+          <div>
+            <label class="form-label">Nombre</label>
+            <input v-model="sidebarForm.name" />
+          </div>
+          <div>
+            <label class="form-label">Experiencia</label>
+            <input v-model.number="sidebarForm.experience_points" type="number" min="0" />
+          </div>
+          <div>
+            <label class="form-label">Raza</label>
+            <select v-model="sidebarForm.race">
+              <option value="">Elegí raza</option>
+              <option v-for="r in RACES" :key="'race-'+r.value" :value="r.label">{{ r.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Subraza</label>
+            <input v-model="sidebarForm.subrace" placeholder="Opcional" />
+          </div>
+          <div>
+            <label class="form-label">Clase</label>
+            <select v-model="sidebarForm.class">
+              <option value="">Elegí clase</option>
+              <option v-for="c in CLASSES" :key="'class-'+c.value" :value="c.value">{{ c.label }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Subclase</label>
+            <input v-model="sidebarForm.subclass" placeholder="Opcional" />
+          </div>
+        </div>
+        <div class="inline-actions">
+          <button type="button" class="btn btn-ghost" @click="closeSidebarEditor">Cancelar</button>
+          <button type="button" class="btn btn-primary" :disabled="sidebarEditorSaving" @click="saveSidebarEditor">
+            {{ sidebarEditorSaving ? "Guardando..." : "Guardar cambios" }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div v-else class="loading-screen">
@@ -609,6 +630,8 @@ import {
   ATTRIBUTES,
   SKILLS,
   SPELLCASTING_ABILITIES,
+  CLASSES,
+  RACES,
   getModifier,
   formatModifier,
 } from "../services/dndData.js";
@@ -626,6 +649,20 @@ export default {
       ATTRIBUTES,
       SKILLS,
       SPELLCASTING_ABILITIES,
+      CLASSES,
+      RACES,
+      sidebarEditorOpen: false,
+      sidebarEditorSaving: false,
+      sidebarPhotoFile: null,
+      sidebarPhotoPreview: "",
+      sidebarForm: {
+        name: "",
+        race: "",
+        subrace: "",
+        class: "",
+        subclass: "",
+        experience_points: 0
+      },
       tabs: [
         { id: "skills", label: "Habilidades" },
         { id: "combat", label: "Combate" },
@@ -762,6 +799,53 @@ export default {
     }
   },
   methods: {
+    openSidebarEditor() {
+      this.sidebarForm = {
+        name: this.character?.name || "",
+        race: this.character?.race || "",
+        subrace: this.character?.subrace || "",
+        class: this.character?.class || "",
+        subclass: this.character?.subclass || "",
+        experience_points: Number(this.character?.experience_points || 0)
+      };
+      this.sidebarPhotoFile = null;
+      this.sidebarPhotoPreview = this.character?.photo_url || "";
+      this.sidebarEditorOpen = true;
+    },
+    closeSidebarEditor() {
+      this.sidebarEditorOpen = false;
+      this.sidebarEditorSaving = false;
+      this.sidebarPhotoFile = null;
+      this.sidebarPhotoPreview = "";
+    },
+    onSidebarEditorPhotoSelected(e) {
+      const file = e?.target?.files?.[0];
+      if (!file) return;
+      this.sidebarPhotoFile = file;
+      this.sidebarPhotoPreview = URL.createObjectURL(file);
+    },
+    async saveSidebarEditor() {
+      try {
+        this.sidebarEditorSaving = true;
+        const fd = this.buildCharacterFormData({
+          name: String(this.sidebarForm.name || "").trim(),
+          race: String(this.sidebarForm.race || "").trim(),
+          subrace: String(this.sidebarForm.subrace || "").trim(),
+          class: String(this.sidebarForm.class || "").trim(),
+          subclass: String(this.sidebarForm.subclass || "").trim(),
+          experience_points: Number(this.sidebarForm.experience_points || 0)
+        });
+        if (this.sidebarPhotoFile) fd.append("photo", this.sidebarPhotoFile);
+        const { data } = await charactersAPI.update(this.id, fd);
+        this.character = data;
+        this.showToast("Perfil actualizado", "success");
+        this.closeSidebarEditor();
+      } catch {
+        this.showToast("No se pudo actualizar el perfil", "error");
+      } finally {
+        this.sidebarEditorSaving = false;
+      }
+    },
     startFieldEdit(key, initialValue) {
       this.fieldEditKey = key;
       if (key === "skills_saves") {
@@ -800,20 +884,6 @@ export default {
           electrum_pieces: Number(this.character?.electrum_pieces || 0),
           gold_pieces: Number(this.character?.gold_pieces || 0),
           platinum_pieces: Number(this.character?.platinum_pieces || 0)
-        };
-        return;
-      }
-      if (key === "sidebar_race") {
-        this.fieldDraft = {
-          race: this.character?.race || "",
-          subrace: this.character?.subrace || ""
-        };
-        return;
-      }
-      if (key === "sidebar_class") {
-        this.fieldDraft = {
-          class: this.character?.class || "",
-          level: Number(this.character?.level || 1)
         };
         return;
       }
@@ -867,18 +937,6 @@ export default {
           await this.persistCharacterPatch({ passive_perception: Number(value || 0) });
         } else if (key === "state_xp") {
           await this.persistCharacterPatch({ experience_points: Number(value || 0) });
-        } else if (key === "sidebar_name") {
-          await this.persistCharacterPatch({ name: String(value || "").trim() });
-        } else if (key === "sidebar_race") {
-          await this.persistCharacterPatch({
-            race: String(this.fieldDraft?.race || "").trim(),
-            subrace: String(this.fieldDraft?.subrace || "").trim() || null
-          });
-        } else if (key === "sidebar_class") {
-          await this.persistCharacterPatch({
-            class: String(this.fieldDraft?.class || "").trim(),
-            level: Math.max(1, Number(this.fieldDraft?.level || 1))
-          });
         } else if (key === "skills_saves") {
           await this.persistCharacterPatch({ saving_throws_prof: Array.isArray(this.fieldDraft) ? this.fieldDraft : [] });
         } else if (key === "skills_skills") {
@@ -995,9 +1053,6 @@ export default {
         this.fieldDraft[levelKey].spells.splice(idx, 1);
       }
     },
-    triggerPhotoPicker() {
-      this.$refs.sidebarPhotoInput?.click();
-    },
     buildCharacterFormData(extra = {}) {
       const fd = new FormData();
       const merged = { ...(this.character || {}), ...extra };
@@ -1007,21 +1062,6 @@ export default {
         fd.append(k, typeof v === "object" ? JSON.stringify(v) : v);
       });
       return fd;
-    },
-    async onSidebarPhotoSelected(e) {
-      const file = e?.target?.files?.[0];
-      if (!file) return;
-      try {
-        const fd = this.buildCharacterFormData();
-        fd.append("photo", file);
-        const { data } = await charactersAPI.update(this.id, fd);
-        this.character = data;
-        this.showToast("Foto actualizada", "success");
-      } catch {
-        this.showToast("No se pudo actualizar la foto", "error");
-      } finally {
-        if (e?.target) e.target.value = "";
-      }
     },
     downloadDmPdf() {
       if (this.character) exportCharacterPdf(this.character);
@@ -1195,6 +1235,10 @@ normalizeSpells(value) {
 .sidebar-meta-row {
   margin-top: 0.2rem;
 }
+.sidebar-edit-btn {
+  margin-top: 0.45rem;
+  width: 100%;
+}
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1204,6 +1248,41 @@ normalizeSpells(value) {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   border: 0;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 50;
+}
+
+.modal-card {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.photo-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.photo-preview .sidebar-photo {
+  width: 4.6rem;
+  height: 4.6rem;
 }
 .quick-states-wrap {
   margin-bottom: 0.7rem;
