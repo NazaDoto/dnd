@@ -402,6 +402,8 @@ def build_checkbox_mapping(reader: PdfReader, char: Dict[str, Any]) -> Dict[str,
     }
 
     for field_name, field_obj in fields.items():
+        if as_str(field_obj.get("/FT", "")) != "/Btn":
+            continue
         n = norm_name(field_name)
         on = checkbox_on_value(field_obj)
         selected = False
@@ -421,8 +423,6 @@ def build_checkbox_mapping(reader: PdfReader, char: Dict[str, Any]) -> Dict[str,
 
         if selected:
             mapping[field_name] = on
-        elif ("checkbox" in n or "prof" in n or "save" in n or "salv" in n):
-            mapping[field_name] = "/Off"
 
     return mapping
 
@@ -453,7 +453,7 @@ def fill_character_sheet(char: Dict[str, Any], input_pdf: str, output_pdf: str) 
         writer.update_page_form_field_values(
             writer.pages[page_num],
             final_mapping,
-            auto_regenerate=False,
+            auto_regenerate=True,
         )
 
     apply_field_styles(writer)
@@ -492,6 +492,9 @@ def apply_field_styles(writer: PdfWriter) -> None:
 
 
 def resolve_profile_url(char: Dict[str, Any]) -> str:
+    local_path = as_str(char.get("__photo_abs_path", "")).strip()
+    if local_path:
+        return local_path
     raw = as_str(char.get("photo_url", "")).strip()
     if not raw:
         return ""
@@ -510,9 +513,13 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
     if not image_url:
         return
     try:
-        import urllib.request
-        with urllib.request.urlopen(image_url, timeout=10) as response:  # nosec - controlled URL
-            image_bytes = response.read()
+        if image_url.startswith("/") or image_url.startswith(".") or ":" in image_url:
+            with open(image_url, "rb") as image_file:
+                image_bytes = image_file.read()
+        else:
+            import urllib.request
+            with urllib.request.urlopen(image_url, timeout=10) as response:  # nosec - controlled URL
+                image_bytes = response.read()
     except Exception:
         return
 

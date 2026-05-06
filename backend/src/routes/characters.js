@@ -447,6 +447,12 @@ router.post('/pdf/styled', auth, async (req, res) => {
             player_username: rawCharacter.player_username || req.user?.username || '',
             __base_url: `${req.protocol}://${req.get('host')}`,
         };
+        if (character.photo_url && typeof character.photo_url === 'string' && character.photo_url.startsWith('/uploads/')) {
+            const localPhotoPath = path.join(__dirname, '../../', character.photo_url);
+            if (fs.existsSync(localPhotoPath)) {
+                character.__photo_abs_path = localPhotoPath;
+            }
+        }
 
         const scriptPath = path.join(__dirname, '../../scripts/fill_character_sheet.py');
         tempDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'dnd-pdf-'));
