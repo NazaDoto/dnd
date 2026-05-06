@@ -1180,6 +1180,7 @@ normalizeSpells(value) {
 }
 .full-sidebar {
   margin-bottom: 0.75rem;
+  align-self: start;
 }
 .sidebar-title {
   margin-bottom: 0.6rem;
@@ -1227,10 +1228,12 @@ normalizeSpells(value) {
   font-size: 1.1rem;
   color: var(--text-primary);
   line-height: 1.15;
+  margin: 0;
 }
 .sidebar-meta {
   color: var(--text-secondary);
   font-size: 0.82rem;
+  margin: 0.15rem 0 0;
 }
 .sidebar-meta-row {
   margin-top: 0.2rem;
@@ -1927,6 +1930,7 @@ normalizeSpells(value) {
     position: sticky;
     top: 5.4rem;
     margin-bottom: 0;
+    align-self: start;
   }
   .tabs {
     flex-direction: column;
