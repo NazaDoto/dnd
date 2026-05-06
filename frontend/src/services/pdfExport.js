@@ -234,13 +234,20 @@ export async function exportCharacterPdfStyled(character) {
     const page3 = pages[2]
     const black = rgb(0.08, 0.08, 0.08)
 
+    const toPdfSafe = (value) => {
+        const raw = sanitize(value, '')
+        return raw
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^ -~]/g, '')
+    }
     const draw = (page, text, x, y, size = 9, isBold = false) => {
-        const val = sanitize(text, '')
+        const val = toPdfSafe(text)
         if (!val) return
         page.drawText(val, { x, y, size, font: isBold ? bold : font, color: black })
     }
     const wrap = (page, text, x, y, width, size = 8.2, line = 9.2) => {
-        const val = sanitize(text, '')
+        const val = toPdfSafe(text)
         if (!val) return y
         const words = val.split(/\s+/)
         let current = ''
@@ -311,14 +318,14 @@ export async function exportCharacterPdfStyled(character) {
 
     // Marcas de salvaciones/habilidades
     const saveY = { strength: 470, dexterity: 452, constitution: 434, intelligence: 416, wisdom: 398, charisma: 380 }
-    Object.keys(saveY).forEach((k) => draw(page1, saves.includes(k) ? '●' : '', 203, saveY[k], 8))
+    Object.keys(saveY).forEach((k) => draw(page1, saves.includes(k) ? 'X' : '', 203, saveY[k], 8, true))
     const skillY = {
         acrobatics: 344, animal_handling: 326, arcana: 308, athletics: 290, deception: 272, history: 254,
         insight: 236, intimidation: 218, investigation: 200, medicine: 182, nature: 164, perception: 146,
         performance: 128, persuasion: 110, religion: 92, sleight_of_hand: 74, stealth: 56, survival: 38
     }
     Object.keys(skillY).forEach((k) => {
-        const mark = expertise.includes(k) ? '◆' : skills.includes(k) ? '●' : ''
+        const mark = expertise.includes(k) ? 'E' : skills.includes(k) ? 'P' : ''
         draw(page1, mark, 203, skillY[k], 7.5)
     })
 
