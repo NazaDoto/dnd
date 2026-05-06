@@ -1,12 +1,10 @@
 <template>
   <nav class="navbar">
-    <RouterLink :to="homePath" class="nav-item" active-class="active">
-      <span class="nav-label">{{ homeLabel }}</span>
+    <RouterLink :to="homePath" class="nav-item nav-home" active-class="active">
+      <span class="nav-label nav-label-mobile">{{ homeLabel }}</span>
+      <span class="nav-label nav-label-desktop">Wachines del DnD</span>
     </RouterLink>
-    <RouterLink v-if="isPlayer" to="/character/new" class="nav-item nav-create" active-class="active">
-      <span class="nav-icon-create">+</span>
-    </RouterLink>
-    <button type="button" class="nav-item" @click="logout">
+    <button type="button" class="nav-item nav-logout" @click="logout">
       <span class="nav-label">Salir</span>
     </button>
   </nav>
@@ -24,9 +22,6 @@ export default {
   computed: {
     role() {
       return this.user?.role || 'jugador'
-    },
-    isPlayer() {
-      return this.role === 'jugador'
     },
     homePath() {
       if (this.role === 'administrador') return '/admin'
@@ -88,22 +83,7 @@ export default {
 .nav-item.active, .nav-item:hover { color: var(--gold-light); }
 
 .nav-label { font-size: 0.6rem; text-align: center; max-width: 4.5rem; line-height: 1.15; }
-
-.nav-create {
-  background: linear-gradient(135deg, var(--gold-dark), var(--gold));
-  border-radius: 50%;
-  width: 3rem;
-  height: 3rem;
-  padding: 0;
-  box-shadow: 0 0 15px rgba(212,160,23,0.4);
-  margin-bottom: 0.25rem;
-}
-.nav-icon-create {
-  font-size: 1.6rem;
-  color: var(--bg-deep);
-  font-weight: bold;
-  line-height: 1;
-}
+.nav-label-desktop { display: none; }
 
 @media (min-width: 1024px) {
   .navbar {
@@ -118,6 +98,20 @@ export default {
     border-radius: 0 0 var(--radius) var(--radius);
     padding: 0.55rem 1.1rem;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  }
+  .nav-home {
+    padding-left: 0.35rem;
+  }
+  .nav-label-mobile {
+    display: none;
+  }
+  .nav-label-desktop {
+    display: inline;
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    line-height: 1;
   }
   .nav-item {
     flex-direction: row;
@@ -134,15 +128,8 @@ export default {
     font-size: 0.72rem;
     max-width: none;
   }
-  .nav-create {
-    width: auto;
-    height: auto;
-    border-radius: var(--radius-sm);
-    margin-bottom: 0;
-    padding: 0.35rem 0.7rem;
-  }
-  .nav-icon-create {
-    font-size: 1.1rem;
+  .nav-logout {
+    margin-left: auto;
   }
 }
 </style>

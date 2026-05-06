@@ -7,9 +7,13 @@
         {{ saving ? 'Guardando...' : 'Guardar' }}
       </button>
     </div>
+    <div v-if="activeSection" class="card section-filter-card">
+      <p class="text-muted">Estás editando solo la sección: <strong>{{ activeSection }}</strong></p>
+      <RouterLink :to="`/character/${id}/full`" class="btn btn-ghost">Volver a ficha</RouterLink>
+    </div>
 
     <form class="char-form" @submit.prevent="submitForm">
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['core'])">
         <p class="section-title">Datos principales</p>
 
         <div class="photo-picker">
@@ -103,7 +107,7 @@
         </label>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['combat'])">
         <p class="section-title">Combate</p>
 
         <div class="grid-3">
@@ -185,7 +189,7 @@
         </label>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['skills'])">
         <p class="section-title">Atributos</p>
 
         <div class="stats-grid">
@@ -206,7 +210,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['skills'])">
         <p class="section-title">Salvaciones</p>
 
         <div class="chips-grid">
@@ -228,7 +232,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['skills'])">
         <p class="section-title">Habilidades</p>
 
         <div class="skill-edit-list">
@@ -267,7 +271,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['combat'])">
         <p class="section-title">Ataques</p>
 
         <div
@@ -319,7 +323,7 @@
         </button>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['combat'])">
         <p class="section-title">Magia</p>
 
         <div class="grid-3">
@@ -459,7 +463,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['equipment'])">
         <p class="section-title">Equipo</p>
 
         <div class="grid-5">
@@ -489,7 +493,7 @@
         </label>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['features'])">
         <p class="section-title">Rasgos, idiomas y competencias</p>
 
         <label class="field">
@@ -538,7 +542,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['backstory'])">
         <p class="section-title">Trasfondo</p>
 
         <div class="grid-2">
@@ -572,7 +576,7 @@
         </label>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['backstory'])">
         <p class="section-title">Apariencia</p>
 
         <div class="grid-3">
@@ -616,7 +620,7 @@
         </label>
       </div>
 
-      <div class="card">
+      <div class="card" v-if="sectionVisible(['backstory'])">
         <p class="section-title">Alianzas</p>
 
         <label class="field">
@@ -721,6 +725,10 @@ export default {
   computed: {
     id() {
       return this.$route.params.id
+    },
+    activeSection() {
+      const section = String(this.$route.query.section || '').trim()
+      return section || null
     }
   },
   async mounted() {
@@ -967,6 +975,10 @@ export default {
     removeTag(field, value) {
       this.form[field] = this.form[field].filter(v => v !== value)
     },
+    sectionVisible(sections) {
+      if (!this.activeSection) return true
+      return sections.includes(this.activeSection)
+    },
 
     buildPayload() {
       this.addTag('languages', this.languageInput)
@@ -1038,6 +1050,13 @@ export default {
 <style scoped>
 .form-view {
   padding-bottom: 2rem;
+}
+.section-filter-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .form-header {

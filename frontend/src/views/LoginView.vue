@@ -109,8 +109,9 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
-  padding: 1.5rem;
+  min-height: 100%;
+  width: 100%;
+  padding: 1rem;
   gap: 1.5rem;
 }
 
@@ -180,5 +181,12 @@ export default {
   letter-spacing: 0.15em;
   color: var(--text-dim);
   text-align: center;
+}
+
+@media (min-width: 1024px) {
+  .auth-page {
+    padding: 1.25rem 1rem;
+    gap: 1rem;
+  }
 }
 </style>

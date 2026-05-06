@@ -37,7 +37,17 @@ const routes = [
         meta: { requiresAuth: true, roles: ['dm'] }
     },
     { path: '/character/new', component: CharacterCreateView, meta: { requiresAuth: true, roles: ['jugador'] } },
-    { path: '/character/:id', component: CharacterDetailView, meta: { requiresAuth: true, roles: ['jugador'] } },
+    {
+        path: '/character/:id',
+        component: CharacterDetailView,
+        meta: { requiresAuth: true, roles: ['jugador'] },
+        beforeEnter: (to) => {
+            if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+                return { path: `/character/${to.params.id}/full` }
+            }
+            return true
+        }
+    },
     { path: '/character/:id/full', component: CharacterFullView, meta: { requiresAuth: true, roles: ['jugador'] } },
     { path: '/character/:id/edit', component: CharacterEditView, meta: { requiresAuth: true, roles: ['jugador'] } },
     { path: '/character/:id/notes', component: NotesView, meta: { requiresAuth: true, roles: ['jugador'] } },

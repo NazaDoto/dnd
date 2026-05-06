@@ -107,8 +107,9 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100dvh;
-  padding: 1.5rem;
+  min-height: 100%;
+  width: 100%;
+  padding: 1rem;
   gap: 1.5rem;
 }
 .logo-title {
@@ -129,5 +130,12 @@ export default {
   font-size: 0.95rem;
   padding-top: 0.6rem;
   padding-bottom: 0.6rem;
+}
+
+@media (min-width: 1024px) {
+  .auth-page {
+    padding: 1.25rem 1rem;
+    gap: 1rem;
+  }
 }
 </style>

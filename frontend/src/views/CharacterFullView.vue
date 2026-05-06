@@ -42,6 +42,11 @@
 
     <!-- ── PESTAÑA: Habilidades ── -->
     <div v-if="activeTab === 'skills'" class="tab-content">
+      <div class="tab-edit-row" v-if="!isDmCampaignReader">
+        <button type="button" class="edit-icon-btn" @click="goEditSection('skills')" title="Editar habilidades">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
+        </button>
+      </div>
       <div class="card mb-4">
         <p class="section-title">Salvaciones</p>
         <div class="skill-list">
@@ -74,6 +79,11 @@
 
     <!-- ── PESTAÑA: Combate ── -->
     <div v-if="activeTab === 'combat'" class="tab-content">
+      <div class="tab-edit-row" v-if="!isDmCampaignReader">
+        <button type="button" class="edit-icon-btn" @click="goEditSection('combat')" title="Editar combate">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
+        </button>
+      </div>
       <div class="card mb-4">
         <p class="section-title">Ataques</p>
         <div v-if="attacks.length" class="attacks-list">
@@ -142,6 +152,11 @@
 
       <!-- ── PESTAÑA: Equipo ── -->
       <div v-if="activeTab === 'equipment'" class="tab-content">
+        <div class="tab-edit-row" v-if="!isDmCampaignReader">
+          <button type="button" class="edit-icon-btn" @click="goEditSection('equipment')" title="Editar equipo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
+          </button>
+        </div>
         <div class="card mb-4">
           <p class="section-title">Monedas</p>
           <div class="coins-grid">
@@ -178,6 +193,11 @@
 
       <!-- ── PESTAÑA: Trasfondo ── -->
       <div v-if="activeTab === 'backstory'" class="tab-content">
+        <div class="tab-edit-row" v-if="!isDmCampaignReader">
+          <button type="button" class="edit-icon-btn" @click="goEditSection('backstory')" title="Editar trasfondo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
+          </button>
+        </div>
         <div class="card mb-4" v-if="
           character.personality_traits ||
           character.ideals ||
@@ -245,6 +265,11 @@
 
       <!-- ── PESTAÑA: Rasgos ── -->
       <div v-if="activeTab === 'features'" class="tab-content">
+        <div class="tab-edit-row" v-if="!isDmCampaignReader">
+          <button type="button" class="edit-icon-btn" @click="goEditSection('features')" title="Editar rasgos">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
+          </button>
+        </div>
         <div class="card mb-4" v-if="features.length">
           <p class="section-title">Rasgos & Capacidades</p>
           <div v-for="(feat, i) in features" :key="i" class="feat-block">
@@ -264,6 +289,17 @@
               p
             }}</span>
           </div>
+        </div>
+      </div>
+      <div v-if="activeTab === 'notes'" class="tab-content">
+        <div class="card">
+          <p class="section-title">Notas de campaña</p>
+          <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0.75rem;">
+            Abrí tus notas vinculadas a este personaje para registrar sesiones, NPCs y pistas.
+          </p>
+          <RouterLink :to="`/character/${id}/notes`" class="btn btn-primary">
+            Ir a notas
+          </RouterLink>
         </div>
       </div>
     </div>
@@ -300,6 +336,7 @@ export default {
         { id: "equipment", label: "Equipo" },
         { id: "backstory", label: "Trasfondo" },
         { id: "features", label: "Rasgos" },
+        { id: "notes", label: "Notas" },
       ],
       coins: [
         { key: "copper_pieces", label: "PC", icon: "🟤", color: "#92400e" },
@@ -429,6 +466,9 @@ export default {
     }
   },
   methods: {
+    goEditSection(section) {
+      this.$router.push(`/character/${this.id}/edit?section=${section}`);
+    },
     downloadDmPdf() {
       if (this.character) exportCharacterPdf(this.character);
     },
@@ -583,6 +623,32 @@ normalizeSpells(value) {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+.tab-edit-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -0.25rem;
+}
+.edit-icon-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border-radius: 999px;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.edit-icon-btn:hover {
+  border-color: var(--gold-dark);
+  color: var(--gold-light);
+}
+.edit-icon-btn svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
 }
 
 .mb-4 {

@@ -27,6 +27,16 @@
       </div>
     </div>
 
+    <!-- Acciones rápidas -->
+    <div class="quick-actions quick-actions--top">
+      <RouterLink :to="`/character/${id}/full`" class="btn btn-primary quick-btn">
+        Ficha completa
+      </RouterLink>
+      <RouterLink :to="`/character/${id}/notes`" class="btn btn-secondary quick-btn">
+        Notas
+      </RouterLink>
+    </div>
+
     <!-- HP Bar -->
     <div class="hp-section card">
       <div class="hp-header">
@@ -228,21 +238,6 @@
         <span class="pill-val">{{ character.passive_perception }}</span>
         <span class="pill-lbl">Perc. Pasiva</span>
       </div>
-    </div>
-
-    <!-- Acciones rápidas -->
-    <div class="quick-actions">
-      <RouterLink :to="`/character/${id}/full`" class="btn btn-primary quick-btn">
-        Ficha completa
-      </RouterLink>
-
-      <RouterLink :to="`/character/${id}/notes`" class="btn btn-secondary quick-btn">
-        Notas
-      </RouterLink>
-
-      <RouterLink :to="`/character/${id}/edit`" class="btn btn-ghost quick-btn">
-        Editar
-      </RouterLink>
     </div>
 
     <!-- XP -->
@@ -970,9 +965,12 @@ equipmentLabel(item) {
 /* Quick actions */
 .quick-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   margin-bottom: 0.65rem;
+}
+.quick-actions--top {
+  margin-bottom: 0.75rem;
 }
 
 .quick-btn {
