@@ -18,7 +18,7 @@
       <p class="hint">Después podés completar mundo, NPCs, preparación y roster desde la vista de campaña.</p>
     </div>
 
-    <div class="card">
+    <div class="card campaigns-card">
       <p class="section-title">Mis campañas</p>
       <div v-if="loading" class="text-muted">Cargando...</div>
       <div v-else-if="!campaigns.length" class="text-muted">Todavía no tenés campañas.</div>
@@ -139,7 +139,19 @@ export default {
   line-height: 1.4;
   max-width: 70ch;
 }
-.table-wrap { display: flex; flex-direction: column; gap: 0.55rem; }
+.campaigns-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.table-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  max-height: min(52dvh, 31rem);
+  overflow: auto;
+  padding-right: 0.2rem;
+}
 .campaign-row {
   display: flex;
   justify-content: space-between;

@@ -4,7 +4,11 @@
     <main
       :class="[
         'main-content',
-        { 'with-nav': isAuthenticated, 'main-content--dm': isDmLayout }
+        {
+          'with-nav': isAuthenticated,
+          'main-content--dm': isDmLayout,
+          'main-content--auth': isAuthLayout
+        }
       ]"
     >
       <RouterView />
@@ -37,6 +41,10 @@ export default {
     isDmLayout() {
       const p = this.$route?.path || ''
       return p === '/dm' || p.startsWith('/dm/')
+    },
+    isAuthLayout() {
+      const p = this.$route?.path || ''
+      return p === '/login' || p === '/register'
     }
   },
   created() {
@@ -77,25 +85,55 @@ export default {
 </script>
 
 <style>
-#dnd-app { min-height: 100dvh; display: flex; flex-direction: column; }
+html,
+body,
+#app {
+  height: 100%;
+  overflow: hidden;
+}
+#dnd-app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
 .main-content {
   flex: 1;
-  padding: 1rem;
-  max-width: 600px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0.9rem;
+  max-width: min(1100px, 100%);
   margin: 0 auto;
   width: 100%;
+}
+.main-content.main-content--auth {
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 /* Panel DM y ficha en contexto campaña: aprovechar pantallas anchas */
 .main-content.main-content--dm {
   max-width: min(1200px, 100%);
 }
 .main-content.with-nav {
-  padding-top: 1rem;
+  padding-top: 0.9rem;
   padding-bottom: 5rem; /* espacio para navbar bottom */
 }
 
 @media (min-width: 640px) {
-  .main-content { padding: 1.5rem; }
+  .main-content { padding: 1.25rem; }
+}
+
+@media (min-width: 1024px) {
+  .main-content.with-nav {
+    padding-top: 4.8rem; /* navbar en top desktop */
+    padding-bottom: 1.5rem;
+  }
+  .main-content.main-content--auth {
+    max-width: 560px;
+  }
 }
 </style>

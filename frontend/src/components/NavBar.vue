@@ -104,4 +104,45 @@ export default {
   font-weight: bold;
   line-height: 1;
 }
+
+@media (min-width: 1024px) {
+  .navbar {
+    top: 0;
+    bottom: auto;
+    margin: 0 auto;
+    width: min(1100px, 100%);
+    justify-content: flex-start;
+    gap: 0.65rem;
+    border-top: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+    padding: 0.55rem 1.1rem;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  }
+  .nav-item {
+    flex-direction: row;
+    min-height: 2.1rem;
+    font-size: 0.72rem;
+    padding: 0.35rem 0.85rem;
+    border: 1px solid transparent;
+  }
+  .nav-item.active {
+    border-color: var(--border);
+    background: var(--bg-surface);
+  }
+  .nav-label {
+    font-size: 0.72rem;
+    max-width: none;
+  }
+  .nav-create {
+    width: auto;
+    height: auto;
+    border-radius: var(--radius-sm);
+    margin-bottom: 0;
+    padding: 0.35rem 0.7rem;
+  }
+  .nav-icon-create {
+    font-size: 1.1rem;
+  }
+}
 </style>

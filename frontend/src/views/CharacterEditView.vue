@@ -1382,6 +1382,48 @@ export default {
   margin-top: 0.25rem;
 }
 
+@media (min-width: 860px) {
+  .form-header {
+    margin-bottom: 1rem;
+  }
+  .form-title {
+    text-align: left;
+  }
+  .char-form {
+    gap: 0.85rem;
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .grid-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .stats-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .char-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.9rem;
+  }
+  .char-form > .card {
+    margin: 0;
+  }
+  .char-form > .submit-btn {
+    grid-column: 1 / -1;
+    width: fit-content;
+    min-width: 15rem;
+    justify-self: end;
+  }
+}
+
 @media (max-width: 720px) {
   .grid-2,
   .grid-3,

@@ -204,6 +204,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
   margin-bottom: 1.25rem;
 }
 .home-title {
@@ -239,11 +241,11 @@ export default {
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--bg-surface);
-  color: var(--gold-light);
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-title);
+  font-family: inherit;
   font-size: 0.72rem;
 }
 
@@ -299,6 +301,9 @@ export default {
 }
 
 @media (min-width: 860px) {
+  .home-header {
+    flex-wrap: nowrap;
+  }
   .home-top-grid {
     grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.35fr);
     align-items: start;

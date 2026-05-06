@@ -528,14 +528,14 @@ export default {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 0.15rem 0.45rem;
-  font-family: var(--font-title);
+  font-family: inherit;
   font-size: 0.66rem;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
+  letter-spacing: 0;
+  color: var(--text-muted);
   background: var(--bg-surface);
 }
 .stat-pill-ca {
-  color: var(--gold-light);
+  color: var(--text-secondary);
 }
 .stat-pill-hp {
   display: inline-flex;
@@ -554,8 +554,8 @@ export default {
   cursor: pointer;
 }
 .hp-step:hover {
-  color: var(--gold-light);
-  border-color: var(--gold-dark);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 .roster-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
 .mt-2 { margin-top: 0.5rem; }

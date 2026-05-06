@@ -190,6 +190,7 @@ export default {
 .notes-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 1rem; gap: 0.5rem;
+  flex-wrap: wrap;
 }
 .notes-title {
   font-family: var(--font-title); font-size: 1rem; color: var(--text-primary); flex: 1; text-align: center;
@@ -235,4 +236,33 @@ export default {
 .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
 .empty-icon  { font-size: 3rem; margin-bottom: 1rem; }
 .empty-state h3 { font-family: var(--font-title); color: var(--text-secondary); margin-bottom: 0.5rem; }
+
+@media (min-width: 760px) {
+  .notes-header {
+    flex-wrap: nowrap;
+  }
+  .notes-title {
+    text-align: left;
+    font-size: 1.15rem;
+  }
+  .note-form-actions {
+    justify-content: flex-end;
+  }
+}
+
+@media (min-width: 1024px) {
+  .notes-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+  }
+  .note-card {
+    min-height: 13rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .note-preview {
+    -webkit-line-clamp: 5;
+  }
+}
 </style>

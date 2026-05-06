@@ -887,4 +887,71 @@ normalizeSpells(value) {
   flex-wrap: wrap;
   gap: 0.4rem;
 }
+
+@media (max-width: 760px) {
+  .full-header {
+    flex-wrap: wrap;
+  }
+  .full-title {
+    order: 3;
+    width: 100%;
+    text-align: left;
+  }
+  .attack-row {
+    grid-template-columns: 1fr auto;
+    gap: 0.35rem;
+  }
+  .atk-dmg,
+  .atk-type {
+    grid-column: 1 / -1;
+  }
+  .spell-meta {
+    grid-template-columns: 1fr;
+  }
+  .coins-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .trait-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 980px) {
+  .full-view {
+    display: grid;
+    grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
+    grid-template-areas:
+      "header header"
+      "tabs content";
+    column-gap: 1rem;
+    align-items: start;
+  }
+  .full-header {
+    grid-area: header;
+    margin-bottom: 0.25rem;
+  }
+  .tabs {
+    grid-area: tabs;
+    flex-direction: column;
+    overflow: visible;
+    position: sticky;
+    top: 5.5rem;
+    gap: 0.35rem;
+  }
+  .tab-btn {
+    width: 100%;
+    text-align: left;
+    text-transform: none;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    padding: 0.5rem 0.7rem;
+  }
+  .tab-content {
+    grid-area: content;
+  }
+  .coins-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    max-width: 34rem;
+  }
+}
 </style>
