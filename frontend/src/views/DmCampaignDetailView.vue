@@ -202,11 +202,17 @@
     <div class="spinner"></div>
     <span>Cargando campaña...</span>
   </div>
+  <PdfFormatModal
+    v-if="pdfModalOpen && pdfCharacter"
+    @cancel="closePdfModal"
+    @choose="downloadCharacterPdfByFormat"
+  />
 </template>
 
 <script>
 import { dmAPI } from '../services/api.js'
-import { exportCampaignPdf, exportCharacterPdfWithOption } from '../services/pdfExport.js'
+import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
+import PdfFormatModal from '../components/PdfFormatModal.vue'
 
 const emptyForm = () => ({
   name: '',
@@ -231,6 +237,7 @@ const emptyForm = () => ({
 
 export default {
   name: 'DmCampaignDetailView',
+  components: { PdfFormatModal },
   inject: ['showToast'],
   data() {
     return {
@@ -245,7 +252,9 @@ export default {
       ],
       form: emptyForm(),
       npcList: [],
-      roster: { active: [], pending: [] }
+      roster: { active: [], pending: [] },
+      pdfModalOpen: false,
+      pdfCharacter: null
     }
   },
   computed: {
@@ -327,7 +336,18 @@ export default {
       exportCampaignPdf(this.buildPayload(), this.roster.active)
     },
     async pdfOne(row) {
-      await exportCharacterPdfWithOption(row)
+      this.pdfCharacter = row
+      this.pdfModalOpen = true
+    },
+    closePdfModal() {
+      this.pdfModalOpen = false
+      this.pdfCharacter = null
+    },
+    async downloadCharacterPdfByFormat(format) {
+      if (!this.pdfCharacter) return
+      const character = this.pdfCharacter
+      this.closePdfModal()
+      await exportCharacterPdf(character, { format })
     },
     addNpc() {
       this.npcList.push({ name: '', role: '', notes: '' })

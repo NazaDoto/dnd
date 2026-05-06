@@ -205,15 +205,6 @@ function normalizeSpells(character) {
     return out
 }
 
-function pickPdfFormat() {
-    const response = window.prompt(
-        'Elegí formato de PDF:\n1 = Común (texto simple)\n2 = Estilizado (hoja D&D)\n\nEscribí 1 o 2',
-        '1'
-    )
-    if (response === null) return null
-    return String(response).trim() === '2' ? 'styled' : 'plain'
-}
-
 function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHeight = 4.2) {
     const safe = sanitize(text, '')
     if (!safe) return y
@@ -295,12 +286,6 @@ export async function exportCharacterPdf(character, opts = {}) {
         return exportCharacterPdfStyled(character)
     }
     return exportCharacterPdfPlain(character)
-}
-
-export async function exportCharacterPdfWithOption(character) {
-    const format = pickPdfFormat()
-    if (!format) return
-    return exportCharacterPdf(character, { format })
 }
 
 export function exportCampaignPdf(campaign, linkedCharacters = []) {

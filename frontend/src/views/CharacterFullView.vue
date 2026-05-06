@@ -620,12 +620,18 @@
     <div class="spinner"></div>
     <span>Cargando ficha...</span>
   </div>
+  <PdfFormatModal
+    v-if="pdfModalOpen"
+    @cancel="pdfModalOpen = false"
+    @choose="downloadCharacterPdfByFormat"
+  />
 </template>
 
 <script>
 import { charactersAPI, dmAPI } from "../services/api.js";
-import { exportCharacterPdfWithOption } from "../services/pdfExport.js";
+import { exportCharacterPdf } from "../services/pdfExport.js";
 import CharacterNotesPanel from "../components/CharacterNotesPanel.vue";
+import PdfFormatModal from "../components/PdfFormatModal.vue";
 import {
   ATTRIBUTES,
   SKILLS,
@@ -638,7 +644,7 @@ import {
 
 export default {
   name: "CharacterFullView",
-  components: { CharacterNotesPanel },
+  components: { CharacterNotesPanel, PdfFormatModal },
   inject: ["showToast"],
   data() {
     return {
@@ -653,6 +659,7 @@ export default {
       RACES,
       sidebarEditorOpen: false,
       sidebarEditorSaving: false,
+      pdfModalOpen: false,
       sidebarPhotoFile: null,
       sidebarPhotoPreview: "",
       sidebarForm: {
@@ -1064,7 +1071,13 @@ export default {
       return fd;
     },
     async downloadDmPdf() {
-      if (this.character) await exportCharacterPdfWithOption(this.character);
+      if (!this.character) return;
+      this.pdfModalOpen = true;
+    },
+    async downloadCharacterPdfByFormat(format) {
+      this.pdfModalOpen = false;
+      if (!this.character) return;
+      await exportCharacterPdf(this.character, { format });
     },
     hasSavingThrow(attr) {
       return (this.character?.saving_throws_prof || []).includes(attr);

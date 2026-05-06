@@ -44,22 +44,31 @@
       <span class="action-arrow">›</span>
     </div>
   </div>
+  <PdfFormatModal
+    v-if="pdfModalOpen"
+    @cancel="pdfModalOpen = false"
+    @choose="downloadPdfByFormat"
+  />
 </template>
 
 <script>
 import { CLASSES } from "../services/dndData.js";
 import { charactersAPI } from "../services/api.js";
-import { exportCharacterPdfWithOption } from "../services/pdfExport.js";
+import { exportCharacterPdf } from "../services/pdfExport.js";
+import PdfFormatModal from "./PdfFormatModal.vue";
 
 export default {
   name: "CharacterCard",
   emits: ["click"],
+  components: { PdfFormatModal },
   props: {
     character: { type: Object, required: true },
   },
   data() {
     return {
       downloadingPdf: false,
+      pdfModalOpen: false,
+      pdfPayload: null,
     };
   },
   computed: {
@@ -98,12 +107,24 @@ export default {
 
       try {
         const { data } = await charactersAPI.getFull(id);
-        await exportCharacterPdfWithOption(data);
+        this.pdfPayload = data;
+        this.pdfModalOpen = true;
       } catch (error) {
         console.error(error);
         alert("No se pudo generar el PDF del personaje.");
       } finally {
         this.downloadingPdf = false;
+      }
+    },
+    async downloadPdfByFormat(format) {
+      if (!this.pdfPayload) return;
+      this.pdfModalOpen = false;
+      try {
+        await exportCharacterPdf(this.pdfPayload, { format });
+      } catch {
+        alert("No se pudo generar el PDF del personaje.");
+      } finally {
+        this.pdfPayload = null;
       }
     },
   },
