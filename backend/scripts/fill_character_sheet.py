@@ -553,9 +553,9 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
         print(traceback.format_exc(), file=sys.stderr)
         return
 
-    # Campo de imagen en página 2
+    # Campos de imagen en página 2
     target_page_index = 1
-    target_rect = None
+    target_rects = []
     page = reader.pages[target_page_index]
     annots = page.get("/Annots")
     if annots:
@@ -566,25 +566,42 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
                 rect = annot.get("/Rect")
                 if rect and len(rect) == 4:
                     target_rect = [float(rect[0]), float(rect[1]), float(rect[2]), float(rect[3])]
+                    target_rects.append((title.strip(), target_rect))
                     print(f"[styled-pdf][image] target field found: {title.strip()} rect={target_rect}", file=sys.stderr)
-                    break
-    if not target_rect:
+    if not target_rects:
         print("[styled-pdf][image] no image field found (Imagen1_af_image/Imagen2_af_image)", file=sys.stderr)
         return
-
-    llx, lly, urx, ury = target_rect
-    width = max(1.0, urx - llx)
-    height = max(1.0, ury - lly)
 
     packet = BytesIO()
     page_width = float(page.mediabox.width)
     page_height = float(page.mediabox.height)
     c = canvas.Canvas(packet, pagesize=(page_width, page_height))
-    c.drawImage(ImageReader(BytesIO(image_bytes)), llx, lly, width=width, height=height, preserveAspectRatio=True, anchor="c", mask="auto")
+    image_reader = ImageReader(BytesIO(image_bytes))
+    for title, rect in target_rects:
+        llx, lly, urx, ury = rect
+        width = max(1.0, urx - llx)
+        height = max(1.0, ury - lly)
+        c.drawImage(image_reader, llx, lly, width=width, height=height, preserveAspectRatio=True, anchor="c", mask="auto")
+        print(f"[styled-pdf][image] image drawn in field {title}", file=sys.stderr)
     c.save()
     packet.seek(0)
     overlay_reader = PdfReader(packet)
     writer.pages[target_page_index].merge_page(overlay_reader.pages[0])
+    # Remove image widget annotations so they don't cover the merged image.
+    writer_page = writer.pages[target_page_index]
+    writer_annots = writer_page.get("/Annots")
+    if writer_annots:
+        filtered_annots = []
+        removed = 0
+        for annot_ref in writer_annots:
+            annot = annot_ref.get_object()
+            title = as_str(annot.get("/T", "")).strip()
+            if title in ("Imagen1_af_image", "Imagen2_af_image"):
+                removed += 1
+                continue
+            filtered_annots.append(annot_ref)
+        writer_page[NameObject("/Annots")] = filtered_annots
+        print(f"[styled-pdf][image] removed image annotations: {removed}", file=sys.stderr)
     print("[styled-pdf][image] image overlay merged on page 2", file=sys.stderr)
 
 
