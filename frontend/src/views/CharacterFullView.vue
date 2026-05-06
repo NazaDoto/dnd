@@ -98,7 +98,20 @@
           </div>
         </div>
         <div v-if="isEditing('skills_saves')" class="inline-editor">
-          <input v-model="fieldDraft" @keydown.enter.prevent="saveFieldEdit" placeholder="str, dex, con..." />
+          <div class="chips-grid">
+            <label
+              v-for="attr in ATTRIBUTES"
+              :key="'save-' + attr.key"
+              :class="['chip-check', { active: Array.isArray(fieldDraft) && fieldDraft.includes(attr.key) }]"
+            >
+              <input
+                type="checkbox"
+                :checked="Array.isArray(fieldDraft) && fieldDraft.includes(attr.key)"
+                @change="toggleDraftRootArrayValue(attr.key)"
+              />
+              <span>{{ attr.label }}</span>
+            </label>
+          </div>
         </div>
         <div class="skill-list">
           <div v-for="attr in ATTRIBUTES" :key="attr.key" class="skill-row">
@@ -120,8 +133,36 @@
           </div>
         </div>
         <div v-if="isEditing('skills_skills')" class="inline-editor">
-          <label class="form-label">Linea 1: proficiencias. Linea 3: experticias.</label>
-          <textarea v-model="fieldDraft" rows="4"></textarea>
+          <p class="form-label">Proficiencias</p>
+          <div class="chips-grid">
+            <label
+              v-for="sk in SKILLS"
+              :key="'prof-' + sk.key"
+              :class="['chip-check', { active: fieldDraft?.prof?.includes(sk.key) }]"
+            >
+              <input
+                type="checkbox"
+                :checked="fieldDraft?.prof?.includes(sk.key)"
+                @change="toggleDraftArrayValue('prof', sk.key)"
+              />
+              <span>{{ sk.label }}</span>
+            </label>
+          </div>
+          <p class="form-label mt-2">Experticias</p>
+          <div class="chips-grid">
+            <label
+              v-for="sk in SKILLS"
+              :key="'exp-' + sk.key"
+              :class="['chip-check', { active: fieldDraft?.expertise?.includes(sk.key) }]"
+            >
+              <input
+                type="checkbox"
+                :checked="fieldDraft?.expertise?.includes(sk.key)"
+                @change="toggleDraftArrayValue('expertise', sk.key)"
+              />
+              <span>{{ sk.label }}</span>
+            </label>
+          </div>
         </div>
         <div class="skill-list">
           <div v-for="sk in SKILLS" :key="sk.key" class="skill-row">
@@ -147,7 +188,7 @@
         <div class="section-title-row">
           <p class="section-title">Ataques</p>
           <div class="mini-edit-actions">
-            <button v-if="!isEditing('combat_attacks')" type="button" class="icon-action edit" @click="startFieldEdit('combat_attacks', (attacks || []).map(a => `${a.name || ''}|${a.bonus || ''}|${a.damage || ''}|${a.type || ''}`).join('\n'))">✎</button>
+            <button v-if="!isEditing('combat_attacks')" type="button" class="icon-action edit" @click="startFieldEdit('combat_attacks')">✎</button>
             <template v-else>
               <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
               <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
@@ -155,7 +196,14 @@
           </div>
         </div>
         <div v-if="isEditing('combat_attacks')" class="inline-editor">
-          <textarea v-model="fieldDraft" rows="4"></textarea>
+          <div v-for="(atk, i) in fieldDraft" :key="'edit-atk-'+i" class="attack-edit-row">
+            <input v-model="atk.name" placeholder="Nombre del ataque" />
+            <input v-model="atk.bonus" placeholder="+5" />
+            <input v-model="atk.damage" placeholder="1d8+3" />
+            <input v-model="atk.type" placeholder="Cortante/Fuego..." />
+            <button type="button" class="icon-action cancel" @click="removeDraftAttack(i)">✕</button>
+          </div>
+          <button type="button" class="btn-secondary" @click="addDraftAttack">+ Agregar ataque</button>
         </div>
         <div v-if="attacks.length" class="attacks-list">
           <div v-for="(atk, i) in attacks" :key="i" class="attack-row">
@@ -177,7 +225,7 @@
         <div class="section-title-row">
           <p class="section-title">Lanzamiento de Conjuros</p>
           <div class="mini-edit-actions">
-            <button v-if="!isEditing('combat_spellcasting')" type="button" class="icon-action edit" @click="startFieldEdit('combat_spellcasting', `${character.spellcasting_ability || ''}\n${character.spell_save_dc || ''}\n${character.spell_attack_bonus || ''}`)">✎</button>
+            <button v-if="!isEditing('combat_spellcasting')" type="button" class="icon-action edit" @click="startFieldEdit('combat_spellcasting')">✎</button>
             <template v-else>
               <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
               <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
@@ -185,8 +233,16 @@
           </div>
         </div>
         <div v-if="isEditing('combat_spellcasting')" class="inline-editor">
-          <label class="form-label">Linea 1: habilidad, linea 2: CD, linea 3: bonus ataque</label>
-          <textarea v-model="fieldDraft" rows="3"></textarea>
+          <select v-model="fieldDraft.spellcasting_ability">
+            <option value="">Sin habilidad</option>
+            <option v-for="ab in SPELLCASTING_ABILITIES" :key="'ab-' + ab.value" :value="ab.value">
+              {{ ab.label }}
+            </option>
+          </select>
+          <div class="two-col">
+            <input v-model.number="fieldDraft.spell_save_dc" type="number" min="0" placeholder="CD de salvación" />
+            <input v-model.number="fieldDraft.spell_attack_bonus" type="number" placeholder="Bonus de ataque" />
+          </div>
         </div>
         <div v-if="character.spellcasting_ability" class="spell-meta">
           <div class="spell-meta-box">
@@ -214,15 +270,34 @@
         <div class="section-title-row">
           <p class="section-title">Conjuros</p>
           <div class="mini-edit-actions">
-            <button v-if="!isEditing('combat_spells')" type="button" class="icon-action edit" @click="startFieldEdit('combat_spells', JSON.stringify(character.spells || {}, null, 2))">✎</button>
+            <button v-if="!isEditing('combat_spells')" type="button" class="icon-action edit" @click="startFieldEdit('combat_spells')">✎</button>
             <template v-else>
               <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
               <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
             </template>
           </div>
         </div>
-        <div v-if="isEditing('combat_spells')" class="inline-editor">
-          <textarea v-model="fieldDraft" rows="8"></textarea>
+        <div v-if="isEditing('combat_spells')" class="inline-editor spells-editor">
+          <div class="spell-level-block">
+            <p class="spell-level-name">Trucos</p>
+            <div v-for="(sp, i) in fieldDraft.cantrips" :key="'cantrip-'+i" class="spell-edit-row">
+              <input v-model="fieldDraft.cantrips[i]" placeholder="Nombre del truco" />
+              <button type="button" class="icon-action cancel" @click="removeDraftSpell('cantrips', i)">✕</button>
+            </div>
+            <button type="button" class="btn-secondary" @click="addDraftSpell('cantrips')">+ Agregar truco</button>
+          </div>
+          <div v-for="lvl in [1,2,3,4,5,6,7,8,9]" :key="'edit-lvl-'+lvl" class="spell-level-block">
+            <p class="spell-level-name">Nivel {{ lvl }}</p>
+            <div class="two-col mb-1">
+              <input v-model.number="fieldDraft['level'+lvl].slotsTotal" type="number" min="0" placeholder="Slots totales" />
+              <input v-model.number="fieldDraft['level'+lvl].slotsUsed" type="number" min="0" placeholder="Slots usados" />
+            </div>
+            <div v-for="(sp, i) in fieldDraft['level'+lvl].spells" :key="'lvl-'+lvl+'-sp-'+i" class="spell-edit-row">
+              <input v-model="fieldDraft['level'+lvl].spells[i]" :placeholder="'Conjuro nivel ' + lvl" />
+              <button type="button" class="icon-action cancel" @click="removeDraftSpell('level'+lvl, i)">✕</button>
+            </div>
+            <button type="button" class="btn-secondary" @click="addDraftSpell('level'+lvl)">+ Agregar conjuro</button>
+          </div>
         </div>
 
         <div v-for="block in visibleSpellBlocks" :key="block.key" class="spell-level-block">
@@ -249,7 +324,24 @@
       <!-- ── PESTAÑA: Equipo ── -->
       <div v-if="activeTab === 'equipment'" class="tab-content">
         <div class="card mb-4">
-          <p class="section-title">Monedas</p>
+          <div class="section-title-row">
+            <p class="section-title">Monedas</p>
+            <div class="mini-edit-actions">
+              <button v-if="!isEditing('equipment_coins')" type="button" class="icon-action edit" @click="startFieldEdit('equipment_coins')">✎</button>
+              <template v-else>
+                <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+              </template>
+            </div>
+          </div>
+          <div v-if="isEditing('equipment_coins')" class="inline-editor">
+            <div class="coins-edit-grid">
+              <div v-for="coin in coins" :key="'coin-edit-' + coin.key" class="coin-edit-row">
+                <label>{{ coin.label }}</label>
+                <input v-model.number="fieldDraft[coin.key]" type="number" min="0" />
+              </div>
+            </div>
+          </div>
           <div class="coins-grid">
             <div v-for="coin in coins" :key="coin.key" class="coin-box" :style="{ borderColor: coin.color }">
               <span class="coin-icon">{{ coin.icon }}</span>
@@ -356,7 +448,17 @@
           <div class="appear-grid">
             <div v-for="f in visibleAppearanceFields" :key="f.key" class="appear-row">
               <span class="appear-lbl">{{ f.label }}</span>
-              <span class="appear-val">{{ character[f.key] }}</span>
+              <span v-if="!isEditing('appearance_' + f.key)" class="appear-val">{{ character[f.key] || "—" }}</span>
+              <div v-else class="appear-inline-edit">
+                <input v-model="fieldDraft" :placeholder="f.label" />
+              </div>
+              <div class="mini-edit-actions">
+                <button v-if="!isEditing('appearance_' + f.key)" type="button" class="icon-action edit" @click="startFieldEdit('appearance_' + f.key, character[f.key] || '')">✎</button>
+                <template v-else>
+                  <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                  <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+                </template>
+              </div>
             </div>
           </div>
           <p v-if="character.appearance_notes" style="
@@ -580,6 +682,45 @@ export default {
   methods: {
     startFieldEdit(key, initialValue) {
       this.fieldEditKey = key;
+      if (key === "skills_saves") {
+        this.fieldDraft = Array.isArray(this.character?.saving_throws_prof) ? [...this.character.saving_throws_prof] : [];
+        return;
+      }
+      if (key === "skills_skills") {
+        this.fieldDraft = {
+          prof: Array.isArray(this.character?.skills_prof) ? [...this.character.skills_prof] : [],
+          expertise: Array.isArray(this.character?.skills_expertise) ? [...this.character.skills_expertise] : []
+        };
+        return;
+      }
+      if (key === "combat_attacks") {
+        this.fieldDraft = Array.isArray(this.character?.attacks_spellcasting)
+          ? this.character.attacks_spellcasting.map(a => ({ ...a }))
+          : [];
+        return;
+      }
+      if (key === "combat_spellcasting") {
+        this.fieldDraft = {
+          spellcasting_ability: this.character?.spellcasting_ability || "",
+          spell_save_dc: this.character?.spell_save_dc ?? "",
+          spell_attack_bonus: this.character?.spell_attack_bonus ?? ""
+        };
+        return;
+      }
+      if (key === "combat_spells") {
+        this.fieldDraft = this.normalizeSpells(this.character?.spells);
+        return;
+      }
+      if (key === "equipment_coins") {
+        this.fieldDraft = {
+          copper_pieces: Number(this.character?.copper_pieces || 0),
+          silver_pieces: Number(this.character?.silver_pieces || 0),
+          electrum_pieces: Number(this.character?.electrum_pieces || 0),
+          gold_pieces: Number(this.character?.gold_pieces || 0),
+          platinum_pieces: Number(this.character?.platinum_pieces || 0)
+        };
+        return;
+      }
       this.fieldDraft = initialValue ?? "";
     },
     cancelFieldEdit() {
@@ -624,33 +765,39 @@ export default {
         } else if (key === "state_xp") {
           await this.persistCharacterPatch({ experience_points: Number(value || 0) });
         } else if (key === "skills_saves") {
-          await this.persistCharacterPatch({ saving_throws_prof: this.toList(value) });
+          await this.persistCharacterPatch({ saving_throws_prof: Array.isArray(this.fieldDraft) ? this.fieldDraft : [] });
         } else if (key === "skills_skills") {
-          const [prof = "", expertise = ""] = String(value).split("\n---\n");
           await this.persistCharacterPatch({
-            skills_prof: this.toList(prof),
-            skills_expertise: this.toList(expertise)
+            skills_prof: Array.isArray(this.fieldDraft?.prof) ? this.fieldDraft.prof : [],
+            skills_expertise: Array.isArray(this.fieldDraft?.expertise) ? this.fieldDraft.expertise : []
           });
         } else if (key === "combat_attacks") {
-          const attacks = String(value || "")
-            .split("\n")
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .map((line) => {
-              const [name = "", bonus = "", damage = "", type = ""] = line.split("|");
-              return { name: name.trim(), bonus: bonus.trim(), damage: damage.trim(), type: type.trim() };
-            });
+          const attacks = (Array.isArray(this.fieldDraft) ? this.fieldDraft : [])
+            .map((a) => ({
+              name: String(a?.name || "").trim(),
+              bonus: String(a?.bonus || "").trim(),
+              damage: String(a?.damage || "").trim(),
+              type: String(a?.type || "").trim()
+            }))
+            .filter((a) => a.name || a.bonus || a.damage || a.type);
           await this.persistCharacterPatch({ attacks_spellcasting: attacks });
         } else if (key === "combat_spellcasting") {
-          const [ability = "", saveDc = "", atkBonus = ""] = String(value).split("\n");
+          const draft = this.fieldDraft || {};
           await this.persistCharacterPatch({
-            spellcasting_ability: ability.trim() || null,
-            spell_save_dc: saveDc.trim() ? Number(saveDc.trim()) : null,
-            spell_attack_bonus: atkBonus.trim() ? Number(atkBonus.trim()) : null
+            spellcasting_ability: String(draft.spellcasting_ability || "").trim() || null,
+            spell_save_dc: draft.spell_save_dc === "" ? null : Number(draft.spell_save_dc),
+            spell_attack_bonus: draft.spell_attack_bonus === "" ? null : Number(draft.spell_attack_bonus)
           });
         } else if (key === "combat_spells") {
-          const parsed = JSON.parse(String(value || "{}"));
-          await this.persistCharacterPatch({ spells: parsed });
+          await this.persistCharacterPatch({ spells: this.fieldDraft || this.emptySpells() });
+        } else if (key === "equipment_coins") {
+          await this.persistCharacterPatch({
+            copper_pieces: Number(this.fieldDraft?.copper_pieces || 0),
+            silver_pieces: Number(this.fieldDraft?.silver_pieces || 0),
+            electrum_pieces: Number(this.fieldDraft?.electrum_pieces || 0),
+            gold_pieces: Number(this.fieldDraft?.gold_pieces || 0),
+            platinum_pieces: Number(this.fieldDraft?.platinum_pieces || 0)
+          });
         } else if (key === "equipment_items") {
           await this.persistCharacterPatch({
             equipment: String(value || "").split("\n").map(v => v.trim()).filter(Boolean)
@@ -669,6 +816,9 @@ export default {
           await this.persistCharacterPatch({ backstory: String(value || "") });
         } else if (key === "backstory_appearance") {
           await this.persistCharacterPatch({ appearance_notes: String(value || "") });
+        } else if (key.startsWith("appearance_")) {
+          const appearanceField = key.replace("appearance_", "");
+          await this.persistCharacterPatch({ [appearanceField]: String(value || "") });
         } else if (key === "backstory_alliances") {
           await this.persistCharacterPatch({ allies_organizations: String(value || "") });
         } else if (key === "features_traits") {
@@ -693,6 +843,41 @@ export default {
     },
     fmtMod(v) {
       return formatModifier(v);
+    },
+    toggleDraftArrayValue(arrKey, value) {
+      if (!this.fieldDraft || !Array.isArray(this.fieldDraft[arrKey])) return;
+      const idx = this.fieldDraft[arrKey].indexOf(value);
+      if (idx >= 0) this.fieldDraft[arrKey].splice(idx, 1);
+      else this.fieldDraft[arrKey].push(value);
+    },
+    toggleDraftRootArrayValue(value) {
+      if (!Array.isArray(this.fieldDraft)) return;
+      const idx = this.fieldDraft.indexOf(value);
+      if (idx >= 0) this.fieldDraft.splice(idx, 1);
+      else this.fieldDraft.push(value);
+    },
+    addDraftAttack() {
+      if (!Array.isArray(this.fieldDraft)) this.fieldDraft = [];
+      this.fieldDraft.push({ name: "", bonus: "", damage: "", type: "" });
+    },
+    removeDraftAttack(i) {
+      if (Array.isArray(this.fieldDraft)) this.fieldDraft.splice(i, 1);
+    },
+    addDraftSpell(levelKey) {
+      if (!this.fieldDraft || typeof this.fieldDraft !== "object") return;
+      if (levelKey === "cantrips") {
+        this.fieldDraft.cantrips.push("");
+      } else {
+        this.fieldDraft[levelKey].spells.push("");
+      }
+    },
+    removeDraftSpell(levelKey, idx) {
+      if (!this.fieldDraft || typeof this.fieldDraft !== "object") return;
+      if (levelKey === "cantrips") {
+        this.fieldDraft.cantrips.splice(idx, 1);
+      } else {
+        this.fieldDraft[levelKey].spells.splice(idx, 1);
+      }
     },
     downloadDmPdf() {
       if (this.character) exportCharacterPdf(this.character);
@@ -1280,6 +1465,85 @@ normalizeSpells(value) {
   gap: 0.4rem;
 }
 
+.chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.4rem;
+}
+
+.chip-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+}
+
+.chip-check.active {
+  border-color: var(--gold-mid);
+  background: color-mix(in srgb, var(--gold-mid) 12%, transparent);
+}
+
+.attack-edit-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 1fr 1fr auto;
+  gap: 0.4rem;
+  margin-bottom: 0.45rem;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.spells-editor {
+  max-height: 26rem;
+  overflow: auto;
+}
+
+.spell-edit-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.btn-secondary {
+  border: 1px dashed var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.coins-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.5rem;
+}
+
+.coin-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.appear-inline-edit {
+  min-width: 0;
+}
+
+.mt-2 {
+  margin-top: 0.55rem;
+}
+
+.mb-1 {
+  margin-bottom: 0.35rem;
+}
+
 @media (max-width: 760px) {
   .full-header {
     flex-wrap: wrap;
@@ -1303,6 +1567,10 @@ normalizeSpells(value) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .trait-grid {
+    grid-template-columns: 1fr;
+  }
+  .attack-edit-row,
+  .two-col {
     grid-template-columns: 1fr;
   }
 }
