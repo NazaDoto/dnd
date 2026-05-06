@@ -2,7 +2,48 @@
   <div class="full-view" v-if="character">
     <div class="full-header">
       <button type="button" class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
-      <h2 class="full-title">{{ character.name }}</h2>
+      <div class="full-header-main">
+        <h2 class="full-title">{{ character.name }}</h2>
+        <p class="hero-meta">
+          {{ character.race }}
+          <span v-if="character.subrace"> ({{ character.subrace }})</span>
+          · {{ character.class }} Nv.{{ character.level }}
+        </p>
+        <div class="quick-state-grid">
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">PV</span>
+            <span class="state-val">{{ character.hit_points_current }}/{{ character.hit_points_max }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">CA</span>
+            <span class="state-val">{{ character.armor_class ?? '-' }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">Ini</span>
+            <span class="state-val">{{ fmtMod(character.initiative) }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">Vel</span>
+            <span class="state-val">{{ character.speed }}ft</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">Prof</span>
+            <span class="state-val">{{ fmtMod(character.proficiency_bonus) }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
+            <span class="state-key">Insp</span>
+            <span class="state-val">{{ character.inspiration ? 'Si' : 'No' }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
+            <span class="state-key">P. Pasiva</span>
+            <span class="state-val">{{ character.passive_perception ?? '-' }}</span>
+          </button>
+          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
+            <span class="state-key">XP</span>
+            <span class="state-val">{{ character.experience_points || 0 }}</span>
+          </button>
+        </div>
+      </div>
       <div class="full-header-actions">
         <RouterLink
           v-if="!isDmCampaignReader"
@@ -32,98 +73,6 @@
       </div>
     </div>
 
-    <div class="full-overview">
-      <div class="detail-hero card">
-        <div class="hero-photo">
-          <img
-            v-if="character.photo_url"
-            :src="character.photo_url"
-            :alt="character.name"
-            class="hero-img"
-          />
-          <div v-else class="hero-placeholder">{{ character.name[0] }}</div>
-        </div>
-        <div class="hero-info">
-          <h1 class="hero-name">{{ character.name }}</h1>
-          <p class="hero-meta">
-            {{ character.race }}
-            <span v-if="character.subrace"> ({{ character.subrace }})</span>
-            · {{ character.class }} Nv.{{ character.level }}
-          </p>
-          <p class="hero-bg" v-if="character.background">
-            {{ character.background }} · {{ character.alignment }}
-          </p>
-        </div>
-      </div>
-
-      <div class="hp-section card">
-        <div class="hp-header">
-          <span class="section-title" style="margin: 0; border: none; padding: 0">Puntos de Vida</span>
-          <div class="hp-controls">
-            <button class="btn btn-secondary btn-icon" @click="adjustHP(-1)">-</button>
-            <span class="hp-display">
-              <span :class="['hp-current', hpClass]">{{ character.hit_points_current }}</span>
-              <span class="hp-sep">/</span>
-              <span class="hp-max">{{ character.hit_points_max }}</span>
-            </span>
-            <button class="btn btn-secondary btn-icon" @click="adjustHP(1)">+</button>
-          </div>
-        </div>
-        <div class="hp-bar-wrap">
-          <div class="hp-bar" :style="{ width: hpPct + '%' }" :class="hpClass"></div>
-        </div>
-        <div v-if="character.hit_points_temp > 0" class="hp-temp">
-          +{{ character.hit_points_temp }} PV temporales
-        </div>
-      </div>
-
-      <div class="combat-row">
-        <div class="combat-box">
-          <span class="cbox-val">{{ character.armor_class }}</span>
-          <span class="cbox-lbl">CA</span>
-        </div>
-        <div class="combat-box">
-          <span class="cbox-val">{{ fmtMod(character.initiative) }}</span>
-          <span class="cbox-lbl">Iniciativa</span>
-        </div>
-        <div class="combat-box">
-          <span class="cbox-val">{{ character.speed }}ft</span>
-          <span class="cbox-lbl">Velocidad</span>
-        </div>
-        <div class="combat-box">
-          <span class="cbox-val">{{ fmtMod(character.proficiency_bonus) }}</span>
-          <span class="cbox-lbl">B.Profic.</span>
-        </div>
-      </div>
-
-      <div class="card">
-        <p class="section-title">Atributos</p>
-        <StatsBlock :character="character" />
-      </div>
-
-      <div class="row-2">
-        <div class="card info-pill">
-          <span class="pill-icon">{{ character.inspiration ? '✨' : '○' }}</span>
-          <span class="pill-lbl">Inspiracion</span>
-        </div>
-        <div class="card info-pill">
-          <span class="pill-val">{{ character.passive_perception ?? '-' }}</span>
-          <span class="pill-lbl">Perc. Pasiva</span>
-        </div>
-      </div>
-
-      <div class="card xp-section">
-        <div class="xp-header">
-          <span class="section-title" style="margin: 0; border: none; padding: 0">Experiencia</span>
-          <span class="badge badge-gold">{{ character.experience_points || 0 }} XP</span>
-        </div>
-        <div class="xp-bar-wrap">
-          <div class="xp-bar" :style="{ width: xpPct + '%' }"></div>
-        </div>
-        <p class="xp-hint">{{ xpLabel }}</p>
-      </div>
-    </div>
-
     <!-- Tabs -->
     <div class="tabs">
       <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
@@ -135,9 +84,20 @@
     <!-- ── PESTAÑA: Habilidades ── -->
     <div v-if="activeTab === 'skills'" class="tab-content">
       <div class="tab-edit-row" v-if="!isDmCampaignReader">
-        <button type="button" class="edit-icon-btn" @click="goEditSection('skills')" title="Editar habilidades">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
+        <button v-if="editingTab !== 'skills'" type="button" class="edit-icon-btn" @click="startInlineEdit('skills')" title="Editar habilidades">
+          Editar
         </button>
+        <div v-else class="inline-actions">
+          <button type="button" class="btn btn-primary" @click="saveInlineEdit('skills')">Guardar</button>
+          <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
+        </div>
+      </div>
+      <div v-if="editingTab === 'skills'" class="card inline-editor">
+        <p class="section-title">Editar habilidades</p>
+        <label class="form-label">Idiomas (separados por coma)</label>
+        <input v-model="editDraft.languages_text" />
+        <label class="form-label mt-2">Otras competencias (separadas por coma)</label>
+        <input v-model="editDraft.other_proficiencies_text" />
       </div>
       <div class="card mb-4">
         <p class="section-title">Salvaciones</p>
@@ -172,9 +132,26 @@
     <!-- ── PESTAÑA: Combate ── -->
     <div v-if="activeTab === 'combat'" class="tab-content">
       <div class="tab-edit-row" v-if="!isDmCampaignReader">
-        <button type="button" class="edit-icon-btn" @click="goEditSection('combat')" title="Editar combate">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
-        </button>
+        <button v-if="editingTab !== 'combat'" type="button" class="edit-icon-btn" @click="startInlineEdit('combat')" title="Editar combate">Editar</button>
+        <div v-else class="inline-actions">
+          <button type="button" class="btn btn-primary" @click="saveInlineEdit('combat')">Guardar</button>
+          <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
+        </div>
+      </div>
+      <div v-if="editingTab === 'combat'" class="card inline-editor">
+        <p class="section-title">Editar combate</p>
+        <div class="inline-grid">
+          <input v-model.number="editDraft.hit_points_current" type="number" placeholder="PV actuales" />
+          <input v-model.number="editDraft.hit_points_max" type="number" placeholder="PV maximos" />
+          <input v-model.number="editDraft.hit_points_temp" type="number" placeholder="PV temp" />
+          <input v-model.number="editDraft.armor_class" type="number" placeholder="CA" />
+          <input v-model.number="editDraft.initiative" type="number" placeholder="Iniciativa" />
+          <input v-model.number="editDraft.speed" type="number" placeholder="Velocidad" />
+          <input v-model.number="editDraft.proficiency_bonus" type="number" placeholder="Prof" />
+        </div>
+        <label class="check-inline"><input v-model="editDraft.inspiration" type="checkbox" /> Inspiracion</label>
+        <label class="form-label mt-2">Ataques (nombre|bonus|dano|tipo por linea)</label>
+        <textarea v-model="editDraft.attacks_text" rows="4"></textarea>
       </div>
       <div class="card mb-4">
         <p class="section-title">Ataques</p>
@@ -245,9 +222,23 @@
       <!-- ── PESTAÑA: Equipo ── -->
       <div v-if="activeTab === 'equipment'" class="tab-content">
         <div class="tab-edit-row" v-if="!isDmCampaignReader">
-          <button type="button" class="edit-icon-btn" @click="goEditSection('equipment')" title="Editar equipo">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
-          </button>
+          <button v-if="editingTab !== 'equipment'" type="button" class="edit-icon-btn" @click="startInlineEdit('equipment')" title="Editar equipo">Editar</button>
+          <div v-else class="inline-actions">
+            <button type="button" class="btn btn-primary" @click="saveInlineEdit('equipment')">Guardar</button>
+            <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
+          </div>
+        </div>
+        <div v-if="editingTab === 'equipment'" class="card inline-editor">
+          <p class="section-title">Editar equipo</p>
+          <div class="inline-grid">
+            <input v-model.number="editDraft.copper_pieces" type="number" placeholder="PC" />
+            <input v-model.number="editDraft.silver_pieces" type="number" placeholder="PP" />
+            <input v-model.number="editDraft.electrum_pieces" type="number" placeholder="PE" />
+            <input v-model.number="editDraft.gold_pieces" type="number" placeholder="PO" />
+            <input v-model.number="editDraft.platinum_pieces" type="number" placeholder="PPl" />
+          </div>
+          <label class="form-label mt-2">Equipo (1 por linea)</label>
+          <textarea v-model="editDraft.equipment_text" rows="4"></textarea>
         </div>
         <div class="card mb-4">
           <p class="section-title">Monedas</p>
@@ -286,9 +277,19 @@
       <!-- ── PESTAÑA: Trasfondo ── -->
       <div v-if="activeTab === 'backstory'" class="tab-content">
         <div class="tab-edit-row" v-if="!isDmCampaignReader">
-          <button type="button" class="edit-icon-btn" @click="goEditSection('backstory')" title="Editar trasfondo">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
-          </button>
+          <button v-if="editingTab !== 'backstory'" type="button" class="edit-icon-btn" @click="startInlineEdit('backstory')" title="Editar trasfondo">Editar</button>
+          <div v-else class="inline-actions">
+            <button type="button" class="btn btn-primary" @click="saveInlineEdit('backstory')">Guardar</button>
+            <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
+          </div>
+        </div>
+        <div v-if="editingTab === 'backstory'" class="card inline-editor">
+          <p class="section-title">Editar trasfondo</p>
+          <textarea v-model="editDraft.backstory" rows="4" placeholder="Historia"></textarea>
+          <textarea v-model="editDraft.personality_traits" rows="2" placeholder="Rasgos"></textarea>
+          <textarea v-model="editDraft.ideals" rows="2" placeholder="Ideales"></textarea>
+          <textarea v-model="editDraft.bonds" rows="2" placeholder="Vinculos"></textarea>
+          <textarea v-model="editDraft.flaws" rows="2" placeholder="Defectos"></textarea>
         </div>
         <div class="card mb-4" v-if="
           character.personality_traits ||
@@ -358,9 +359,16 @@
       <!-- ── PESTAÑA: Rasgos ── -->
       <div v-if="activeTab === 'features'" class="tab-content">
         <div class="tab-edit-row" v-if="!isDmCampaignReader">
-          <button type="button" class="edit-icon-btn" @click="goEditSection('features')" title="Editar rasgos">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75L17.8 8.94l-2.75-2.75L4 17.25zm15.71-9.04a1 1 0 0 0 0-1.41l-2.5-2.5a1 1 0 0 0-1.41 0l-1.34 1.34 3.91 3.91 1.34-1.34z"/></svg>
-          </button>
+          <button v-if="editingTab !== 'features'" type="button" class="edit-icon-btn" @click="startInlineEdit('features')" title="Editar rasgos">Editar</button>
+          <div v-else class="inline-actions">
+            <button type="button" class="btn btn-primary" @click="saveInlineEdit('features')">Guardar</button>
+            <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
+          </div>
+        </div>
+        <div v-if="editingTab === 'features'" class="card inline-editor">
+          <p class="section-title">Editar rasgos</p>
+          <label class="form-label">Un rasgo por linea</label>
+          <textarea v-model="editDraft.features_text" rows="5"></textarea>
         </div>
         <div class="card mb-4" v-if="features.length">
           <p class="section-title">Rasgos & Capacidades</p>
@@ -398,8 +406,6 @@
 import { charactersAPI, dmAPI } from "../services/api.js";
 import { exportCharacterPdf } from "../services/pdfExport.js";
 import CharacterNotesPanel from "../components/CharacterNotesPanel.vue";
-import StatsBlock from "../components/StatsBlock.vue";
-import { XP_BY_LEVEL } from "../services/dndData.js";
 import {
   ATTRIBUTES,
   SKILLS,
@@ -410,12 +416,14 @@ import {
 
 export default {
   name: "CharacterFullView",
-  components: { CharacterNotesPanel, StatsBlock },
+  components: { CharacterNotesPanel },
   inject: ["showToast"],
   data() {
     return {
       character: null,
       activeTab: "skills",
+      editingTab: null,
+      editDraft: {},
       ATTRIBUTES,
       SKILLS,
       tabs: [
@@ -537,32 +545,6 @@ export default {
         (a) => a.value === this.character?.spellcasting_ability,
       );
       return sa ? sa.label.split(" ")[0] : "—";
-    },
-    hpPct() {
-      if (!this.character) return 0;
-      const max = this.character.hit_points_max || 1;
-      return Math.max(0, Math.min(100, (this.character.hit_points_current / max) * 100));
-    },
-    hpClass() {
-      const p = this.hpPct;
-      if (p > 50) return "ok";
-      if (p > 25) return "warn";
-      return "danger";
-    },
-    xpPct() {
-      const lvl = this.character?.level || 1;
-      const cur = this.character?.experience_points || 0;
-      const base = XP_BY_LEVEL[lvl - 1] || 0;
-      const next = XP_BY_LEVEL[lvl] || base;
-      if (!next || next === base) return 100;
-      return Math.min(100, ((cur - base) / (next - base)) * 100);
-    },
-    xpLabel() {
-      const lvl = this.character?.level || 1;
-      if (lvl >= 20) return "Nivel maximo alcanzado";
-      const next = XP_BY_LEVEL[lvl] || 0;
-      const rem = next - (this.character?.experience_points || 0);
-      return rem > 0 ? `${rem} XP para nivel ${lvl + 1}` : "Listo para subir";
     }
   },
   async mounted() {
@@ -580,26 +562,157 @@ export default {
     }
   },
   methods: {
-    goEditSection(section) {
-      this.$router.push(`/character/${this.id}/edit?section=${section}`);
+    startInlineEdit(section) {
+      this.editingTab = section;
+      const c = this.character || {};
+      const clone = (v) => JSON.parse(JSON.stringify(v ?? null));
+      if (section === "skills") {
+        this.editDraft = {
+          saving_throws_prof: clone(c.saving_throws_prof) || [],
+          skills_prof: clone(c.skills_prof) || [],
+          skills_expertise: clone(c.skills_expertise) || [],
+          languages_text: (Array.isArray(c.languages) ? c.languages : []).join(", "),
+          other_proficiencies_text: (Array.isArray(c.other_proficiencies) ? c.other_proficiencies : []).join(", ")
+        };
+      } else if (section === "combat") {
+        this.editDraft = {
+          hit_points_current: Number(c.hit_points_current || 0),
+          hit_points_max: Number(c.hit_points_max || 1),
+          hit_points_temp: Number(c.hit_points_temp || 0),
+          armor_class: Number(c.armor_class || 10),
+          initiative: Number(c.initiative || 0),
+          speed: Number(c.speed || 30),
+          proficiency_bonus: Number(c.proficiency_bonus || 2),
+          inspiration: Boolean(c.inspiration),
+          attacks_text: (Array.isArray(c.attacks_spellcasting) ? c.attacks_spellcasting : [])
+            .map(a => `${a.name || ""}|${a.bonus || ""}|${a.damage || ""}|${a.type || ""}`)
+            .join("\n"),
+          spellcasting_ability: c.spellcasting_ability || "",
+          spell_save_dc: c.spell_save_dc ?? "",
+          spell_attack_bonus: c.spell_attack_bonus ?? ""
+        };
+      } else if (section === "equipment") {
+        this.editDraft = {
+          copper_pieces: Number(c.copper_pieces || 0),
+          silver_pieces: Number(c.silver_pieces || 0),
+          electrum_pieces: Number(c.electrum_pieces || 0),
+          gold_pieces: Number(c.gold_pieces || 0),
+          platinum_pieces: Number(c.platinum_pieces || 0),
+          equipment_text: (Array.isArray(c.equipment) ? c.equipment : []).map(i => (typeof i === "string" ? i : i?.name || "")).filter(Boolean).join("\n"),
+          treasure: c.treasure || ""
+        };
+      } else if (section === "backstory") {
+        this.editDraft = {
+          personality_traits: c.personality_traits || "",
+          ideals: c.ideals || "",
+          bonds: c.bonds || "",
+          flaws: c.flaws || "",
+          backstory: c.backstory || "",
+          age: c.age || "",
+          height: c.height || "",
+          weight: c.weight || "",
+          eyes: c.eyes || "",
+          skin: c.skin || "",
+          hair: c.hair || "",
+          appearance_notes: c.appearance_notes || "",
+          faction: c.faction || "",
+          allies_organizations: c.allies_organizations || ""
+        };
+      } else if (section === "features") {
+        this.editDraft = {
+          features_text: (Array.isArray(c.features_traits) ? c.features_traits : [])
+            .map(f => (typeof f === "string" ? f : f?.name || ""))
+            .filter(Boolean)
+            .join("\n")
+        };
+      }
+    },
+    cancelInlineEdit() {
+      this.editingTab = null;
+      this.editDraft = {};
+    },
+    toList(value) {
+      return String(value || "")
+        .split(",")
+        .map(v => v.trim())
+        .filter(Boolean);
+    },
+    async persistCharacterPatch(patch) {
+      const next = { ...this.character, ...patch };
+      const fd = new FormData();
+      Object.keys(next).forEach((k) => {
+        const val = next[k];
+        if (val === null || val === undefined) return;
+        if (Array.isArray(val) || typeof val === "object") {
+          fd.append(k, JSON.stringify(val));
+        } else {
+          fd.append(k, val);
+        }
+      });
+      await charactersAPI.update(this.id, fd);
+      this.character = next;
+    },
+    async saveInlineEdit(section) {
+      try {
+        if (section === "skills") {
+          await this.persistCharacterPatch({
+            saving_throws_prof: this.editDraft.saving_throws_prof || [],
+            skills_prof: this.editDraft.skills_prof || [],
+            skills_expertise: this.editDraft.skills_expertise || [],
+            languages: this.toList(this.editDraft.languages_text),
+            other_proficiencies: this.toList(this.editDraft.other_proficiencies_text)
+          });
+        } else if (section === "combat") {
+          const attacks = String(this.editDraft.attacks_text || "")
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [name = "", bonus = "", damage = "", type = ""] = line.split("|");
+              return { name: name.trim(), bonus: bonus.trim(), damage: damage.trim(), type: type.trim() };
+            });
+          await this.persistCharacterPatch({
+            hit_points_current: Number(this.editDraft.hit_points_current || 0),
+            hit_points_max: Math.max(1, Number(this.editDraft.hit_points_max || 1)),
+            hit_points_temp: Number(this.editDraft.hit_points_temp || 0),
+            armor_class: Number(this.editDraft.armor_class || 0),
+            initiative: Number(this.editDraft.initiative || 0),
+            speed: Number(this.editDraft.speed || 0),
+            proficiency_bonus: Number(this.editDraft.proficiency_bonus || 2),
+            inspiration: Boolean(this.editDraft.inspiration),
+            attacks_spellcasting: attacks,
+            spellcasting_ability: this.editDraft.spellcasting_ability || "",
+            spell_save_dc: this.editDraft.spell_save_dc === "" ? null : Number(this.editDraft.spell_save_dc),
+            spell_attack_bonus: this.editDraft.spell_attack_bonus === "" ? null : Number(this.editDraft.spell_attack_bonus)
+          });
+        } else if (section === "equipment") {
+          await this.persistCharacterPatch({
+            copper_pieces: Number(this.editDraft.copper_pieces || 0),
+            silver_pieces: Number(this.editDraft.silver_pieces || 0),
+            electrum_pieces: Number(this.editDraft.electrum_pieces || 0),
+            gold_pieces: Number(this.editDraft.gold_pieces || 0),
+            platinum_pieces: Number(this.editDraft.platinum_pieces || 0),
+            equipment: String(this.editDraft.equipment_text || "").split("\n").map(v => v.trim()).filter(Boolean),
+            treasure: this.editDraft.treasure || ""
+          });
+        } else if (section === "backstory") {
+          await this.persistCharacterPatch({ ...this.editDraft });
+        } else if (section === "features") {
+          const features = String(this.editDraft.features_text || "")
+            .split("\n")
+            .map(v => v.trim())
+            .filter(Boolean)
+            .map(name => ({ name, description: "" }));
+          await this.persistCharacterPatch({ features_traits: features });
+        }
+        this.showToast("Seccion actualizada", "success");
+        this.cancelInlineEdit();
+      } catch {
+        this.showToast("No se pudo guardar la seccion", "error");
+      }
     },
     fmtMod(v) {
       return formatModifier(v);
-    },
-    async adjustHP(delta) {
-      const c = this.character;
-      c.hit_points_current = Math.max(0, Math.min(c.hit_points_max || 0, (c.hit_points_current || 0) + delta));
-      try {
-        const fd = new FormData();
-        Object.keys(c).forEach((k) => {
-          if (c[k] !== null && c[k] !== undefined) {
-            fd.append(k, typeof c[k] === "object" ? JSON.stringify(c[k]) : c[k]);
-          }
-        });
-        await charactersAPI.update(this.id, fd);
-      } catch {
-        // silencioso para no interrumpir UX del ajuste rapido
-      }
     },
     downloadDmPdf() {
       if (this.character) exportCharacterPdf(this.character);
@@ -711,88 +824,51 @@ normalizeSpells(value) {
   font-family: var(--font-title);
   font-size: 1.1rem;
   color: var(--text-primary);
+  text-align: left;
+}
+.full-header-main {
   flex: 1;
-  text-align: center;
-}
-.full-overview {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  margin-bottom: 0.75rem;
-}
-.detail-hero {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-.hero-img,
-.hero-placeholder {
-  width: 4rem;
-  height: 4rem;
-  border-radius: 50%;
-  border: 2px solid var(--gold-dark);
-  flex-shrink: 0;
-}
-.hero-img { object-fit: cover; }
-.hero-placeholder {
-  background: var(--bg-surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-title);
-  font-size: 1.4rem;
-  color: var(--gold);
-}
-.hero-name {
-  font-family: var(--font-title);
-  font-size: 1.1rem;
-  color: var(--text-primary);
+  min-width: 0;
 }
 .hero-meta {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
+  margin-top: 0.2rem;
+  margin-bottom: 0.55rem;
 }
-.hero-bg {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.15rem;
+.quick-state-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
 }
-.hp-header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; }
-.hp-controls { display: flex; align-items: center; gap: 0.4rem; }
-.hp-display { font-family: var(--font-title); display: inline-flex; align-items: baseline; gap: 0.15rem; }
-.hp-current { font-size: 1.2rem; font-weight: 700; }
-.hp-current.ok { color: #4ade80; }
-.hp-current.warn { color: #fbbf24; }
-.hp-current.danger { color: #f87171; }
-.hp-sep { color: var(--text-dim); }
-.hp-max { color: var(--text-muted); font-size: 0.95rem; }
-.hp-bar-wrap { height: 8px; border-radius: 4px; background: var(--bg-deep); overflow: hidden; }
-.hp-bar { height: 100%; transition: width 0.3s; }
-.hp-bar.ok { background: linear-gradient(to right, var(--green), #4ade80); }
-.hp-bar.warn { background: linear-gradient(to right, #ca8a04, #fbbf24); }
-.hp-bar.danger { background: linear-gradient(to right, var(--red), var(--red-light)); }
-.hp-temp { font-size: 0.74rem; color: #a78bfa; margin-top: 0.35rem; }
-.combat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
-.combat-box {
-  background: var(--bg-card);
+.state-pill {
   border: 1px solid var(--border);
+  background: var(--bg-surface);
   border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  min-height: 2.4rem;
+  padding: 0.3rem 0.45rem;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 0.45rem 0.2rem;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  cursor: pointer;
 }
-.cbox-val { font-family: var(--font-title); font-size: 1.2rem; color: var(--gold-light); }
-.cbox-lbl { font-size: 0.56rem; text-transform: uppercase; color: var(--text-muted); }
-.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
-.info-pill { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
-.pill-icon { font-size: 1.35rem; }
-.pill-val { font-family: var(--font-title); font-size: 1.25rem; color: var(--gold-light); }
-.pill-lbl { font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted); }
-.xp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
-.xp-bar-wrap { height: 6px; background: var(--bg-deep); border-radius: 3px; overflow: hidden; }
-.xp-bar { height: 100%; background: linear-gradient(to right, var(--purple), #a78bfa); transition: width 0.4s; }
-.xp-hint { margin-top: 0.3rem; font-size: 0.74rem; color: var(--text-muted); text-align: right; }
+.state-pill:hover {
+  border-color: var(--gold-dark);
+  color: var(--gold-light);
+}
+.state-key {
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.state-val {
+  font-family: var(--font-title);
+  font-size: 0.82rem;
+  line-height: 1.15;
+}
 
 /* Tabs */
 .tabs {
@@ -839,6 +915,27 @@ normalizeSpells(value) {
   display: flex;
   justify-content: flex-end;
   margin-bottom: -0.25rem;
+}
+.inline-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.inline-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.inline-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
 }
 .edit-icon-btn {
   border: 1px solid var(--border);
@@ -1169,11 +1266,12 @@ normalizeSpells(value) {
   .full-header {
     flex-wrap: wrap;
   }
-  .full-title {
+  .full-header-main {
     order: 3;
     width: 100%;
-    text-align: left;
   }
+  .quick-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inline-grid { grid-template-columns: 1fr; }
   .attack-row {
     grid-template-columns: 1fr auto;
     gap: 0.35rem;
@@ -1189,12 +1287,6 @@ normalizeSpells(value) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .trait-grid {
-    grid-template-columns: 1fr;
-  }
-  .combat-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .row-2 {
     grid-template-columns: 1fr;
   }
 }
