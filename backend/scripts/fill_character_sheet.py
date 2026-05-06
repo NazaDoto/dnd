@@ -1,6 +1,8 @@
 import argparse
 import json
 import math
+import os
+import sys
 from io import BytesIO
 from typing import Any, Dict
 from urllib.parse import urljoin, urlparse
@@ -514,20 +516,29 @@ def resolve_profile_url(char: Dict[str, Any]) -> str:
 
 def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]) -> None:
     if not HAS_REPORTLAB:
+        print("[styled-pdf][image] reportlab not installed; skipping image", file=sys.stderr)
         return
     image_url = resolve_profile_url(char)
+    print(f"[styled-pdf][image] resolved source: {image_url or '<empty>'}", file=sys.stderr)
     if not image_url:
+        print("[styled-pdf][image] no image source; skipping", file=sys.stderr)
         return
     try:
         parsed = urlparse(image_url)
         if parsed.scheme in ("http", "https"):
+            print(f"[styled-pdf][image] loading from URL: {image_url}", file=sys.stderr)
             import urllib.request
             with urllib.request.urlopen(image_url, timeout=10) as response:  # nosec - controlled URL
                 image_bytes = response.read()
         else:
+            print(f"[styled-pdf][image] loading from file path: {image_url}", file=sys.stderr)
+            print(f"[styled-pdf][image] file exists: {os.path.exists(image_url)}", file=sys.stderr)
             with open(image_url, "rb") as image_file:
                 image_bytes = image_file.read()
+        print(f"[styled-pdf][image] bytes loaded: {len(image_bytes)}", file=sys.stderr)
     except Exception:
+        print("[styled-pdf][image] failed loading image source", file=sys.stderr)
+        print(traceback.format_exc(), file=sys.stderr)
         return
 
     # Campo de imagen en página 2
@@ -543,8 +554,10 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
                 rect = annot.get("/Rect")
                 if rect and len(rect) == 4:
                     target_rect = [float(rect[0]), float(rect[1]), float(rect[2]), float(rect[3])]
+                    print(f"[styled-pdf][image] target field found: {title.strip()} rect={target_rect}", file=sys.stderr)
                     break
     if not target_rect:
+        print("[styled-pdf][image] no image field found (Imagen1_af_image/Imagen2_af_image)", file=sys.stderr)
         return
 
     llx, lly, urx, ury = target_rect
@@ -560,6 +573,7 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
     packet.seek(0)
     overlay_reader = PdfReader(packet)
     writer.pages[target_page_index].merge_page(overlay_reader.pages[0])
+    print("[styled-pdf][image] image overlay merged on page 2", file=sys.stderr)
 
 
 def main() -> None:

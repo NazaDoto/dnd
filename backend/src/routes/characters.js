@@ -447,11 +447,15 @@ router.post('/pdf/styled', auth, async (req, res) => {
             player_username: rawCharacter.player_username || req.user?.username || '',
             __base_url: `${req.protocol}://${req.get('host')}`,
         };
+        console.log('[styled-pdf][image] incoming photo_url:', character.photo_url || null);
         if (character.photo_url && typeof character.photo_url === 'string' && character.photo_url.startsWith('/uploads/')) {
             const relativePhotoPath = character.photo_url.replace(/^\/+/, '');
             const localPhotoPath = path.join(__dirname, '../../', relativePhotoPath);
+            console.log('[styled-pdf][image] local candidate:', localPhotoPath);
+            console.log('[styled-pdf][image] local exists:', fs.existsSync(localPhotoPath));
             if (fs.existsSync(localPhotoPath)) {
                 character.__photo_abs_path = localPhotoPath;
+                console.log('[styled-pdf][image] using __photo_abs_path');
             }
         }
 
