@@ -1,9 +1,19 @@
 import argparse
 import json
 import math
+from io import BytesIO
 from typing import Any, Dict
+from urllib.parse import urljoin
 
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import NameObject, NumberObject, TextStringObject
+
+try:
+    from reportlab.pdfgen import canvas  # type: ignore
+    from reportlab.lib.utils import ImageReader  # type: ignore
+    HAS_REPORTLAB = True
+except Exception:
+    HAS_REPORTLAB = False
 
 
 def as_str(value: Any) -> str:
@@ -226,8 +236,11 @@ def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
         "AttacksSpellcasting": "\n".join(attacks_text),
         "Features and Traits": join_feature_names(char.get("features_traits", [])),
         "Equipment": join_lines(char.get("equipment", [])),
-        "Equipment 2": join_lines(char.get("equipment", [])),
+        "Equipment 2": "",
         "ProficienciesLang": join_csv(char.get("languages", [])) + (
+            ", " if char.get("languages") and char.get("other_proficiencies") else ""
+        ) + join_csv(char.get("other_proficiencies", [])),
+        "ProficienciesLang ": join_csv(char.get("languages", [])) + (
             ", " if char.get("languages") and char.get("other_proficiencies") else ""
         ) + join_csv(char.get("other_proficiencies", [])),
         "CharacterName 2": as_str(char.get("name", "")),
@@ -443,8 +456,96 @@ def fill_character_sheet(char: Dict[str, Any], input_pdf: str, output_pdf: str) 
             auto_regenerate=False,
         )
 
+    apply_field_styles(writer)
+    add_profile_image(reader, writer, char)
+
     with open(output_pdf, "wb") as output_file:
         writer.write(output_file)
+
+
+def set_widget_style(writer: PdfWriter, field_names: list, font_size: int, multiline: bool = False) -> None:
+    names_norm = {norm_name(n) for n in field_names}
+    for page in writer.pages:
+        annots = page.get("/Annots")
+        if not annots:
+            continue
+        for annot_ref in annots:
+            annot = annot_ref.get_object()
+            title = as_str(annot.get("/T", ""))
+            if norm_name(title) not in names_norm:
+                continue
+            annot[NameObject("/DA")] = TextStringObject(f"/Helv {font_size} Tf 0 g")
+            if multiline:
+                ff = int(annot.get("/Ff", 0))
+                annot[NameObject("/Ff")] = NumberObject(ff | (1 << 12))
+
+
+def apply_field_styles(writer: PdfWriter) -> None:
+    # Campos largos con fuente más chica para evitar overflow.
+    set_widget_style(writer, ["PersonalityTraits", "Ideals", "Bonds", "Flaws"], 7, multiline=True)
+    set_widget_style(writer, ["Backstory", "Allies", "Allies 2", "Treasure", "Treasure 2"], 7, multiline=True)
+    set_widget_style(writer, ["Features and Traits", "Feat+Traits", "Feat+Traits 2"], 6, multiline=True)
+    set_widget_style(writer, ["Equipment", "Equipment 2", "AttacksSpellcasting", "ProficienciesLang", "ProficienciesLang "], 6, multiline=True)
+    # Conjuros en grilla necesitan fuente pequeña.
+    spell_fields = [f"Spells {n}" for n in range(1014, 1100)] + [f"Spells 1010{n}" for n in range(0, 14)]
+    set_widget_style(writer, spell_fields, 6, multiline=False)
+
+
+def resolve_profile_url(char: Dict[str, Any]) -> str:
+    raw = as_str(char.get("photo_url", "")).strip()
+    if not raw:
+        return ""
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return raw
+    base = as_str(char.get("__base_url", "")).strip()
+    if not base:
+        return ""
+    return urljoin(base, raw)
+
+
+def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]) -> None:
+    if not HAS_REPORTLAB:
+        return
+    image_url = resolve_profile_url(char)
+    if not image_url:
+        return
+    try:
+        import urllib.request
+        with urllib.request.urlopen(image_url, timeout=10) as response:  # nosec - controlled URL
+            image_bytes = response.read()
+    except Exception:
+        return
+
+    # Campo de imagen en página 2
+    target_page_index = 1
+    target_rect = None
+    page = reader.pages[target_page_index]
+    annots = page.get("/Annots")
+    if annots:
+        for annot_ref in annots:
+            annot = annot_ref.get_object()
+            title = as_str(annot.get("/T", ""))
+            if title.strip() in ("Imagen1_af_image", "Imagen2_af_image"):
+                rect = annot.get("/Rect")
+                if rect and len(rect) == 4:
+                    target_rect = [float(rect[0]), float(rect[1]), float(rect[2]), float(rect[3])]
+                    break
+    if not target_rect:
+        return
+
+    llx, lly, urx, ury = target_rect
+    width = max(1.0, urx - llx)
+    height = max(1.0, ury - lly)
+
+    packet = BytesIO()
+    page_width = float(page.mediabox.width)
+    page_height = float(page.mediabox.height)
+    c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+    c.drawImage(ImageReader(BytesIO(image_bytes)), llx, lly, width=width, height=height, preserveAspectRatio=True, anchor="c", mask="auto")
+    c.save()
+    packet.seek(0)
+    overlay_reader = PdfReader(packet)
+    writer.pages[target_page_index].merge_page(overlay_reader.pages[0])
 
 
 def main() -> None:

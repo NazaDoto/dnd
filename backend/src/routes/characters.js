@@ -445,6 +445,7 @@ router.post('/pdf/styled', auth, async (req, res) => {
         const character = {
             ...rawCharacter,
             player_username: rawCharacter.player_username || req.user?.username || '',
+            __base_url: `${req.protocol}://${req.get('host')}`,
         };
 
         const scriptPath = path.join(__dirname, '../../scripts/fill_character_sheet.py');
