@@ -152,11 +152,13 @@ function runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath }) 
             const [cmd, args] = candidates[idx];
             const child = spawn(cmd, args, { windowsHide: true });
             let stderr = '';
+            let stdout = '';
 
+            child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
             child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
             child.on('error', () => tryAt(idx + 1));
             child.on('close', (code) => {
-                if (code === 0) resolve();
+                if (code === 0) resolve({ cmd, args, stdout, stderr });
                 else if (idx < candidates.length - 1) tryAt(idx + 1);
                 else reject(new Error(stderr || `Generador Python finalizó con código ${code}`));
             });
@@ -466,7 +468,13 @@ router.post('/pdf/styled', auth, async (req, res) => {
         const outputPath = path.join(tempDir, 'styled.pdf');
 
         await fsp.writeFile(jsonPath, JSON.stringify(character), 'utf8');
-        await runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath });
+        const pythonResult = await runPythonGenerator({ scriptPath, jsonPath, templatePath, outputPath });
+        if (pythonResult?.stdout?.trim()) {
+            console.log('[styled-pdf][python][stdout]\n' + pythonResult.stdout.trim());
+        }
+        if (pythonResult?.stderr?.trim()) {
+            console.log('[styled-pdf][python][stderr]\n' + pythonResult.stderr.trim());
+        }
 
         const pdfBytes = await fsp.readFile(outputPath);
         const safeName = String(character.name || 'personaje')
