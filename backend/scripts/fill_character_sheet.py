@@ -1,7 +1,7 @@
 import argparse
 import json
 import math
-from typing import Any
+from typing import Any, Dict
 
 from pypdf import PdfReader, PdfWriter
 
@@ -20,7 +20,7 @@ def ability_mod(score: Any) -> str:
     return str(math.floor((score_num - 10) / 2))
 
 
-def get_spell_block(char: dict[str, Any], level: int) -> dict[str, Any]:
+def get_spell_block(char: Dict[str, Any], level: int) -> Dict[str, Any]:
     spells = char.get("spells", {})
     if not isinstance(spells, dict):
         return {"slots": 0, "slots_used": 0, "spells": []}
@@ -46,7 +46,7 @@ def join_csv(values: Any) -> str:
     return ", ".join(as_str(v) for v in values if v is not None and as_str(v).strip())
 
 
-def build_field_mapping(char: dict[str, Any]) -> dict[str, str]:
+def build_field_mapping(char: Dict[str, Any]) -> Dict[str, str]:
     attacks = char.get("attacks_spellcasting", [])
     if not isinstance(attacks, list):
         attacks = []
@@ -80,7 +80,7 @@ def build_field_mapping(char: dict[str, Any]) -> dict[str, str]:
     level8 = get_spell_block(char, 8)
     level9 = get_spell_block(char, 9)
 
-    field_mapping: dict[str, str] = {
+    field_mapping: Dict[str, str] = {
         "CharacterName": as_str(char.get("name", "")),
         "ClassLevel": f"{as_str(char.get('class', '')).capitalize()} {as_str(char.get('level', ''))}".strip(),
         "Background": as_str(char.get("background", "")),
@@ -205,9 +205,9 @@ def checkbox_on_value(field_obj: Any) -> str:
     return "/Yes"
 
 
-def build_checkbox_mapping(reader: PdfReader, char: dict[str, Any]) -> dict[str, str]:
+def build_checkbox_mapping(reader: PdfReader, char: Dict[str, Any]) -> Dict[str, str]:
     fields = reader.get_fields() or {}
-    mapping: dict[str, str] = {}
+    mapping: Dict[str, str] = {}
     skills_prof = set(as_str(v).strip().lower() for v in char.get("skills_prof", []) if as_str(v).strip())
     saves_prof = set(as_str(v).strip().lower() for v in char.get("saving_throws_prof", []) if as_str(v).strip())
     inspiration = bool(char.get("inspiration"))
@@ -267,7 +267,7 @@ def build_checkbox_mapping(reader: PdfReader, char: dict[str, Any]) -> dict[str,
     return mapping
 
 
-def fill_character_sheet(char: dict[str, Any], input_pdf: str, output_pdf: str) -> None:
+def fill_character_sheet(char: Dict[str, Any], input_pdf: str, output_pdf: str) -> None:
     reader = PdfReader(input_pdf)
     writer = PdfWriter()
     writer.append(reader)
