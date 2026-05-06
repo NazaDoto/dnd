@@ -3,6 +3,7 @@ import json
 import math
 import os
 import sys
+import traceback
 from io import BytesIO
 from typing import Any, Dict
 from urllib.parse import urljoin, urlparse
