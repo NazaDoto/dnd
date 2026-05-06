@@ -229,6 +229,7 @@ export async function exportCharacterPdfStyled(character) {
     if (!targetRes.ok) throw new Error(`No se pudo cargar plantilla destino (${targetRes.status})`)
     const pdfDoc = await PDFDocument.load(await targetRes.arrayBuffer())
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
     const form = pdfDoc.getForm()
     const pages = pdfDoc.getPages()
     const norm = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
@@ -248,6 +249,8 @@ export async function exportCharacterPdfStyled(character) {
         }
         const kind = typeof field.setText === 'function'
             ? 'text'
+            : typeof field.setImage === 'function'
+                ? 'image'
             : typeof field.check === 'function'
                 ? 'check'
                 : 'other'
@@ -268,6 +271,7 @@ export async function exportCharacterPdfStyled(character) {
         const hs = hints.map(norm).filter(Boolean)
         const expectedKind = opts.kind || null
         const expectedPage = Number.isInteger(opts.page) ? opts.page : null
+        const strict = !!opts.strict
         let best = null
 
         for (const entry of fields) {
@@ -276,7 +280,7 @@ export async function exportCharacterPdfStyled(character) {
             for (const h of hs) {
                 if (entry.norm === h) score += 8
                 if (entry.norm.startsWith(h)) score += 5
-                if (entry.norm.includes(h)) score += 2
+                if (!strict && h.length >= 6 && entry.norm.includes(h)) score += 2
             }
             if (expectedPage !== null && entry.pageIndex === expectedPage) score += 2
             if (!score) continue
@@ -286,13 +290,26 @@ export async function exportCharacterPdfStyled(character) {
         return best?.entry || null
     }
 
+    const usedTextFields = new Set()
     const setText = (hints, value, opts = {}) => {
         const text = toPdfSafe(value)
         if (!text) return false
         const target = findBestField(Array.isArray(hints) ? hints : [hints], { ...opts, kind: 'text' })
         if (!target) return false
+        if (!opts.allowReuse && usedTextFields.has(target.name)) return false
         try {
             target.field.setText(text)
+            // Ajuste visual para minimizar overflow en campos largos
+            if (typeof target.field.enableMultiline === 'function') target.field.enableMultiline()
+            if (typeof target.field.setFontSize === 'function') {
+                const suggestedSize = opts.fontSize || (text.length > 260 ? 6 : text.length > 150 ? 7 : text.length > 90 ? 8 : 9)
+                target.field.setFontSize(suggestedSize)
+            }
+            if (typeof target.field.updateAppearances === 'function') {
+                const apFont = (opts.bold ? fontBold : font)
+                target.field.updateAppearances(apFont)
+            }
+            usedTextFields.add(target.name)
             return true
         } catch (err) {
             console.error('[pdf-styled] setText failed', target?.name, err)
@@ -311,6 +328,27 @@ export async function exportCharacterPdfStyled(character) {
             console.error('[pdf-styled] setCheck failed', target?.name, err)
         }
         return false
+    }
+
+    const setImage = async (hints, imageUrl, opts = {}) => {
+        const url = toPdfSafe(imageUrl)
+        if (!url) return false
+        const target = findBestField(Array.isArray(hints) ? hints : [hints], { ...opts, kind: 'image' })
+        if (!target) return false
+        try {
+            const response = await fetch(url)
+            if (!response.ok) return false
+            const bytes = await response.arrayBuffer()
+            const contentType = response.headers.get('content-type') || ''
+            const img = contentType.includes('png')
+                ? await pdfDoc.embedPng(bytes)
+                : await pdfDoc.embedJpg(bytes)
+            target.field.setImage(img)
+            return true
+        } catch (err) {
+            console.error('[pdf-styled] setImage failed', target?.name, err)
+            return false
+        }
     }
 
     const fillAny = (hintGroups, value, opts = {}) => {
@@ -367,18 +405,18 @@ export async function exportCharacterPdfStyled(character) {
     // PÁGINA 1: encabezado y combate
     fillAny([['charactername'], ['nombrepersonaje'], ['personaje']], character.name, { page: 0 })
     fillAny([['playername'], ['nombredeljugador'], ['jugador']], username, { page: 0 })
-    fillAny([['classlevel'], ['claseynivel']], `${classLabel(character.class)} ${character.level || 1}`, { page: 0 })
+    fillAny([['classandlevel'], ['classlevel'], ['claseynivel']], `${classLabel(character.class)} ${character.level || 1}`, { page: 0, strict: true })
     fillAny([['background'], ['trasfondo']], character.background, { page: 0 })
     fillAny([['race'], ['raza']], character.race, { page: 0 })
     fillAny([['alignment'], ['alineamiento']], character.alignment, { page: 0 })
     fillAny([['xp'], ['experiencepoints'], ['puntosdeexperiencia']], String(character.experience_points || 0), { page: 0 })
 
-    fillAny([['strength'], ['fuerza']], String(num(character.strength, 10)), { page: 0 })
-    fillAny([['dexterity'], ['destreza']], String(num(character.dexterity, 10)), { page: 0 })
-    fillAny([['constitution'], ['constitucion']], String(num(character.constitution, 10)), { page: 0 })
-    fillAny([['intelligence'], ['inteligencia']], String(num(character.intelligence, 10)), { page: 0 })
-    fillAny([['wisdom'], ['sabiduria']], String(num(character.wisdom, 10)), { page: 0 })
-    fillAny([['charisma'], ['carisma']], String(num(character.charisma, 10)), { page: 0 })
+    fillAny([['strengthscore'], ['fuerza']], String(num(character.strength, 10)), { page: 0, strict: true })
+    fillAny([['dexterityscore'], ['destreza']], String(num(character.dexterity, 10)), { page: 0, strict: true })
+    fillAny([['constitutionscore'], ['constitucion']], String(num(character.constitution, 10)), { page: 0, strict: true })
+    fillAny([['intelligencescore'], ['inteligencia']], String(num(character.intelligence, 10)), { page: 0, strict: true })
+    fillAny([['wisdomscore'], ['sabiduria']], String(num(character.wisdom, 10)), { page: 0, strict: true })
+    fillAny([['charismascore'], ['carisma']], String(num(character.charisma, 10)), { page: 0, strict: true })
 
     fillAny([['strengthmod'], ['modfuerza']], formatModifier(getModifier(num(character.strength, 10))), { page: 0 })
     fillAny([['dexteritymod'], ['moddestreza']], formatModifier(getModifier(num(character.dexterity, 10))), { page: 0 })
@@ -390,12 +428,11 @@ export async function exportCharacterPdfStyled(character) {
     fillAny([['ac'], ['armourclass'], ['clasedearmadura']], String(num(character.armor_class, 10)), { page: 0 })
     fillAny([['initiative'], ['iniciativa']], formatModifier(num(character.initiative, 0)), { page: 0 })
     fillAny([['speed'], ['velocidad']], String(num(character.speed, 0)), { page: 0 })
-    fillAny([['hitpointmaximum'], ['puntosdegolpemaximos']], String(num(character.hit_points_max, 0)), { page: 0 })
-    fillAny([['currenthitpoints'], ['puntosdegolpeactuales']], String(num(character.hit_points_current, 0)), { page: 0 })
-    fillAny([['temporaryhitpoints'], ['puntosdegolpetemporales']], String(num(character.hit_points_temp, 0)), { page: 0 })
+    fillAny([['hitpointmaximum'], ['puntosdegolpemaximos']], String(num(character.hit_points_max, 0)), { page: 0, strict: true })
+    // Pedido del usuario: no completar estos dos campos
     fillAny([['hitdice'], ['dadosdegolpe']], String(character.hit_dice || ''), { page: 0 })
     fillAny([['profbonus'], ['bonificadorporcompetencia']], formatModifier(proficiencyBonus), { page: 0 })
-    fillAny([['passivewisdom'], ['percepcionpasiva'], ['sabiduriapercepcionpasiva']], String(num(character.passive_perception, 10)), { page: 0 })
+    fillAny([['passivewisdomperception'], ['passivewisdom'], ['percepcionpasiva'], ['sabiduriapercepcionpasiva']], String(num(character.passive_perception, 10)), { page: 0, strict: true })
 
     if (!setCheck(['inspiration'], !!character.inspiration, { page: 0 })) {
         setCheck(['inspiracion'], !!character.inspiration, { page: 0 })
@@ -408,13 +445,13 @@ export async function exportCharacterPdfStyled(character) {
     fillAny([['pp']], String(num(character.platinum_pieces, 0)), { page: 0 })
 
     fillAny([['equipment'], ['equipo']], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '), { page: 0 })
-    fillAny([['otherproficienciesandlanguages'], ['otrascompetenciaseidiomas']], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '), { page: 0 })
-    fillAny([['featurestraits'], ['rasgosyatributos']], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '), { page: 0 })
-    fillAny([['attacksandspellcasting'], ['ataquesylanzamientodeconjuros']], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).filter(Boolean).join('\n'), { page: 0 })
+    fillAny([['otherproficienciesandlanguages'], ['proficiencieslanguages'], ['otrascompetenciaseidiomas']], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '), { page: 0, strict: true, fontSize: 7 })
+    fillAny([['featurestraits'], ['traitsfeatures'], ['rasgosyatributos']], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '), { page: 0, strict: true, fontSize: 7 })
+    fillAny([['attacksandspellcasting'], ['attacksspellcasting'], ['ataquesylanzamientodeconjuros']], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).filter(Boolean).join('\n'), { page: 0, strict: true, fontSize: 7 })
 
     const skillLabels = {
         acrobatics: [['acrobatics'], ['acrobacias']],
-        animal_handling: [['animalhandling'], ['conanimales']],
+        animal_handling: [['animalhandling'], ['tconanimales'], ['tratoconanimales']],
         arcana: [['arcana']],
         athletics: [['athletics'], ['atletismo']],
         deception: [['deception'], ['engano']],
@@ -458,35 +495,41 @@ export async function exportCharacterPdfStyled(character) {
     })
 
     // PÁGINA 2: personalidad y detalles físicos
-    fillAny([['charactername'], ['nombrepersonaje']], character.name, { page: 1 })
+    fillAny([['charactername2'], ['nombrepersonajep2'], ['nombrepersonaje']], character.name, { page: 1, strict: true })
     fillAny([['age'], ['edad']], character.age, { page: 1 })
     fillAny([['height'], ['altura']], character.height, { page: 1 })
     fillAny([['weight'], ['peso']], character.weight, { page: 1 })
     fillAny([['eyes'], ['ojos']], character.eyes, { page: 1 })
     fillAny([['skin'], ['piel']], character.skin, { page: 1 })
     fillAny([['hair'], ['pelo']], character.hair, { page: 1 })
-    fillAny([['personalitytraits'], ['rasgosdepersonalidad']], character.personality_traits, { page: 1 })
-    fillAny([['ideals'], ['ideales']], character.ideals, { page: 1 })
-    fillAny([['bonds'], ['vinculos']], character.bonds, { page: 1 })
-    fillAny([['flaws'], ['defectos']], character.flaws, { page: 1 })
-    fillAny([['characterbackstory'], ['historiadelpersonaje']], character.backstory, { page: 1 })
+    fillAny([['personalitytraits'], ['rasgosdepersonalidad']], character.personality_traits, { page: 1, strict: true, fontSize: 7 })
+    fillAny([['ideals'], ['ideales']], character.ideals, { page: 1, strict: true, fontSize: 7 })
+    fillAny([['bonds'], ['vinculos']], character.bonds, { page: 1, strict: true, fontSize: 7 })
+    fillAny([['flaws'], ['defectos']], character.flaws, { page: 1, strict: true, fontSize: 7 })
+    fillAny([['characterbackstory'], ['backstory'], ['historiadelpersonaje']], character.backstory, { page: 1, strict: true, fontSize: 7 })
     fillAny([['characterappearance'], ['aspectodelpersonaje']], character.appearance_notes, { page: 1 })
-    fillAny([['alliesorganizations'], ['aliadosyorganizaciones']], character.allies_organizations, { page: 1 })
+    fillAny([['alliesorganizations'], ['alliesandorganizations'], ['aliadosyorganizaciones']], character.allies_organizations, { page: 1, strict: true, fontSize: 7 })
     fillAny([['additionalfeaturesandtraits'], ['rasgosyatributosadicionales']], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '), { page: 1 })
     fillAny([['treasure'], ['tesoro']], character.treasure, { page: 1 })
 
     // PÁGINA 3: conjuros
-    fillAny([['spellcastingclass'], ['claselanzadoradeconjuros']], classLabel(character.class), { page: 2 })
-    fillAny([['spellcastingability'], ['aptitudmagica']], character.spellcasting_ability, { page: 2 })
-    fillAny([['spelldc'], ['cdtiradadesalvaciondeconjuros']], String(character.spell_save_dc || ''), { page: 2 })
-    fillAny([['spellattackbonus'], ['bonificadordeataquedeconjuros']], String(character.spell_attack_bonus || ''), { page: 2 })
-    fillAny([['cantrips'], ['trucos']], spells.cantrips.join(', '), { page: 2 })
+    fillAny([['spellcastingclass'], ['spellcasterclass'], ['claselanzadoradeconjuros']], character.spellcasting_ability || classLabel(character.class), { page: 2, strict: true })
+    fillAny([['spellcastingability'], ['aptitudmagica']], character.spellcasting_ability, { page: 2, strict: true })
+    fillAny([['spelldc'], ['spellsavedc'], ['cdtiradadesalvaciondeconjuros']], String(character.spell_save_dc || ''), { page: 2, strict: true })
+    fillAny([['spellattackbonus'], ['bonificadordeataquedeconjuros']], String(character.spell_attack_bonus || ''), { page: 2, strict: true })
+    fillAny([['cantrips'], ['trucos']], spells.cantrips.join(', '), { page: 2, strict: true, fontSize: 7 })
     for (let i = 1; i <= 9; i++) {
         const lvl = spells[`level${i}`]
-        fillAny([[`level${i}slots`], [`nivel${i}espaciostotales`]], String(lvl.slots || 0), { page: 2 })
-        fillAny([[`level${i}slotsexpended`], [`nivel${i}espaciosgastados`]], String(lvl.slots_used || 0), { page: 2 })
-        fillAny([[`level${i}spells`], [`nivel${i}conjurosconocidos`]], (lvl.spells || []).join(', '), { page: 2 })
+        fillAny([[`level${i}slots`], [`nivel${i}espaciostotales`]], String(lvl.slots || 0), { page: 2, strict: true })
+        fillAny([[`level${i}slotsexpended`], [`nivel${i}espaciosgastados`]], String(lvl.slots_used || 0), { page: 2, strict: true })
+        fillAny([[`level${i}spells`], [`nivel${i}conjurosconocidos`]], (lvl.spells || []).join(', '), { page: 2, strict: true, fontSize: 6.5 })
     }
+
+    await setImage(
+        [['portrait'], ['characterimage'], ['aspectodelpersonaje'], ['appearancefile']],
+        character.avatar_url || character.image_url || character.photo_url || '',
+        { page: 1, strict: false }
+    )
 
     form.updateFieldAppearances(font)
     if (missingAssignments.length) {
