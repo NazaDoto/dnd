@@ -1,5 +1,6 @@
 <template>
   <div class="full-view" v-if="character">
+    <div class="full-top-sticky">
     <div class="full-header">
       <button type="button" class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
       <div class="full-header-main">
@@ -45,15 +46,7 @@
         </div>
       </div>
       <div class="full-header-actions">
-        <RouterLink
-          v-if="!isDmCampaignReader"
-          :to="`/character/${id}/edit`"
-          class="btn btn-secondary"
-          style="font-size: 0.78rem; padding: 0.4rem 0.7rem"
-        >
-          Editar
-        </RouterLink>
-        <template v-else>
+        <template v-if="isDmCampaignReader">
           <RouterLink
             :to="`/dm/campaign/${campaignId}`"
             class="btn btn-ghost"
@@ -79,6 +72,7 @@
         @click="activeTab = tab.id">
         {{ tab.label }}
       </button>
+    </div>
     </div>
 
     <!-- ── PESTAÑA: Habilidades ── -->
@@ -638,19 +632,8 @@ export default {
         .filter(Boolean);
     },
     async persistCharacterPatch(patch) {
-      const next = { ...this.character, ...patch };
-      const fd = new FormData();
-      Object.keys(next).forEach((k) => {
-        const val = next[k];
-        if (val === null || val === undefined) return;
-        if (Array.isArray(val) || typeof val === "object") {
-          fd.append(k, JSON.stringify(val));
-        } else {
-          fd.append(k, val);
-        }
-      });
-      await charactersAPI.update(this.id, fd);
-      this.character = next;
+      const { data } = await charactersAPI.updateFields(this.id, patch);
+      this.character = data?.character || { ...this.character, ...patch };
     },
     async saveInlineEdit(section) {
       try {
@@ -809,8 +792,16 @@ normalizeSpells(value) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
   gap: 0.5rem;
+}
+.full-top-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--bg-deep);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.55rem;
 }
 
 .full-header-actions {
@@ -1292,37 +1283,12 @@ normalizeSpells(value) {
 }
 
 @media (min-width: 980px) {
-  .full-view {
-    display: grid;
-    grid-template-columns: minmax(9rem, 12rem) minmax(0, 1fr);
-    grid-template-areas:
-      "header header"
-      "tabs content";
-    column-gap: 1rem;
-    align-items: start;
-  }
-  .full-header {
-    grid-area: header;
-    margin-bottom: 0.25rem;
-  }
-  .tabs {
-    grid-area: tabs;
-    flex-direction: column;
-    overflow: visible;
-    position: sticky;
-    top: 5.5rem;
-    gap: 0.35rem;
-  }
+  .full-top-sticky { top: 0; }
+  .tabs { gap: 0.4rem; }
   .tab-btn {
-    width: 100%;
-    text-align: left;
-    text-transform: none;
     font-size: 0.8rem;
     letter-spacing: 0.02em;
     padding: 0.5rem 0.7rem;
-  }
-  .tab-content {
-    grid-area: content;
   }
   .coins-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));

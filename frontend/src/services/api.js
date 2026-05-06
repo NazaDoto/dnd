@@ -36,6 +36,8 @@ export const charactersAPI = {
     getFull: (id) => api.get(`/characters/${id}`),
     create: (formData) => api.post('/characters', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
     update: (id, fd) => api.put(`/characters/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    updateFields: (id, fields) => api.patch(`/characters/${id}/fields`, fields),
+    updateField: (id, field, value) => api.patch(`/characters/${id}/fields`, { [field]: value }),
     delete: (id) => api.delete(`/characters/${id}`),
 }
 

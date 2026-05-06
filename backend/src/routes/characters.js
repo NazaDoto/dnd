@@ -84,6 +84,53 @@ function parseJsonCols(row) {
     return row;
 }
 
+const PATCHABLE_FIELDS = new Set([
+    'name', 'class', 'subclass', 'level', 'background', 'race', 'subrace', 'alignment', 'experience_points',
+    'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+    'armor_class', 'initiative', 'speed', 'hit_points_max', 'hit_points_current', 'hit_points_temp', 'hit_dice',
+    'saving_throws_prof', 'skills_prof', 'skills_expertise',
+    'inspiration', 'proficiency_bonus', 'passive_perception',
+    'personality_traits', 'ideals', 'bonds', 'flaws', 'backstory',
+    'age', 'height', 'weight', 'eyes', 'skin', 'hair', 'appearance_notes',
+    'equipment', 'copper_pieces', 'silver_pieces', 'electrum_pieces', 'gold_pieces', 'platinum_pieces',
+    'attacks_spellcasting', 'features_traits',
+    'spellcasting_ability', 'spell_save_dc', 'spell_attack_bonus', 'spells',
+    'languages', 'other_proficiencies', 'allies_organizations', 'faction', 'treasure'
+]);
+
+function normalizePatchField(field, value) {
+    if (JSON_COLS.includes(field)) {
+        if (typeof value === 'string') {
+            try {
+                JSON.parse(value);
+                return value;
+            } catch {
+                return JSON_DEFAULTS[field] || '[]';
+            }
+        }
+        return JSON.stringify(value ?? JSON.parse(JSON_DEFAULTS[field] || '[]'));
+    }
+
+    if (field === 'inspiration') {
+        return value === true || value === 'true' || value === 1 ? 1 : 0;
+    }
+
+    const intFields = new Set([
+        'level', 'experience_points', 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma',
+        'armor_class', 'initiative', 'speed', 'hit_points_max', 'hit_points_current', 'hit_points_temp',
+        'proficiency_bonus', 'passive_perception', 'copper_pieces', 'silver_pieces', 'electrum_pieces', 'gold_pieces',
+        'platinum_pieces', 'spell_save_dc', 'spell_attack_bonus'
+    ]);
+    if (intFields.has(field)) {
+        if (value === null || value === undefined || value === '') return null;
+        const n = parseInt(value, 10);
+        return Number.isNaN(n) ? null : n;
+    }
+
+    if (value === undefined) return null;
+    return value;
+}
+
 // ── GET /api/characters ──────────────────────────────────────
 router.get('/', auth, async (req, res) => {
     try {
@@ -282,6 +329,41 @@ router.put('/:id', auth, upload.single('photo'), async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error al actualizar', detail: err.message });
+    }
+});
+
+// ── PATCH /api/characters/:id/fields ─────────────────────────
+router.patch('/:id/fields', auth, async (req, res) => {
+    try {
+        const payload = req.body && typeof req.body === 'object' ? req.body : {};
+        const entries = Object.entries(payload).filter(([k]) => PATCHABLE_FIELDS.has(k));
+
+        if (!entries.length) {
+            return res.status(400).json({ message: 'No hay campos válidos para actualizar' });
+        }
+
+        const [exists] = await db.query(
+            'SELECT id FROM characters WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.id]
+        );
+        if (!exists.length) return res.status(404).json({ message: 'Personaje no encontrado' });
+
+        const setSql = entries.map(([k]) => `${k} = ?`).join(', ');
+        const values = entries.map(([k, v]) => normalizePatchField(k, v));
+
+        await db.query(
+            `UPDATE characters SET ${setSql} WHERE id = ? AND user_id = ?`,
+            [...values, req.params.id, req.user.id]
+        );
+
+        const [rows] = await db.query(
+            'SELECT * FROM characters WHERE id = ? AND user_id = ?',
+            [req.params.id, req.user.id]
+        );
+        res.json({ message: 'Campos actualizados', character: parseJsonCols(rows[0]) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Error al actualizar campos', detail: err.message });
     }
 });
 
