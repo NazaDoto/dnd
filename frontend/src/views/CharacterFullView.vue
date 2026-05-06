@@ -32,6 +32,98 @@
       </div>
     </div>
 
+    <div class="full-overview">
+      <div class="detail-hero card">
+        <div class="hero-photo">
+          <img
+            v-if="character.photo_url"
+            :src="character.photo_url"
+            :alt="character.name"
+            class="hero-img"
+          />
+          <div v-else class="hero-placeholder">{{ character.name[0] }}</div>
+        </div>
+        <div class="hero-info">
+          <h1 class="hero-name">{{ character.name }}</h1>
+          <p class="hero-meta">
+            {{ character.race }}
+            <span v-if="character.subrace"> ({{ character.subrace }})</span>
+            · {{ character.class }} Nv.{{ character.level }}
+          </p>
+          <p class="hero-bg" v-if="character.background">
+            {{ character.background }} · {{ character.alignment }}
+          </p>
+        </div>
+      </div>
+
+      <div class="hp-section card">
+        <div class="hp-header">
+          <span class="section-title" style="margin: 0; border: none; padding: 0">Puntos de Vida</span>
+          <div class="hp-controls">
+            <button class="btn btn-secondary btn-icon" @click="adjustHP(-1)">-</button>
+            <span class="hp-display">
+              <span :class="['hp-current', hpClass]">{{ character.hit_points_current }}</span>
+              <span class="hp-sep">/</span>
+              <span class="hp-max">{{ character.hit_points_max }}</span>
+            </span>
+            <button class="btn btn-secondary btn-icon" @click="adjustHP(1)">+</button>
+          </div>
+        </div>
+        <div class="hp-bar-wrap">
+          <div class="hp-bar" :style="{ width: hpPct + '%' }" :class="hpClass"></div>
+        </div>
+        <div v-if="character.hit_points_temp > 0" class="hp-temp">
+          +{{ character.hit_points_temp }} PV temporales
+        </div>
+      </div>
+
+      <div class="combat-row">
+        <div class="combat-box">
+          <span class="cbox-val">{{ character.armor_class }}</span>
+          <span class="cbox-lbl">CA</span>
+        </div>
+        <div class="combat-box">
+          <span class="cbox-val">{{ fmtMod(character.initiative) }}</span>
+          <span class="cbox-lbl">Iniciativa</span>
+        </div>
+        <div class="combat-box">
+          <span class="cbox-val">{{ character.speed }}ft</span>
+          <span class="cbox-lbl">Velocidad</span>
+        </div>
+        <div class="combat-box">
+          <span class="cbox-val">{{ fmtMod(character.proficiency_bonus) }}</span>
+          <span class="cbox-lbl">B.Profic.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="section-title">Atributos</p>
+        <StatsBlock :character="character" />
+      </div>
+
+      <div class="row-2">
+        <div class="card info-pill">
+          <span class="pill-icon">{{ character.inspiration ? '✨' : '○' }}</span>
+          <span class="pill-lbl">Inspiracion</span>
+        </div>
+        <div class="card info-pill">
+          <span class="pill-val">{{ character.passive_perception ?? '-' }}</span>
+          <span class="pill-lbl">Perc. Pasiva</span>
+        </div>
+      </div>
+
+      <div class="card xp-section">
+        <div class="xp-header">
+          <span class="section-title" style="margin: 0; border: none; padding: 0">Experiencia</span>
+          <span class="badge badge-gold">{{ character.experience_points || 0 }} XP</span>
+        </div>
+        <div class="xp-bar-wrap">
+          <div class="xp-bar" :style="{ width: xpPct + '%' }"></div>
+        </div>
+        <p class="xp-hint">{{ xpLabel }}</p>
+      </div>
+    </div>
+
     <!-- Tabs -->
     <div class="tabs">
       <button v-for="tab in tabs" :key="tab.id" :class="['tab-btn', { active: activeTab === tab.id }]"
@@ -306,6 +398,8 @@
 import { charactersAPI, dmAPI } from "../services/api.js";
 import { exportCharacterPdf } from "../services/pdfExport.js";
 import CharacterNotesPanel from "../components/CharacterNotesPanel.vue";
+import StatsBlock from "../components/StatsBlock.vue";
+import { XP_BY_LEVEL } from "../services/dndData.js";
 import {
   ATTRIBUTES,
   SKILLS,
@@ -316,7 +410,7 @@ import {
 
 export default {
   name: "CharacterFullView",
-  components: { CharacterNotesPanel },
+  components: { CharacterNotesPanel, StatsBlock },
   inject: ["showToast"],
   data() {
     return {
@@ -444,6 +538,32 @@ export default {
       );
       return sa ? sa.label.split(" ")[0] : "—";
     },
+    hpPct() {
+      if (!this.character) return 0;
+      const max = this.character.hit_points_max || 1;
+      return Math.max(0, Math.min(100, (this.character.hit_points_current / max) * 100));
+    },
+    hpClass() {
+      const p = this.hpPct;
+      if (p > 50) return "ok";
+      if (p > 25) return "warn";
+      return "danger";
+    },
+    xpPct() {
+      const lvl = this.character?.level || 1;
+      const cur = this.character?.experience_points || 0;
+      const base = XP_BY_LEVEL[lvl - 1] || 0;
+      const next = XP_BY_LEVEL[lvl] || base;
+      if (!next || next === base) return 100;
+      return Math.min(100, ((cur - base) / (next - base)) * 100);
+    },
+    xpLabel() {
+      const lvl = this.character?.level || 1;
+      if (lvl >= 20) return "Nivel maximo alcanzado";
+      const next = XP_BY_LEVEL[lvl] || 0;
+      const rem = next - (this.character?.experience_points || 0);
+      return rem > 0 ? `${rem} XP para nivel ${lvl + 1}` : "Listo para subir";
+    }
   },
   async mounted() {
     try {
@@ -462,6 +582,24 @@ export default {
   methods: {
     goEditSection(section) {
       this.$router.push(`/character/${this.id}/edit?section=${section}`);
+    },
+    fmtMod(v) {
+      return formatModifier(v);
+    },
+    async adjustHP(delta) {
+      const c = this.character;
+      c.hit_points_current = Math.max(0, Math.min(c.hit_points_max || 0, (c.hit_points_current || 0) + delta));
+      try {
+        const fd = new FormData();
+        Object.keys(c).forEach((k) => {
+          if (c[k] !== null && c[k] !== undefined) {
+            fd.append(k, typeof c[k] === "object" ? JSON.stringify(c[k]) : c[k]);
+          }
+        });
+        await charactersAPI.update(this.id, fd);
+      } catch {
+        // silencioso para no interrumpir UX del ajuste rapido
+      }
     },
     downloadDmPdf() {
       if (this.character) exportCharacterPdf(this.character);
@@ -576,6 +714,85 @@ normalizeSpells(value) {
   flex: 1;
   text-align: center;
 }
+.full-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+.detail-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.hero-img,
+.hero-placeholder {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  border: 2px solid var(--gold-dark);
+  flex-shrink: 0;
+}
+.hero-img { object-fit: cover; }
+.hero-placeholder {
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 1.4rem;
+  color: var(--gold);
+}
+.hero-name {
+  font-family: var(--font-title);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+.hero-meta {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+.hero-bg {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+.hp-header { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 0.45rem; }
+.hp-controls { display: flex; align-items: center; gap: 0.4rem; }
+.hp-display { font-family: var(--font-title); display: inline-flex; align-items: baseline; gap: 0.15rem; }
+.hp-current { font-size: 1.2rem; font-weight: 700; }
+.hp-current.ok { color: #4ade80; }
+.hp-current.warn { color: #fbbf24; }
+.hp-current.danger { color: #f87171; }
+.hp-sep { color: var(--text-dim); }
+.hp-max { color: var(--text-muted); font-size: 0.95rem; }
+.hp-bar-wrap { height: 8px; border-radius: 4px; background: var(--bg-deep); overflow: hidden; }
+.hp-bar { height: 100%; transition: width 0.3s; }
+.hp-bar.ok { background: linear-gradient(to right, var(--green), #4ade80); }
+.hp-bar.warn { background: linear-gradient(to right, #ca8a04, #fbbf24); }
+.hp-bar.danger { background: linear-gradient(to right, var(--red), var(--red-light)); }
+.hp-temp { font-size: 0.74rem; color: #a78bfa; margin-top: 0.35rem; }
+.combat-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem; }
+.combat-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.45rem 0.2rem;
+}
+.cbox-val { font-family: var(--font-title); font-size: 1.2rem; color: var(--gold-light); }
+.cbox-lbl { font-size: 0.56rem; text-transform: uppercase; color: var(--text-muted); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; }
+.info-pill { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.pill-icon { font-size: 1.35rem; }
+.pill-val { font-family: var(--font-title); font-size: 1.25rem; color: var(--gold-light); }
+.pill-lbl { font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted); }
+.xp-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+.xp-bar-wrap { height: 6px; background: var(--bg-deep); border-radius: 3px; overflow: hidden; }
+.xp-bar { height: 100%; background: linear-gradient(to right, var(--purple), #a78bfa); transition: width 0.4s; }
+.xp-hint { margin-top: 0.3rem; font-size: 0.74rem; color: var(--text-muted); text-align: right; }
 
 /* Tabs */
 .tabs {
@@ -972,6 +1189,12 @@ normalizeSpells(value) {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .trait-grid {
+    grid-template-columns: 1fr;
+  }
+  .combat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .row-2 {
     grid-template-columns: 1fr;
   }
 }
