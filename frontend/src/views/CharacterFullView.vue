@@ -1923,7 +1923,7 @@ normalizeSpells(value) {
     display: grid;
     grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
     gap: 1rem;
-    align-items: start;
+    align-items: stretch;
   }
   .full-sidebar {
     position: sticky;
