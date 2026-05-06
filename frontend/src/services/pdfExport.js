@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { PDFCheckBox, PDFDocument, PDFTextField, StandardFonts } from 'pdf-lib'
+import { PDFDocument, StandardFonts } from 'pdf-lib'
 import { CLASSES, ATTRIBUTES, getModifier, formatModifier } from './dndData.js'
 
 function pdfTheme() {
@@ -246,12 +246,18 @@ export async function exportCharacterPdfStyled(character) {
             const idx = pages.findIndex((p) => p.ref === widgetPage)
             pageIndex = idx >= 0 ? idx : 0
         }
+        const kind = typeof field.setText === 'function'
+            ? 'text'
+            : typeof field.check === 'function'
+                ? 'check'
+                : 'other'
         return {
             field,
             name: field.getName(),
             norm: norm(field.getName()),
             pageIndex,
             type: field.constructor?.name || 'Unknown',
+            kind,
         }
     })
     debug('template fields count', fields.length)
@@ -260,19 +266,19 @@ export async function exportCharacterPdfStyled(character) {
 
     const findBestField = (hints = [], opts = {}) => {
         const hs = hints.map(norm).filter(Boolean)
-        const expectedType = opts.type || null
+        const expectedKind = opts.kind || null
         const expectedPage = Number.isInteger(opts.page) ? opts.page : null
         let best = null
 
         for (const entry of fields) {
-            if (expectedType && entry.type !== expectedType) continue
-            if (expectedPage !== null && entry.pageIndex !== expectedPage) continue
+            if (expectedKind && entry.kind !== expectedKind) continue
             let score = 0
             for (const h of hs) {
                 if (entry.norm === h) score += 8
                 if (entry.norm.startsWith(h)) score += 5
                 if (entry.norm.includes(h)) score += 2
             }
+            if (expectedPage !== null && entry.pageIndex === expectedPage) score += 2
             if (!score) continue
             if (!best || score > best.score) best = { entry, score }
         }
@@ -283,14 +289,11 @@ export async function exportCharacterPdfStyled(character) {
     const setText = (hints, value, opts = {}) => {
         const text = toPdfSafe(value)
         if (!text) return false
-        const target = findBestField(Array.isArray(hints) ? hints : [hints], { ...opts, type: 'PDFTextField' })
+        const target = findBestField(Array.isArray(hints) ? hints : [hints], { ...opts, kind: 'text' })
         if (!target) return false
         try {
-            const textField = target.field
-            if (textField instanceof PDFTextField) {
-                textField.setText(text)
-                return true
-            }
+            target.field.setText(text)
+            return true
         } catch (err) {
             console.error('[pdf-styled] setText failed', target?.name, err)
         }
@@ -298,15 +301,12 @@ export async function exportCharacterPdfStyled(character) {
     }
 
     const setCheck = (hints, checked, opts = {}) => {
-        const target = findBestField(Array.isArray(hints) ? hints : [hints], { ...opts, type: 'PDFCheckBox' })
+        const target = findBestField(Array.isArray(hints) ? hints : [hints], { ...opts, kind: 'check' })
         if (!target) return false
         try {
-            const checkBox = target.field
-            if (checkBox instanceof PDFCheckBox) {
-                if (checked) checkBox.check()
-                else checkBox.uncheck()
-                return true
-            }
+            if (checked) target.field.check()
+            else if (typeof target.field.uncheck === 'function') target.field.uncheck()
+            return true
         } catch (err) {
             console.error('[pdf-styled] setCheck failed', target?.name, err)
         }
