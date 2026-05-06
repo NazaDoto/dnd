@@ -2,7 +2,7 @@
   <div class="full-view" v-if="character">
     <div class="full-header">
       <button type="button" class="btn btn-ghost btn-icon" @click="$router.back()">‹</button>
-      <h2 class="full-title">{{ character.name }}</h2>
+      <h2 class="full-title">Ficha completa</h2>
       <div class="full-header-actions">
         <template v-if="isDmCampaignReader">
           <RouterLink
@@ -44,61 +44,62 @@
       <section class="full-content">
       <div class="quick-states-wrap card">
         <div class="quick-state-grid">
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">PV</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_hp', character.hit_points_current)">
+            <span class="state-head"><span class="state-key">PV</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.hit_points_current }}/{{ character.hit_points_max }}</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">CA</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_ac', character.armor_class)">
+            <span class="state-head"><span class="state-key">CA</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.armor_class ?? '-' }}</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">Iniciativa</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_ini', character.initiative)">
+            <span class="state-head"><span class="state-key">Iniciativa</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ fmtMod(character.initiative) }}</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">Velocidad</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_speed', character.speed)">
+            <span class="state-head"><span class="state-key">Velocidad</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.speed }}ft</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">Prof</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_prof', character.proficiency_bonus)">
+            <span class="state-head"><span class="state-key">Prof</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ fmtMod(character.proficiency_bonus) }}</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
-            <span class="state-key">Insp</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_insp', character.inspiration ? 'Si' : 'No')">
+            <span class="state-head"><span class="state-key">Insp</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.inspiration ? 'Si' : 'No' }}</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('skills')">
-            <span class="state-key">P. Pasiva</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_passive', character.passive_perception)">
+            <span class="state-head"><span class="state-key">P. Pasiva</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.passive_perception ?? '-' }}</span>
           </button>
-          <button type="button" class="state-pill" @click="startInlineEdit('combat')">
-            <span class="state-key">XP</span>
+          <button type="button" class="state-pill" @click="startFieldEdit('state_xp', character.experience_points)">
+            <span class="state-head"><span class="state-key">XP</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.experience_points || 0 }}</span>
           </button>
+        </div>
+        <div v-if="fieldEditKey && fieldEditKey.startsWith('state_')" class="inline-state-editor">
+          <input v-model="fieldDraft" @keydown.enter.prevent="saveFieldEdit" />
+          <button type="button" class="icon-action save" @click="saveFieldEdit" title="Guardar">✓</button>
+          <button type="button" class="icon-action cancel" @click="cancelFieldEdit" title="Cancelar">✕</button>
         </div>
       </div>
 
     <!-- ── PESTAÑA: Habilidades ── -->
     <div v-if="activeTab === 'skills'" class="tab-content">
-      <div class="tab-edit-row" v-if="!isDmCampaignReader">
-        <button v-if="editingTab !== 'skills'" type="button" class="edit-icon-btn" @click="startInlineEdit('skills')" title="Editar habilidades">
-          Editar
-        </button>
-        <div v-else class="inline-actions">
-          <button type="button" class="btn btn-primary" @click="saveInlineEdit('skills')">Guardar</button>
-          <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
-        </div>
-      </div>
-      <div v-if="editingTab === 'skills'" class="card inline-editor">
-        <p class="section-title">Editar habilidades</p>
-        <label class="form-label">Idiomas (separados por coma)</label>
-        <input v-model="editDraft.languages_text" />
-        <label class="form-label mt-2">Otras competencias (separadas por coma)</label>
-        <input v-model="editDraft.other_proficiencies_text" />
-      </div>
       <div class="card mb-4">
-        <p class="section-title">Salvaciones</p>
+        <div class="section-title-row">
+          <p class="section-title">Salvaciones</p>
+          <div class="mini-edit-actions">
+            <button v-if="!isEditing('skills_saves')" type="button" class="icon-action edit" @click="startFieldEdit('skills_saves', (character.saving_throws_prof || []).join(', '))">✎</button>
+            <template v-else>
+              <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+              <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+            </template>
+          </div>
+        </div>
+        <div v-if="isEditing('skills_saves')" class="inline-editor">
+          <input v-model="fieldDraft" @keydown.enter.prevent="saveFieldEdit" placeholder="str, dex, con..." />
+        </div>
         <div class="skill-list">
           <div v-for="attr in ATTRIBUTES" :key="attr.key" class="skill-row">
             <span :class="['prof-dot', hasSavingThrow(attr.key) ? 'filled' : '']"></span>
@@ -108,7 +109,20 @@
         </div>
       </div>
       <div class="card">
-        <p class="section-title">Habilidades</p>
+        <div class="section-title-row">
+          <p class="section-title">Habilidades</p>
+          <div class="mini-edit-actions">
+            <button v-if="!isEditing('skills_skills')" type="button" class="icon-action edit" @click="startFieldEdit('skills_skills', `${(character.skills_prof || []).join(', ')}\n---\n${(character.skills_expertise || []).join(', ')}`)">✎</button>
+            <template v-else>
+              <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+              <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+            </template>
+          </div>
+        </div>
+        <div v-if="isEditing('skills_skills')" class="inline-editor">
+          <label class="form-label">Linea 1: proficiencias. Linea 3: experticias.</label>
+          <textarea v-model="fieldDraft" rows="4"></textarea>
+        </div>
         <div class="skill-list">
           <div v-for="sk in SKILLS" :key="sk.key" class="skill-row">
             <span :class="[
@@ -129,30 +143,20 @@
 
     <!-- ── PESTAÑA: Combate ── -->
     <div v-if="activeTab === 'combat'" class="tab-content">
-      <div class="tab-edit-row" v-if="!isDmCampaignReader">
-        <button v-if="editingTab !== 'combat'" type="button" class="edit-icon-btn" @click="startInlineEdit('combat')" title="Editar combate">Editar</button>
-        <div v-else class="inline-actions">
-          <button type="button" class="btn btn-primary" @click="saveInlineEdit('combat')">Guardar</button>
-          <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
-        </div>
-      </div>
-      <div v-if="editingTab === 'combat'" class="card inline-editor">
-        <p class="section-title">Editar combate</p>
-        <div class="inline-grid">
-          <input v-model.number="editDraft.hit_points_current" type="number" placeholder="PV actuales" />
-          <input v-model.number="editDraft.hit_points_max" type="number" placeholder="PV maximos" />
-          <input v-model.number="editDraft.hit_points_temp" type="number" placeholder="PV temp" />
-          <input v-model.number="editDraft.armor_class" type="number" placeholder="CA" />
-          <input v-model.number="editDraft.initiative" type="number" placeholder="Iniciativa" />
-          <input v-model.number="editDraft.speed" type="number" placeholder="Velocidad" />
-          <input v-model.number="editDraft.proficiency_bonus" type="number" placeholder="Prof" />
-        </div>
-        <label class="check-inline"><input v-model="editDraft.inspiration" type="checkbox" /> Inspiracion</label>
-        <label class="form-label mt-2">Ataques (nombre|bonus|dano|tipo por linea)</label>
-        <textarea v-model="editDraft.attacks_text" rows="4"></textarea>
-      </div>
       <div class="card mb-4">
-        <p class="section-title">Ataques</p>
+        <div class="section-title-row">
+          <p class="section-title">Ataques</p>
+          <div class="mini-edit-actions">
+            <button v-if="!isEditing('combat_attacks')" type="button" class="icon-action edit" @click="startFieldEdit('combat_attacks', (attacks || []).map(a => `${a.name || ''}|${a.bonus || ''}|${a.damage || ''}|${a.type || ''}`).join('\n'))">✎</button>
+            <template v-else>
+              <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+              <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+            </template>
+          </div>
+        </div>
+        <div v-if="isEditing('combat_attacks')" class="inline-editor">
+          <textarea v-model="fieldDraft" rows="4"></textarea>
+        </div>
         <div v-if="attacks.length" class="attacks-list">
           <div v-for="(atk, i) in attacks" :key="i" class="attack-row">
             <span class="atk-name">{{ atk.name || "Ataque " + (i + 1) }}</span>
@@ -170,7 +174,20 @@
         </p>
       </div>
       <div class="card mb-4">
-        <p class="section-title">Lanzamiento de Conjuros</p>
+        <div class="section-title-row">
+          <p class="section-title">Lanzamiento de Conjuros</p>
+          <div class="mini-edit-actions">
+            <button v-if="!isEditing('combat_spellcasting')" type="button" class="icon-action edit" @click="startFieldEdit('combat_spellcasting', `${character.spellcasting_ability || ''}\n${character.spell_save_dc || ''}\n${character.spell_attack_bonus || ''}`)">✎</button>
+            <template v-else>
+              <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+              <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+            </template>
+          </div>
+        </div>
+        <div v-if="isEditing('combat_spellcasting')" class="inline-editor">
+          <label class="form-label">Linea 1: habilidad, linea 2: CD, linea 3: bonus ataque</label>
+          <textarea v-model="fieldDraft" rows="3"></textarea>
+        </div>
         <div v-if="character.spellcasting_ability" class="spell-meta">
           <div class="spell-meta-box">
             <span class="smb-val">{{ character.spell_save_dc || "—" }}</span>
@@ -194,7 +211,19 @@
         </p>
       </div>
       <div class="card" v-if="visibleSpellBlocks.length">
-        <p class="section-title">Conjuros</p>
+        <div class="section-title-row">
+          <p class="section-title">Conjuros</p>
+          <div class="mini-edit-actions">
+            <button v-if="!isEditing('combat_spells')" type="button" class="icon-action edit" @click="startFieldEdit('combat_spells', JSON.stringify(character.spells || {}, null, 2))">✎</button>
+            <template v-else>
+              <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+              <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+            </template>
+          </div>
+        </div>
+        <div v-if="isEditing('combat_spells')" class="inline-editor">
+          <textarea v-model="fieldDraft" rows="8"></textarea>
+        </div>
 
         <div v-for="block in visibleSpellBlocks" :key="block.key" class="spell-level-block">
           <div class="spell-level-header">
@@ -219,25 +248,6 @@
 
       <!-- ── PESTAÑA: Equipo ── -->
       <div v-if="activeTab === 'equipment'" class="tab-content">
-        <div class="tab-edit-row" v-if="!isDmCampaignReader">
-          <button v-if="editingTab !== 'equipment'" type="button" class="edit-icon-btn" @click="startInlineEdit('equipment')" title="Editar equipo">Editar</button>
-          <div v-else class="inline-actions">
-            <button type="button" class="btn btn-primary" @click="saveInlineEdit('equipment')">Guardar</button>
-            <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
-          </div>
-        </div>
-        <div v-if="editingTab === 'equipment'" class="card inline-editor">
-          <p class="section-title">Editar equipo</p>
-          <div class="inline-grid">
-            <input v-model.number="editDraft.copper_pieces" type="number" placeholder="PC" />
-            <input v-model.number="editDraft.silver_pieces" type="number" placeholder="PP" />
-            <input v-model.number="editDraft.electrum_pieces" type="number" placeholder="PE" />
-            <input v-model.number="editDraft.gold_pieces" type="number" placeholder="PO" />
-            <input v-model.number="editDraft.platinum_pieces" type="number" placeholder="PPl" />
-          </div>
-          <label class="form-label mt-2">Equipo (1 por linea)</label>
-          <textarea v-model="editDraft.equipment_text" rows="4"></textarea>
-        </div>
         <div class="card mb-4">
           <p class="section-title">Monedas</p>
           <div class="coins-grid">
@@ -249,7 +259,19 @@
           </div>
         </div>
         <div class="card mb-4">
-          <p class="section-title">Equipo</p>
+          <div class="section-title-row">
+            <p class="section-title">Equipo</p>
+            <div class="mini-edit-actions">
+              <button v-if="!isEditing('equipment_items')" type="button" class="icon-action edit" @click="startFieldEdit('equipment_items', (equipment || []).map(i => (typeof i === 'string' ? i : i?.name || '')).join('\n'))">✎</button>
+              <template v-else>
+                <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+              </template>
+            </div>
+          </div>
+          <div v-if="isEditing('equipment_items')" class="inline-editor">
+            <textarea v-model="fieldDraft" rows="4"></textarea>
+          </div>
           <div v-if="equipment.length">
             <div v-for="(item, i) in equipment" :key="i" class="equip-row">
               <span class="equip-name">{{ item.name || item }}</span>
@@ -261,7 +283,19 @@
           </p>
         </div>
         <div class="card" v-if="character.treasure">
-          <p class="section-title">Tesoros & Otros</p>
+          <div class="section-title-row">
+            <p class="section-title">Tesoros & Otros</p>
+            <div class="mini-edit-actions">
+              <button v-if="!isEditing('equipment_treasure')" type="button" class="icon-action edit" @click="startFieldEdit('equipment_treasure', character.treasure || '')">✎</button>
+              <template v-else>
+                <button type="button" class="icon-action save" @click="saveFieldEdit">✓</button>
+                <button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button>
+              </template>
+            </div>
+          </div>
+          <div v-if="isEditing('equipment_treasure')" class="inline-editor">
+            <textarea v-model="fieldDraft" rows="4"></textarea>
+          </div>
           <p style="
             font-size: 0.9rem;
             color: var(--text-secondary);
@@ -274,21 +308,6 @@
 
       <!-- ── PESTAÑA: Trasfondo ── -->
       <div v-if="activeTab === 'backstory'" class="tab-content">
-        <div class="tab-edit-row" v-if="!isDmCampaignReader">
-          <button v-if="editingTab !== 'backstory'" type="button" class="edit-icon-btn" @click="startInlineEdit('backstory')" title="Editar trasfondo">Editar</button>
-          <div v-else class="inline-actions">
-            <button type="button" class="btn btn-primary" @click="saveInlineEdit('backstory')">Guardar</button>
-            <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
-          </div>
-        </div>
-        <div v-if="editingTab === 'backstory'" class="card inline-editor">
-          <p class="section-title">Editar trasfondo</p>
-          <textarea v-model="editDraft.backstory" rows="4" placeholder="Historia"></textarea>
-          <textarea v-model="editDraft.personality_traits" rows="2" placeholder="Rasgos"></textarea>
-          <textarea v-model="editDraft.ideals" rows="2" placeholder="Ideales"></textarea>
-          <textarea v-model="editDraft.bonds" rows="2" placeholder="Vinculos"></textarea>
-          <textarea v-model="editDraft.flaws" rows="2" placeholder="Defectos"></textarea>
-        </div>
         <div class="card mb-4" v-if="
           character.personality_traits ||
           character.ideals ||
@@ -298,25 +317,30 @@
           <p class="section-title">Personalidad</p>
           <div class="trait-grid">
             <div v-if="character.personality_traits" class="trait-box">
-              <p class="trait-lbl">Rasgos</p>
+              <div class="trait-head"><p class="trait-lbl">Rasgos</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_traits', character.personality_traits || '')">✎</button></div>
+              <div v-if="isEditing('backstory_traits')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
               <p class="trait-val">{{ character.personality_traits }}</p>
             </div>
             <div v-if="character.ideals" class="trait-box">
-              <p class="trait-lbl">Ideales</p>
+              <div class="trait-head"><p class="trait-lbl">Ideales</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_ideals', character.ideals || '')">✎</button></div>
+              <div v-if="isEditing('backstory_ideals')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
               <p class="trait-val">{{ character.ideals }}</p>
             </div>
             <div v-if="character.bonds" class="trait-box">
-              <p class="trait-lbl">Vínculos</p>
+              <div class="trait-head"><p class="trait-lbl">Vínculos</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_bonds', character.bonds || '')">✎</button></div>
+              <div v-if="isEditing('backstory_bonds')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
               <p class="trait-val">{{ character.bonds }}</p>
             </div>
             <div v-if="character.flaws" class="trait-box">
-              <p class="trait-lbl">Defectos</p>
+              <div class="trait-head"><p class="trait-lbl">Defectos</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_flaws', character.flaws || '')">✎</button></div>
+              <div v-if="isEditing('backstory_flaws')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
               <p class="trait-val">{{ character.flaws }}</p>
             </div>
           </div>
         </div>
         <div class="card mb-4" v-if="character.backstory">
-          <p class="section-title">Historia</p>
+          <div class="section-title-row"><p class="section-title">Historia</p><div class="mini-edit-actions"><button v-if="!isEditing('backstory_history')" type="button" class="icon-action edit" @click="startFieldEdit('backstory_history', character.backstory || '')">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
+          <div v-if="isEditing('backstory_history')" class="inline-editor"><textarea v-model="fieldDraft" rows="5"></textarea></div>
           <p style="
             font-size: 0.9rem;
             line-height: 1.7;
@@ -327,7 +351,8 @@
           </p>
         </div>
         <div class="card mb-4">
-          <p class="section-title">Apariencia</p>
+          <div class="section-title-row"><p class="section-title">Apariencia</p><div class="mini-edit-actions"><button v-if="!isEditing('backstory_appearance')" type="button" class="icon-action edit" @click="startFieldEdit('backstory_appearance', character.appearance_notes || '')">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
+          <div v-if="isEditing('backstory_appearance')" class="inline-editor"><textarea v-model="fieldDraft" rows="4"></textarea></div>
           <div class="appear-grid">
             <div v-for="f in visibleAppearanceFields" :key="f.key" class="appear-row">
               <span class="appear-lbl">{{ f.label }}</span>
@@ -344,7 +369,8 @@
           </p>
         </div>
         <div class="card" v-if="character.allies_organizations || character.faction">
-          <p class="section-title">Alianzas & Organizaciones</p>
+          <div class="section-title-row"><p class="section-title">Alianzas & Organizaciones</p><div class="mini-edit-actions"><button v-if="!isEditing('backstory_alliances')" type="button" class="icon-action edit" @click="startFieldEdit('backstory_alliances', character.allies_organizations || '')">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
+          <div v-if="isEditing('backstory_alliances')" class="inline-editor"><textarea v-model="fieldDraft" rows="4"></textarea></div>
           <p v-if="character.faction" class="badge badge-purple mb-2">
             {{ character.faction }}
           </p>
@@ -356,20 +382,9 @@
 
       <!-- ── PESTAÑA: Rasgos ── -->
       <div v-if="activeTab === 'features'" class="tab-content">
-        <div class="tab-edit-row" v-if="!isDmCampaignReader">
-          <button v-if="editingTab !== 'features'" type="button" class="edit-icon-btn" @click="startInlineEdit('features')" title="Editar rasgos">Editar</button>
-          <div v-else class="inline-actions">
-            <button type="button" class="btn btn-primary" @click="saveInlineEdit('features')">Guardar</button>
-            <button type="button" class="btn btn-secondary" @click="cancelInlineEdit">Cancelar</button>
-          </div>
-        </div>
-        <div v-if="editingTab === 'features'" class="card inline-editor">
-          <p class="section-title">Editar rasgos</p>
-          <label class="form-label">Un rasgo por linea</label>
-          <textarea v-model="editDraft.features_text" rows="5"></textarea>
-        </div>
         <div class="card mb-4" v-if="features.length">
-          <p class="section-title">Rasgos & Capacidades</p>
+          <div class="section-title-row"><p class="section-title">Rasgos & Capacidades</p><div class="mini-edit-actions"><button v-if="!isEditing('features_traits')" type="button" class="icon-action edit" @click="startFieldEdit('features_traits', (features || []).map(f => (typeof f === 'string' ? f : f?.name || '')).join('\n'))">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
+          <div v-if="isEditing('features_traits')" class="inline-editor"><textarea v-model="fieldDraft" rows="5"></textarea></div>
           <div v-for="(feat, i) in features" :key="i" class="feat-block">
             <p class="feat-name">{{ feat.name }}</p>
             <p class="feat-desc" v-if="feat.description">
@@ -378,7 +393,8 @@
           </div>
         </div>
         <div class="card" v-if="languages.length || otherProfs.length">
-          <p class="section-title">Competencias & Idiomas</p>
+          <div class="section-title-row"><p class="section-title">Competencias & Idiomas</p><div class="mini-edit-actions"><button v-if="!isEditing('features_competencies')" type="button" class="icon-action edit" @click="startFieldEdit('features_competencies', `${(languages || []).join(', ')}\n---\n${(otherProfs || []).join(', ')}`)">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
+          <div v-if="isEditing('features_competencies')" class="inline-editor"><textarea v-model="fieldDraft" rows="4"></textarea></div>
           <div class="lang-tags">
             <span v-for="l in languages" :key="l" class="badge badge-blue">{{
               l
@@ -394,12 +410,12 @@
       </div>
       </section>
     </div>
-    </div>
+  </div>
 
-    <div v-else class="loading-screen">
-      <div class="spinner"></div>
-      <span>Cargando ficha...</span>
-    </div>
+  <div v-else class="loading-screen">
+    <div class="spinner"></div>
+    <span>Cargando ficha...</span>
+  </div>
 </template>
 
 <script>
@@ -422,8 +438,8 @@ export default {
     return {
       character: null,
       activeTab: "skills",
-      editingTab: null,
-      editDraft: {},
+      fieldEditKey: null,
+      fieldDraft: "",
       ATTRIBUTES,
       SKILLS,
       tabs: [
@@ -562,74 +578,13 @@ export default {
     }
   },
   methods: {
-    startInlineEdit(section) {
-      this.editingTab = section;
-      const c = this.character || {};
-      const clone = (v) => JSON.parse(JSON.stringify(v ?? null));
-      if (section === "skills") {
-        this.editDraft = {
-          saving_throws_prof: clone(c.saving_throws_prof) || [],
-          skills_prof: clone(c.skills_prof) || [],
-          skills_expertise: clone(c.skills_expertise) || [],
-          languages_text: (Array.isArray(c.languages) ? c.languages : []).join(", "),
-          other_proficiencies_text: (Array.isArray(c.other_proficiencies) ? c.other_proficiencies : []).join(", ")
-        };
-      } else if (section === "combat") {
-        this.editDraft = {
-          hit_points_current: Number(c.hit_points_current || 0),
-          hit_points_max: Number(c.hit_points_max || 1),
-          hit_points_temp: Number(c.hit_points_temp || 0),
-          armor_class: Number(c.armor_class || 10),
-          initiative: Number(c.initiative || 0),
-          speed: Number(c.speed || 30),
-          proficiency_bonus: Number(c.proficiency_bonus || 2),
-          inspiration: Boolean(c.inspiration),
-          attacks_text: (Array.isArray(c.attacks_spellcasting) ? c.attacks_spellcasting : [])
-            .map(a => `${a.name || ""}|${a.bonus || ""}|${a.damage || ""}|${a.type || ""}`)
-            .join("\n"),
-          spellcasting_ability: c.spellcasting_ability || "",
-          spell_save_dc: c.spell_save_dc ?? "",
-          spell_attack_bonus: c.spell_attack_bonus ?? ""
-        };
-      } else if (section === "equipment") {
-        this.editDraft = {
-          copper_pieces: Number(c.copper_pieces || 0),
-          silver_pieces: Number(c.silver_pieces || 0),
-          electrum_pieces: Number(c.electrum_pieces || 0),
-          gold_pieces: Number(c.gold_pieces || 0),
-          platinum_pieces: Number(c.platinum_pieces || 0),
-          equipment_text: (Array.isArray(c.equipment) ? c.equipment : []).map(i => (typeof i === "string" ? i : i?.name || "")).filter(Boolean).join("\n"),
-          treasure: c.treasure || ""
-        };
-      } else if (section === "backstory") {
-        this.editDraft = {
-          personality_traits: c.personality_traits || "",
-          ideals: c.ideals || "",
-          bonds: c.bonds || "",
-          flaws: c.flaws || "",
-          backstory: c.backstory || "",
-          age: c.age || "",
-          height: c.height || "",
-          weight: c.weight || "",
-          eyes: c.eyes || "",
-          skin: c.skin || "",
-          hair: c.hair || "",
-          appearance_notes: c.appearance_notes || "",
-          faction: c.faction || "",
-          allies_organizations: c.allies_organizations || ""
-        };
-      } else if (section === "features") {
-        this.editDraft = {
-          features_text: (Array.isArray(c.features_traits) ? c.features_traits : [])
-            .map(f => (typeof f === "string" ? f : f?.name || ""))
-            .filter(Boolean)
-            .join("\n")
-        };
-      }
+    startFieldEdit(key, initialValue) {
+      this.fieldEditKey = key;
+      this.fieldDraft = initialValue ?? "";
     },
-    cancelInlineEdit() {
-      this.editingTab = null;
-      this.editDraft = {};
+    cancelFieldEdit() {
+      this.fieldEditKey = null;
+      this.fieldDraft = "";
     },
     toList(value) {
       return String(value || "")
@@ -637,22 +592,47 @@ export default {
         .map(v => v.trim())
         .filter(Boolean);
     },
+    isEditing(key) {
+      return this.fieldEditKey === key;
+    },
     async persistCharacterPatch(patch) {
       const { data } = await charactersAPI.updateFields(this.id, patch);
       this.character = data?.character || { ...this.character, ...patch };
     },
-    async saveInlineEdit(section) {
+    async saveFieldEdit() {
       try {
-        if (section === "skills") {
+        const key = this.fieldEditKey;
+        const value = this.fieldDraft;
+        if (!key) return;
+
+        if (key === "state_hp") {
           await this.persistCharacterPatch({
-            saving_throws_prof: this.editDraft.saving_throws_prof || [],
-            skills_prof: this.editDraft.skills_prof || [],
-            skills_expertise: this.editDraft.skills_expertise || [],
-            languages: this.toList(this.editDraft.languages_text),
-            other_proficiencies: this.toList(this.editDraft.other_proficiencies_text)
+            hit_points_current: Number(value || 0)
           });
-        } else if (section === "combat") {
-          const attacks = String(this.editDraft.attacks_text || "")
+        } else if (key === "state_ac") {
+          await this.persistCharacterPatch({ armor_class: Number(value || 0) });
+        } else if (key === "state_ini") {
+          await this.persistCharacterPatch({ initiative: Number(value || 0) });
+        } else if (key === "state_speed") {
+          await this.persistCharacterPatch({ speed: Number(value || 0) });
+        } else if (key === "state_prof") {
+          await this.persistCharacterPatch({ proficiency_bonus: Number(value || 0) });
+        } else if (key === "state_insp") {
+          await this.persistCharacterPatch({ inspiration: String(value).toLowerCase() === "si" || String(value).toLowerCase() === "true" });
+        } else if (key === "state_passive") {
+          await this.persistCharacterPatch({ passive_perception: Number(value || 0) });
+        } else if (key === "state_xp") {
+          await this.persistCharacterPatch({ experience_points: Number(value || 0) });
+        } else if (key === "skills_saves") {
+          await this.persistCharacterPatch({ saving_throws_prof: this.toList(value) });
+        } else if (key === "skills_skills") {
+          const [prof = "", expertise = ""] = String(value).split("\n---\n");
+          await this.persistCharacterPatch({
+            skills_prof: this.toList(prof),
+            skills_expertise: this.toList(expertise)
+          });
+        } else if (key === "combat_attacks") {
+          const attacks = String(value || "")
             .split("\n")
             .map((line) => line.trim())
             .filter(Boolean)
@@ -660,44 +640,55 @@ export default {
               const [name = "", bonus = "", damage = "", type = ""] = line.split("|");
               return { name: name.trim(), bonus: bonus.trim(), damage: damage.trim(), type: type.trim() };
             });
+          await this.persistCharacterPatch({ attacks_spellcasting: attacks });
+        } else if (key === "combat_spellcasting") {
+          const [ability = "", saveDc = "", atkBonus = ""] = String(value).split("\n");
           await this.persistCharacterPatch({
-            hit_points_current: Number(this.editDraft.hit_points_current || 0),
-            hit_points_max: Math.max(1, Number(this.editDraft.hit_points_max || 1)),
-            hit_points_temp: Number(this.editDraft.hit_points_temp || 0),
-            armor_class: Number(this.editDraft.armor_class || 0),
-            initiative: Number(this.editDraft.initiative || 0),
-            speed: Number(this.editDraft.speed || 0),
-            proficiency_bonus: Number(this.editDraft.proficiency_bonus || 2),
-            inspiration: Boolean(this.editDraft.inspiration),
-            attacks_spellcasting: attacks,
-            spellcasting_ability: this.editDraft.spellcasting_ability || "",
-            spell_save_dc: this.editDraft.spell_save_dc === "" ? null : Number(this.editDraft.spell_save_dc),
-            spell_attack_bonus: this.editDraft.spell_attack_bonus === "" ? null : Number(this.editDraft.spell_attack_bonus)
+            spellcasting_ability: ability.trim() || null,
+            spell_save_dc: saveDc.trim() ? Number(saveDc.trim()) : null,
+            spell_attack_bonus: atkBonus.trim() ? Number(atkBonus.trim()) : null
           });
-        } else if (section === "equipment") {
+        } else if (key === "combat_spells") {
+          const parsed = JSON.parse(String(value || "{}"));
+          await this.persistCharacterPatch({ spells: parsed });
+        } else if (key === "equipment_items") {
           await this.persistCharacterPatch({
-            copper_pieces: Number(this.editDraft.copper_pieces || 0),
-            silver_pieces: Number(this.editDraft.silver_pieces || 0),
-            electrum_pieces: Number(this.editDraft.electrum_pieces || 0),
-            gold_pieces: Number(this.editDraft.gold_pieces || 0),
-            platinum_pieces: Number(this.editDraft.platinum_pieces || 0),
-            equipment: String(this.editDraft.equipment_text || "").split("\n").map(v => v.trim()).filter(Boolean),
-            treasure: this.editDraft.treasure || ""
+            equipment: String(value || "").split("\n").map(v => v.trim()).filter(Boolean)
           });
-        } else if (section === "backstory") {
-          await this.persistCharacterPatch({ ...this.editDraft });
-        } else if (section === "features") {
-          const features = String(this.editDraft.features_text || "")
+        } else if (key === "equipment_treasure") {
+          await this.persistCharacterPatch({ treasure: String(value || "") });
+        } else if (key === "backstory_traits") {
+          await this.persistCharacterPatch({ personality_traits: String(value || "") });
+        } else if (key === "backstory_ideals") {
+          await this.persistCharacterPatch({ ideals: String(value || "") });
+        } else if (key === "backstory_bonds") {
+          await this.persistCharacterPatch({ bonds: String(value || "") });
+        } else if (key === "backstory_flaws") {
+          await this.persistCharacterPatch({ flaws: String(value || "") });
+        } else if (key === "backstory_history") {
+          await this.persistCharacterPatch({ backstory: String(value || "") });
+        } else if (key === "backstory_appearance") {
+          await this.persistCharacterPatch({ appearance_notes: String(value || "") });
+        } else if (key === "backstory_alliances") {
+          await this.persistCharacterPatch({ allies_organizations: String(value || "") });
+        } else if (key === "features_traits") {
+          const features = String(value || "")
             .split("\n")
             .map(v => v.trim())
             .filter(Boolean)
             .map(name => ({ name, description: "" }));
           await this.persistCharacterPatch({ features_traits: features });
+        } else if (key === "features_competencies") {
+          const [langs = "", profs = ""] = String(value).split("\n---\n");
+          await this.persistCharacterPatch({
+            languages: this.toList(langs),
+            other_proficiencies: this.toList(profs)
+          });
         }
         this.showToast("Seccion actualizada", "success");
-        this.cancelInlineEdit();
+        this.cancelFieldEdit();
       } catch {
-        this.showToast("No se pudo guardar la seccion", "error");
+        this.showToast("No se pudo guardar el campo", "error");
       }
     },
     fmtMod(v) {
@@ -866,6 +857,17 @@ normalizeSpells(value) {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.state-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+}
+.state-edit {
+  font-size: 0.62rem;
+  color: var(--text-dim);
+}
 .state-val {
   font-family: var(--font-title);
   font-size: 0.9rem;
@@ -913,11 +915,6 @@ normalizeSpells(value) {
   flex-direction: column;
   gap: 0.65rem;
 }
-.tab-edit-row {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: -0.25rem;
-}
 .inline-actions {
   display: flex;
   gap: 0.4rem;
@@ -939,26 +936,45 @@ normalizeSpells(value) {
   color: var(--text-secondary);
   font-size: 0.82rem;
 }
-.edit-icon-btn {
+.section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+.mini-edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.icon-action {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   color: var(--text-muted);
   border-radius: 999px;
-  width: 2rem;
-  height: 2rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.78rem;
+  line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
 }
-.edit-icon-btn:hover {
-  border-color: var(--gold-dark);
-  color: var(--gold-light);
+.icon-action:hover { border-color: var(--gold-dark); color: var(--gold-light); }
+.icon-action.save { color: #4ade80; }
+.icon-action.cancel { color: #f87171; }
+.inline-state-editor {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.45rem;
 }
-.edit-icon-btn svg {
-  width: 1rem;
-  height: 1rem;
-  fill: currentColor;
+.trait-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
 }
 
 .mb-4 {
