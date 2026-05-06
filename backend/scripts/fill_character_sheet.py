@@ -562,14 +562,14 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
         for annot_ref in annots:
             annot = annot_ref.get_object()
             title = as_str(annot.get("/T", ""))
-            if title.strip() in ("Imagen1_af_image", "Imagen2_af_image"):
+            if title.strip() == "Imagen1_af_image":
                 rect = annot.get("/Rect")
                 if rect and len(rect) == 4:
                     target_rect = [float(rect[0]), float(rect[1]), float(rect[2]), float(rect[3])]
                     target_rects.append((title.strip(), target_rect))
                     print(f"[styled-pdf][image] target field found: {title.strip()} rect={target_rect}", file=sys.stderr)
     if not target_rects:
-        print("[styled-pdf][image] no image field found (Imagen1_af_image/Imagen2_af_image)", file=sys.stderr)
+        print("[styled-pdf][image] no image field found (Imagen1_af_image)", file=sys.stderr)
         return
 
     packet = BytesIO()
@@ -596,7 +596,7 @@ def add_profile_image(reader: PdfReader, writer: PdfWriter, char: Dict[str, Any]
         for annot_ref in writer_annots:
             annot = annot_ref.get_object()
             title = as_str(annot.get("/T", "")).strip()
-            if title in ("Imagen1_af_image", "Imagen2_af_image"):
+            if title == "Imagen1_af_image":
                 removed += 1
                 continue
             filtered_annots.append(annot_ref)
