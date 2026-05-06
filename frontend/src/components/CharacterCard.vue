@@ -49,7 +49,7 @@
 <script>
 import { CLASSES } from "../services/dndData.js";
 import { charactersAPI } from "../services/api.js";
-import { exportCharacterPdf } from "../services/pdfExport.js";
+import { exportCharacterPdfWithOption } from "../services/pdfExport.js";
 
 export default {
   name: "CharacterCard",
@@ -98,7 +98,7 @@ export default {
 
       try {
         const { data } = await charactersAPI.getFull(id);
-        exportCharacterPdf(data);
+        await exportCharacterPdfWithOption(data);
       } catch (error) {
         console.error(error);
         alert("No se pudo generar el PDF del personaje.");

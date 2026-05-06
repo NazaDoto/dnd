@@ -206,7 +206,7 @@
 
 <script>
 import { dmAPI } from '../services/api.js'
-import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
+import { exportCampaignPdf, exportCharacterPdfWithOption } from '../services/pdfExport.js'
 
 const emptyForm = () => ({
   name: '',
@@ -326,8 +326,8 @@ export default {
     downloadPdf() {
       exportCampaignPdf(this.buildPayload(), this.roster.active)
     },
-    pdfOne(row) {
-      exportCharacterPdf(row)
+    async pdfOne(row) {
+      await exportCharacterPdfWithOption(row)
     },
     addNpc() {
       this.npcList.push({ name: '', role: '', notes: '' })

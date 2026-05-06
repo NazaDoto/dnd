@@ -109,7 +109,7 @@ function safeArray(value) {
     return []
 }
 
-export function exportCharacterPdf(character) {
+export function exportCharacterPdfPlain(character) {
     const t = pdfTheme()
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
     let y = 0
@@ -158,6 +158,149 @@ export function exportCharacterPdf(character) {
     addFooter(doc, character.name || 'Personaje')
     const filename = `${String(character.name || 'personaje').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')}.pdf`
     doc.save(filename)
+}
+
+function parseMaybeJson(value, fallback) {
+    if (value === null || value === undefined || value === '') return fallback
+    if (typeof value === 'string') {
+        try {
+            return JSON.parse(value)
+        } catch {
+            return fallback
+        }
+    }
+    return value
+}
+
+function normalizeAttacks(character) {
+    const attacks = parseMaybeJson(character.attacks_spellcasting, [])
+    return Array.isArray(attacks) ? attacks : []
+}
+
+function normalizeSpells(character) {
+    const base = {
+        cantrips: [],
+        level1: { slots: 0, slots_used: 0, spells: [] },
+        level2: { slots: 0, slots_used: 0, spells: [] },
+        level3: { slots: 0, slots_used: 0, spells: [] },
+        level4: { slots: 0, slots_used: 0, spells: [] },
+        level5: { slots: 0, slots_used: 0, spells: [] },
+        level6: { slots: 0, slots_used: 0, spells: [] },
+        level7: { slots: 0, slots_used: 0, spells: [] },
+        level8: { slots: 0, slots_used: 0, spells: [] },
+        level9: { slots: 0, slots_used: 0, spells: [] },
+    }
+    const parsed = parseMaybeJson(character.spells, base)
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return base
+    const out = { ...base, ...parsed }
+    for (let i = 1; i <= 9; i++) {
+        const k = `level${i}`
+        out[k] = {
+            slots: Number(parsed?.[k]?.slots || 0),
+            slots_used: Number(parsed?.[k]?.slots_used || 0),
+            spells: Array.isArray(parsed?.[k]?.spells) ? parsed[k].spells : []
+        }
+    }
+    out.cantrips = Array.isArray(parsed.cantrips) ? parsed.cantrips : []
+    return out
+}
+
+function pickPdfFormat() {
+    const response = window.prompt(
+        'Elegí formato de PDF:\n1 = Común (texto simple)\n2 = Estilizado (hoja D&D)\n\nEscribí 1 o 2',
+        '1'
+    )
+    if (response === null) return null
+    return String(response).trim() === '2' ? 'styled' : 'plain'
+}
+
+function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHeight = 4.2) {
+    const safe = sanitize(text, '')
+    if (!safe) return y
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(size)
+    doc.setTextColor(...color)
+    const lines = doc.splitTextToSize(safe, width)
+    lines.forEach((line) => {
+        doc.text(line, x, y)
+        y += lineHeight
+    })
+    return y + 1.5
+}
+
+export async function exportCharacterPdfStyled(character) {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const t = pdfTheme()
+    const attacks = normalizeAttacks(character)
+    const spells = normalizeSpells(character)
+
+    doc.setFillColor(24, 20, 16)
+    doc.rect(0, 0, 210, 297, 'F')
+    doc.setFillColor(248, 244, 235)
+    doc.roundedRect(8, 8, 194, 281, 3, 3, 'F')
+
+    setFont(doc, 'bold', 20, [60, 44, 20])
+    doc.text(sanitize(character.name || 'Personaje'), 14, 20)
+    setFont(doc, 'normal', 10, [95, 85, 70])
+    doc.text(`${sanitize(character.race)} · ${classLabel(character.class)} · Nivel ${character.level || 1}`, 14, 27)
+    doc.text(`XP ${character.experience_points || 0} · ${sanitize(character.alignment, '')}`, 14, 33)
+
+    let y = 42
+    y = addSection(doc, 'Atributos y combate', y)
+    y = addTwoCols(doc, [
+        ['FUE', `${character.strength || 10} (${formatModifier(getModifier(character.strength || 10))})`],
+        ['DES', `${character.dexterity || 10} (${formatModifier(getModifier(character.dexterity || 10))})`],
+        ['CON', `${character.constitution || 10} (${formatModifier(getModifier(character.constitution || 10))})`],
+        ['INT', `${character.intelligence || 10} (${formatModifier(getModifier(character.intelligence || 10))})`],
+        ['SAB', `${character.wisdom || 10} (${formatModifier(getModifier(character.wisdom || 10))})`],
+        ['CAR', `${character.charisma || 10} (${formatModifier(getModifier(character.charisma || 10))})`],
+        ['PV', `${character.hit_points_current || 0}/${character.hit_points_max || 0}`],
+        ['CA', `${character.armor_class || 10}`],
+        ['Iniciativa', formatModifier(character.initiative || 0)],
+        ['Velocidad', `${character.speed || 0} ft`],
+        ['PB', formatModifier(character.proficiency_bonus || 2)],
+        ['Percep. pasiva', `${character.passive_perception || 10}`],
+    ], y)
+
+    y = addSection(doc, 'Ataques y conjuros', y + 1)
+    y = addParagraph(doc, `Ataques: ${attacks.map((a) => `${a.name || '-'} (${a.bonus || ''}, ${a.damage || ''} ${a.type || ''})`).join(' · ') || 'Sin ataques'}`, 16, y, 176, { fontSize: 8.4 })
+    y = addParagraph(doc, `Conjuros (trucos): ${spells.cantrips.join(', ') || '-'}`, 16, y, 176, { fontSize: 8.4 })
+    y = addParagraph(doc, `Habilidad de lanzamiento: ${sanitize(character.spellcasting_ability, '-')} · CD ${character.spell_save_dc || '-'} · Ataque ${character.spell_attack_bonus || '-'}`, 16, y, 176, { fontSize: 8.4 })
+
+    y = addSection(doc, 'Trasfondo y descripcion', y + 1)
+    y = addParagraph(doc, `Rasgos: ${sanitize(character.personality_traits, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Ideales: ${sanitize(character.ideals, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Vinculos: ${sanitize(character.bonds, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Defectos: ${sanitize(character.flaws, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Historia: ${sanitize(character.backstory, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Apariencia: ${sanitize(character.appearance_notes, '-')}`, 16, y, 176, { fontSize: 8.2 })
+
+    y = addSection(doc, 'Equipo, rasgos y recursos', y + 1)
+    y = addParagraph(doc, `Equipo: ${safeArray(character.equipment).map((i) => (typeof i === 'string' ? i : i?.name || '')).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Rasgos y capacidades: ${safeArray(character.features_traits).map((f) => (typeof f === 'string' ? f : f?.name || '')).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Idiomas: ${safeArray(character.languages).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Otras competencias: ${safeArray(character.other_proficiencies).join(', ') || '-'}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Monedas: CP ${character.copper_pieces || 0} · SP ${character.silver_pieces || 0} · EP ${character.electrum_pieces || 0} · GP ${character.gold_pieces || 0} · PP ${character.platinum_pieces || 0}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Tesoro: ${sanitize(character.treasure, '-')}`, 16, y, 176, { fontSize: 8.2 })
+    y = addParagraph(doc, `Alianzas: ${sanitize(character.allies_organizations, '-')} · Faccion: ${sanitize(character.faction, '-')}`, 16, y, 176, { fontSize: 8.2 })
+
+    addFooter(doc, `${character.name || 'Personaje'} · Estilizado`)
+    const filename = `${String(character.name || 'personaje').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-_]/g, '')}-estilizado.pdf`
+    doc.save(filename)
+}
+
+export async function exportCharacterPdf(character, opts = {}) {
+    const format = opts.format || 'plain'
+    if (format === 'styled') {
+        return exportCharacterPdfStyled(character)
+    }
+    return exportCharacterPdfPlain(character)
+}
+
+export async function exportCharacterPdfWithOption(character) {
+    const format = pickPdfFormat()
+    if (!format) return
+    return exportCharacterPdf(character, { format })
 }
 
 export function exportCampaignPdf(campaign, linkedCharacters = []) {

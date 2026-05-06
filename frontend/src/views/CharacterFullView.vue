@@ -624,7 +624,7 @@
 
 <script>
 import { charactersAPI, dmAPI } from "../services/api.js";
-import { exportCharacterPdf } from "../services/pdfExport.js";
+import { exportCharacterPdfWithOption } from "../services/pdfExport.js";
 import CharacterNotesPanel from "../components/CharacterNotesPanel.vue";
 import {
   ATTRIBUTES,
@@ -1063,8 +1063,8 @@ export default {
       });
       return fd;
     },
-    downloadDmPdf() {
-      if (this.character) exportCharacterPdf(this.character);
+    async downloadDmPdf() {
+      if (this.character) await exportCharacterPdfWithOption(this.character);
     },
     hasSavingThrow(attr) {
       return (this.character?.saving_throws_prof || []).includes(attr);
