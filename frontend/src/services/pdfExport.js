@@ -233,7 +233,6 @@ export async function exportCharacterPdfStyled(character) {
     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
     const coordSources = [
-        '/pdf/5E_CharacterSheetFillable.pdf',
         '/pdf/5E_CharacterSheet_Fillable.pdf'
     ]
     let sourcePdfDoc = null
@@ -279,18 +278,31 @@ export async function exportCharacterPdfStyled(character) {
     const targetPages = pdfDoc.getPages()
     const black = rgb(0.08, 0.08, 0.08)
 
+    const getPageBox = (page) => {
+        try {
+            const crop = page.getCropBox()
+            if (crop?.width && crop?.height) return crop
+        } catch { }
+        return page.getMediaBox()
+    }
+
+    const FIELD_OFFSET_X = 0
+    const FIELD_OFFSET_Y = 0
+
     const projectRect = (srcRect, pageIndex) => {
         const sp = sourcePages[pageIndex]
         const tp = targetPages[pageIndex]
-        const sw = sp.getWidth()
-        const sh = sp.getHeight()
-        const tw = tp.getWidth()
-        const th = tp.getHeight()
+        const sb = getPageBox(sp)
+        const tb = getPageBox(tp)
+        const relX = (srcRect.x - sb.x) / sb.width
+        const relY = (srcRect.y - sb.y) / sb.height
+        const relW = srcRect.width / sb.width
+        const relH = srcRect.height / sb.height
         return {
-            x: (srcRect.x / sw) * tw,
-            y: (srcRect.y / sh) * th,
-            w: (srcRect.width / sw) * tw,
-            h: (srcRect.height / sh) * th
+            x: tb.x + (relX * tb.width) + FIELD_OFFSET_X,
+            y: tb.y + (relY * tb.height) + FIELD_OFFSET_Y,
+            w: relW * tb.width,
+            h: relH * tb.height
         }
     }
 
