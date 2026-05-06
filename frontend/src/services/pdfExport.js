@@ -233,6 +233,17 @@ export async function exportCharacterPdfStyled(character) {
     const page2 = pages[1]
     const page3 = pages[2]
     const black = rgb(0.08, 0.08, 0.08)
+    const BASE_W = 612
+    const BASE_H = 792
+    const TRIM_X = 14.1732
+    const TRIM_Y = 14.1732
+    const TRIM_W = 594
+    const TRIM_H = 783
+    const scaleX = TRIM_W / BASE_W
+    const scaleY = TRIM_H / BASE_H
+    const tx = (x) => TRIM_X + (x * scaleX)
+    const ty = (y) => TRIM_Y + (y * scaleY)
+    const ts = (s) => s * ((scaleX + scaleY) / 2)
 
     const toPdfSafe = (value) => {
         const raw = sanitize(value, '')
@@ -244,7 +255,7 @@ export async function exportCharacterPdfStyled(character) {
     const draw = (page, text, x, y, size = 9, isBold = false) => {
         const val = toPdfSafe(text)
         if (!val) return
-        page.drawText(val, { x, y, size, font: isBold ? bold : font, color: black })
+        page.drawText(val, { x: tx(x), y: ty(y), size: ts(size), font: isBold ? bold : font, color: black })
     }
     const wrap = (page, text, x, y, width, size = 8.2, line = 9.2) => {
         const val = toPdfSafe(text)
@@ -252,18 +263,21 @@ export async function exportCharacterPdfStyled(character) {
         const words = val.split(/\s+/)
         let current = ''
         let yy = y
+        const fontSize = ts(size)
+        const wrapWidth = width * scaleX
+        const lineStep = line * scaleY
         for (const w of words) {
             const test = current ? `${current} ${w}` : w
-            if (font.widthOfTextAtSize(test, size) > width) {
+            if (font.widthOfTextAtSize(test, fontSize) > wrapWidth) {
                 draw(page, current, x, yy, size)
-                yy -= line
+                yy -= lineStep
                 current = w
             } else {
                 current = test
             }
         }
         if (current) draw(page, current, x, yy, size)
-        return yy - line
+        return yy - lineStep
     }
 
     const skills = safeArray(character.skills_prof)
