@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf'
-import { PDFDocument } from 'pdf-lib'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 import { CLASSES, ATTRIBUTES, getModifier, formatModifier } from './dndData.js'
 
 function pdfTheme() {
@@ -221,43 +221,42 @@ function drawWrapped(doc, text, x, y, size, width, color = [35, 35, 35], lineHei
 }
 
 export async function exportCharacterPdfStyled(character) {
-    const templateUrl = '/pdf/5E_CharacterSheet_Fillable.pdf'
+    const templateUrl = '/pdf/dnd_blankcharactersheet_es.pdf'
     const res = await fetch(templateUrl)
     if (!res.ok) throw new Error('Plantilla PDF no encontrada')
     const bytes = await res.arrayBuffer()
     const pdfDoc = await PDFDocument.load(bytes)
-    const form = pdfDoc.getForm()
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+    const pages = pdfDoc.getPages()
+    const page1 = pages[0]
+    const page2 = pages[1]
+    const page3 = pages[2]
+    const black = rgb(0.08, 0.08, 0.08)
 
-    const fields = form.getFields()
-    const norm = (v) => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-    const fieldNames = fields.map((f) => f.getName())
-    const fieldNorm = fieldNames.map((n) => ({ raw: n, norm: norm(n) }))
-    const used = new Set()
-
-    const findByHints = (hints = []) => {
-        const normalizedHints = hints.map(norm).filter(Boolean)
-        let best = null
-        for (const f of fieldNorm) {
-            const score = normalizedHints.reduce((acc, h) => acc + (f.norm.includes(h) ? 1 : 0), 0)
-            if (!score) continue
-            const penalty = used.has(f.raw) ? 0.25 : 0
-            const finalScore = score - penalty
-            if (!best || finalScore > best.score) best = { name: f.raw, score: finalScore }
-        }
-        return best?.name || null
+    const draw = (page, text, x, y, size = 9, isBold = false) => {
+        const val = sanitize(text, '')
+        if (!val) return
+        page.drawText(val, { x, y, size, font: isBold ? bold : font, color: black })
     }
-
-    const setText = (hints, value) => {
-        const name = Array.isArray(hints) ? findByHints(hints) : findByHints([hints])
-        if (!name) return false
-        const val = sanitize(value, '')
-        try {
-            form.getTextField(name).setText(val)
-            used.add(name)
-            return true
-        } catch {
-            return false
+    const wrap = (page, text, x, y, width, size = 8.2, line = 9.2) => {
+        const val = sanitize(text, '')
+        if (!val) return y
+        const words = val.split(/\s+/)
+        let current = ''
+        let yy = y
+        for (const w of words) {
+            const test = current ? `${current} ${w}` : w
+            if (font.widthOfTextAtSize(test, size) > width) {
+                draw(page, current, x, yy, size)
+                yy -= line
+                current = w
+            } else {
+                current = test
+            }
         }
+        if (current) draw(page, current, x, yy, size)
+        return yy - line
     }
 
     const skills = safeArray(character.skills_prof)
@@ -266,79 +265,94 @@ export async function exportCharacterPdfStyled(character) {
     const attacks = normalizeAttacks(character)
     const spells = normalizeSpells(character)
 
-    setText(['character', 'name'], character.name)
-    setText(['class', 'level'], `${classLabel(character.class)} ${character.level || 1}`)
-    setText(['background'], character.background)
-    setText(['race'], character.race)
-    setText(['experience', 'xp'], String(character.experience_points || 0))
-    setText(['alignment'], character.alignment)
-    setText(['player', 'name'], character.player_username || '')
+    // Pagina 1
+    draw(page1, character.name, 38, 742, 11, true)
+    draw(page1, `${classLabel(character.class)} ${character.level || 1}`, 38, 775, 9)
+    draw(page1, character.background, 165, 775, 9)
+    draw(page1, character.race, 327, 775, 9)
+    draw(page1, character.alignment, 489, 775, 9)
+    draw(page1, String(character.experience_points || 0), 548, 775, 9)
 
-    setText(['strength', 'score'], String(character.strength || 10))
-    setText(['dexterity', 'score'], String(character.dexterity || 10))
-    setText(['constitution', 'score'], String(character.constitution || 10))
-    setText(['intelligence', 'score'], String(character.intelligence || 10))
-    setText(['wisdom', 'score'], String(character.wisdom || 10))
-    setText(['charisma', 'score'], String(character.charisma || 10))
+    const scorePos = { strength: [70, 638], dexterity: [70, 570], constitution: [70, 502], intelligence: [70, 434], wisdom: [70, 365], charisma: [70, 297] }
+    ATTRIBUTES.forEach((attr) => {
+        const [x, y] = scorePos[attr.key]
+        const score = Number(character[attr.key] || 10)
+        draw(page1, String(score), x, y, 14, true)
+        draw(page1, formatModifier(getModifier(score)), x - 2, y - 26, 10)
+    })
+    draw(page1, String(character.armor_class || 10), 245, 602, 13, true)
+    draw(page1, formatModifier(character.initiative || 0), 307, 602, 11, true)
+    draw(page1, String(character.speed || 0), 370, 602, 11, true)
+    draw(page1, String(character.hit_points_max || 0), 482, 664, 11)
+    draw(page1, String(character.hit_points_current || 0), 482, 602, 12, true)
+    draw(page1, String(character.hit_points_temp || 0), 482, 560, 10)
+    draw(page1, formatModifier(character.proficiency_bonus || 2), 244, 512, 11, true)
+    draw(page1, character.inspiration ? 'X' : '', 244, 456, 11, true)
+    draw(page1, String(character.passive_perception || 10), 243, 242, 11, true)
 
-    setText(['armor', 'class'], String(character.armor_class || 10))
-    setText(['INITIATIVE'], formatModifier(character.initiative || 0))
-    setText(['SPEED'], String(character.speed || 0))
-    setText(['hit', 'point', 'maximum'], String(character.hit_points_max || 0))
-    setText(['current', 'hit', 'points'], String(character.hit_points_current || 0))
-    setText(['temporary', 'hit', 'points'], String(character.hit_points_temp || 0))
-    setText(['proficiency', 'bonus'], formatModifier(character.proficiency_bonus || 2))
-    setText(['INSPIRATION'], character.inspiration ? 'X' : '')
-    setText(['passive', 'perception'], String(character.passive_perception || 10))
+    draw(page1, String(character.copper_pieces || 0), 82, 125, 9)
+    draw(page1, String(character.silver_pieces || 0), 82, 110, 9)
+    draw(page1, String(character.electrum_pieces || 0), 82, 95, 9)
+    draw(page1, String(character.gold_pieces || 0), 82, 80, 9)
+    draw(page1, String(character.platinum_pieces || 0), 82, 65, 9)
 
-    setText(['CP'], String(character.copper_pieces || 0))
-    setText(['SP'], String(character.silver_pieces || 0))
-    setText(['EP'], String(character.electrum_pieces || 0))
-    setText(['GP'], String(character.gold_pieces || 0))
-    setText(['PP'], String(character.platinum_pieces || 0))
+    const equipment = safeArray(character.equipment).map((i) => (typeof i === 'string' ? i : i?.name || '')).filter(Boolean).join(', ')
+    wrap(page1, equipment, 138, 154, 155, 8.2, 8.6)
+    const profsAndLangs = [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', ')
+    wrap(page1, profsAndLangs, 303, 154, 240, 8.2, 8.6)
+    wrap(page1, safeArray(character.features_traits).map((f) => (typeof f === 'string' ? f : f?.name || '')).join(', '), 326, 238, 230, 8.1, 8.4)
+    let ay = 352
+    attacks.slice(0, 3).forEach((a) => {
+        draw(page1, a.name || '', 326, ay, 8)
+        draw(page1, a.bonus || '', 448, ay, 8)
+        draw(page1, `${a.damage || ''} ${a.type || ''}`.trim(), 490, ay, 8)
+        ay -= 20
+    })
 
-    const skillMap = [
-        ['acrobatics', 'Acrobatics (Dex)'], ['animal_handling', 'Animal Handling (Wis)'], ['arcana', 'Arcana (Int)'],
-        ['athletics', 'Athletics (Str)'], ['deception', 'Deception (Cha)'], ['history', 'History (Int)'],
-        ['insight', 'Insight (Wis)'], ['intimidation', 'Intimidation (Cha)'], ['investigation', 'Investigation (Int)'],
-        ['medicine', 'Medicine (Wis)'], ['nature', 'Nature (Int)'], ['perception', 'Perception (Wis)'],
-        ['performance', 'Performance (Cha)'], ['persuasion', 'Persuasion (Cha)'], ['religion', 'Religion (Int)'],
-        ['sleight_of_hand', 'Sleight of Hand (Dex)'], ['stealth', 'Stealth (Dex)'], ['survival', 'Survival (Wis)'],
-    ]
-    for (const [k, n] of skillMap) setText([n], expertise.includes(k) ? 'E' : skills.includes(k) ? 'P' : '')
-    const saveMap = [['strength', 'STRENGTH'], ['dexterity', 'DEXTERITY'], ['constitution', 'CONSTITUTION'], ['intelligence', 'INTELLIGENCE'], ['wisdom', 'WISDOM'], ['charisma', 'CHARISMA']]
-    for (const [k, n] of saveMap) setText([n], saves.includes(k) ? 'P' : '')
+    // Marcas de salvaciones/habilidades
+    const saveY = { strength: 470, dexterity: 452, constitution: 434, intelligence: 416, wisdom: 398, charisma: 380 }
+    Object.keys(saveY).forEach((k) => draw(page1, saves.includes(k) ? '●' : '', 203, saveY[k], 8))
+    const skillY = {
+        acrobatics: 344, animal_handling: 326, arcana: 308, athletics: 290, deception: 272, history: 254,
+        insight: 236, intimidation: 218, investigation: 200, medicine: 182, nature: 164, perception: 146,
+        performance: 128, persuasion: 110, religion: 92, sleight_of_hand: 74, stealth: 56, survival: 38
+    }
+    Object.keys(skillY).forEach((k) => {
+        const mark = expertise.includes(k) ? '◆' : skills.includes(k) ? '●' : ''
+        draw(page1, mark, 203, skillY[k], 7.5)
+    })
 
-    setText(['equipment'], safeArray(character.equipment).map((i) => typeof i === 'string' ? i : i?.name || '').filter(Boolean).join(', '))
-    setText(['other', 'proficiencies', 'languages'], [...safeArray(character.other_proficiencies), ...safeArray(character.languages)].join(', '))
-    setText(['features', 'traits'], safeArray(character.features_traits).map((f) => typeof f === 'string' ? f : f?.name || '').join(', '))
-    setText(['attacks', 'spellcasting'], attacks.map((a) => `${a.name || ''} ${a.bonus || ''} ${a.damage || ''} ${a.type || ''}`.trim()).join('\n'))
+    // Pagina 2
+    draw(page2, character.name, 38, 774, 10, true)
+    draw(page2, character.age, 66, 735, 9)
+    draw(page2, character.height, 160, 735, 9)
+    draw(page2, character.weight, 248, 735, 9)
+    draw(page2, character.eyes, 350, 774, 9)
+    draw(page2, character.skin, 350, 735, 9)
+    draw(page2, character.hair, 510, 735, 9)
+    wrap(page2, character.personality_traits, 38, 505, 250, 8.2, 8.8)
+    wrap(page2, character.ideals, 38, 420, 250, 8.2, 8.8)
+    wrap(page2, character.bonds, 38, 336, 250, 8.2, 8.8)
+    wrap(page2, character.flaws, 38, 252, 250, 8.2, 8.8)
+    wrap(page2, character.backstory, 305, 640, 255, 8.1, 8.5)
+    wrap(page2, character.appearance_notes, 305, 410, 255, 8.1, 8.5)
+    wrap(page2, safeArray(character.features_traits).map((f) => (typeof f === 'string' ? f : f?.name || '')).join(', '), 305, 185, 255, 8.1, 8.5)
+    wrap(page2, character.allies_organizations, 38, 160, 250, 8.2, 8.8)
+    wrap(page2, character.treasure, 38, 70, 250, 8.2, 8.8)
 
-    setText(['personality', 'traits'], character.personality_traits)
-    setText(['IDEALS'], character.ideals)
-    setText(['BONDS'], character.bonds)
-    setText(['FLAWS'], character.flaws)
-    setText(['character', 'backstory'], character.backstory)
-    setText(['character', 'appearance'], character.appearance_notes)
-    setText(['allies', 'organizations'], character.allies_organizations)
-    setText(['TREASURE'], character.treasure)
-    setText(['AGE'], character.age)
-    setText(['HEIGHT'], character.height)
-    setText(['WEIGHT'], character.weight)
-    setText(['EYES'], character.eyes)
-    setText(['SKIN'], character.skin)
-    setText(['HAIR'], character.hair)
-
-    setText(['spellcasting', 'class'], classLabel(character.class))
-    setText(['spellcasting', 'ability'], character.spellcasting_ability)
-    setText(['spell', 'save', 'dc'], String(character.spell_save_dc || ''))
-    setText(['spell', 'attack', 'bonus'], String(character.spell_attack_bonus || ''))
-    setText(['CANTRIPS'], spells.cantrips.join(', '))
+    // Pagina 3
+    draw(page3, classLabel(character.class), 39, 775, 9)
+    draw(page3, character.spellcasting_ability, 70, 710, 9)
+    draw(page3, String(character.spell_save_dc || ''), 144, 710, 9)
+    draw(page3, String(character.spell_attack_bonus || ''), 214, 710, 9)
+    wrap(page3, spells.cantrips.join(', '), 36, 638, 160, 8, 8.5)
+    let sy = 618
     for (let i = 1; i <= 9; i++) {
         const lvl = spells[`level${i}`]
-        setText([`LEVEL ${i} SLOTS TOTAL`], String(lvl.slots || 0))
-        setText([`LEVEL ${i} SLOTS EXPENDED`], String(lvl.slots_used || 0))
-        setText([`LEVEL ${i} SPELLS KNOWN`], (lvl.spells || []).join(', '))
+        draw(page3, String(lvl.slots || 0), 230, sy + 3, 8)
+        draw(page3, String(lvl.slots_used || 0), 252, sy + 3, 8)
+        wrap(page3, (lvl.spells || []).join(', '), 280, sy + 3, 280, 8, 8.4)
+        sy -= 58
     }
 
     const out = await pdfDoc.save()
