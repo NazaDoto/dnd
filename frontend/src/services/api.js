@@ -109,12 +109,6 @@ export const dmAPI = {
     locations: entityApi('locations'),
     factions: entityApi('factions'),
     items: entityApi('items'),
-
-    illustrations: {
-        list: (campaignId, sessionId) => api.get(`/dm/campaigns/${campaignId}/sessions/${sessionId}/illustrations`),
-        generate: (campaignId, sessionId, payload) => api.post(`/dm/campaigns/${campaignId}/sessions/${sessionId}/illustrate`, payload, { timeout: 120000 }),
-        remove: (id) => api.delete(`/dm/illustrations/${id}`),
-    },
 }
 
 export default api

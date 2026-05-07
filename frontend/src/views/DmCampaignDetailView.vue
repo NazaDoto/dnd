@@ -159,15 +159,7 @@
           :schema="entitySchemas.sessions"
           :api="dmAPI.sessions"
           :campaign-id="cid"
-        >
-          <template #row-extra="{ item }">
-            <SessionIllustrations
-              :campaign-id="cid"
-              :session="item"
-              :roster-characters="roster.active"
-            />
-          </template>
-        </CampaignEntityList>
+        />
       </div>
     </div>
 
@@ -334,7 +326,6 @@ import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
 import PdfFormatModal from '../components/PdfFormatModal.vue'
 import InitiativeTracker from '../components/InitiativeTracker.vue'
 import CampaignEntityList from '../components/campaign/CampaignEntityList.vue'
-import SessionIllustrations from '../components/campaign/SessionIllustrations.vue'
 import { useInitiative } from '../stores/initiative.js'
 import { CAMPAIGN_ENTITY_SCHEMAS } from '../data/campaignSchemas.js'
 
@@ -365,7 +356,7 @@ const emptyForm = () => ({
 
 export default {
   name: 'DmCampaignDetailView',
-  components: { PdfFormatModal, InitiativeTracker, CampaignEntityList, SessionIllustrations },
+  components: { PdfFormatModal, InitiativeTracker, CampaignEntityList },
   inject: ['showToast'],
   data() {
     return {
