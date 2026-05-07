@@ -110,6 +110,7 @@ export default {
 
 <style scoped>
 .auth-page {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -118,6 +119,25 @@ export default {
   width: 100%;
   padding: 1rem;
   gap: 1.5rem;
+}
+
+.auth-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(180deg, rgba(8, 6, 3, 0.55) 0%, rgba(13, 10, 7, 0.86) 100%),
+    url('/bg.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.auth-page > * {
+  position: relative;
+  z-index: 1;
 }
 
 .auth-logo {
@@ -132,7 +152,7 @@ export default {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: none;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
 }
 
 .logo-sub {
