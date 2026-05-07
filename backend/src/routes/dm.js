@@ -61,14 +61,18 @@ router.get('/campaigns', async(req, res) => {
 
 router.post('/campaigns', async(req, res) => {
     try {
-        const { name, setting_name, summary, status, start_date, next_session_date } = req.body;
+        const { name, setting_name, summary, status, start_date, next_session_date, xp_mode, current_party_level } = req.body;
         if (!name || !String(name).trim()) return res.status(400).json({ message: 'El nombre de campaña es obligatorio' });
+
+        const allowedXp = ['xp', 'hitos'];
+        const xpModeValue = allowedXp.includes(xp_mode) ? xp_mode : 'xp';
+        const partyLevel = current_party_level == null || current_party_level === '' ? null : Math.max(1, Math.min(20, parseInt(current_party_level, 10) || 1));
 
         const invite_code = await uniqueInviteCode();
         const [result] = await db.query(
             `INSERT INTO campaigns (
-        dm_user_id, name, invite_code, setting_name, summary, status, start_date, next_session_date
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        dm_user_id, name, invite_code, setting_name, summary, status, start_date, next_session_date, xp_mode, current_party_level
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 req.user.id,
                 name.trim(),
@@ -77,7 +81,9 @@ router.post('/campaigns', async(req, res) => {
                 summary || null,
                 status || 'activa',
                 start_date || null,
-                next_session_date || null
+                next_session_date || null,
+                xpModeValue,
+                partyLevel
             ]
         );
         res.status(201).json({ id: result.insertId, invite_code, message: 'Campaña creada' });
@@ -114,12 +120,25 @@ router.put('/campaigns/:id', async(req, res) => {
             npcsJsonStr = JSON.stringify(Array.isArray(camp.npcs_json) ? camp.npcs_json : []);
         }
 
+        const allowedXp = ['xp', 'hitos'];
+        let xpModeValue = camp.xp_mode || 'xp';
+        if (b.xp_mode !== undefined) {
+            xpModeValue = allowedXp.includes(b.xp_mode) ? b.xp_mode : 'xp';
+        }
+        let partyLevel = camp.current_party_level ?? null;
+        if (b.current_party_level !== undefined) {
+            partyLevel = b.current_party_level == null || b.current_party_level === ''
+                ? null
+                : Math.max(1, Math.min(20, parseInt(b.current_party_level, 10) || 1));
+        }
+
         const [result] = await db.query(
             `UPDATE campaigns SET
         name = ?, setting_name = ?, summary = ?, status = ?, start_date = ?, next_session_date = ?,
         campaign_hook = ?, themes_truths = ?, fronts_antagonists = ?, npcs_json = ?,
         locations_maps = ?, session_prep = ?, last_session_recap = ?, active_quests = ?,
-        treasure_log = ?, house_rules = ?, dm_private_notes = ?, resources_links = ?
+        treasure_log = ?, house_rules = ?, dm_private_notes = ?, resources_links = ?,
+        world_calendar = ?, pantheon = ?, xp_mode = ?, current_party_level = ?
       WHERE id = ? AND dm_user_id = ?`,
             [
                 b.name != null ? String(b.name).trim() : camp.name,
@@ -140,6 +159,10 @@ router.put('/campaigns/:id', async(req, res) => {
                 b.house_rules !== undefined ? b.house_rules : camp.house_rules,
                 b.dm_private_notes !== undefined ? b.dm_private_notes : camp.dm_private_notes,
                 b.resources_links !== undefined ? b.resources_links : camp.resources_links,
+                b.world_calendar !== undefined ? b.world_calendar : camp.world_calendar,
+                b.pantheon !== undefined ? b.pantheon : camp.pantheon,
+                xpModeValue,
+                partyLevel,
                 req.params.id,
                 req.user.id
             ]

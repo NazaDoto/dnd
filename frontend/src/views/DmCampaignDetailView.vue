@@ -78,6 +78,19 @@
           <label class="form-label">Gancho principal (1 línea)</label>
           <input v-model="form.campaign_hook" placeholder="Ej. Los héroes deben impedir que el pacto se cumpla antes de la luna nueva." />
         </div>
+        <div class="grid-2 grid-core-desk mt-2">
+          <div class="form-group">
+            <label class="form-label">Modo de progresión</label>
+            <select v-model="form.xp_mode">
+              <option value="xp">Por XP</option>
+              <option value="hitos">Por hitos</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nivel medio del grupo</label>
+            <input v-model.number="form.current_party_level" type="number" min="1" max="20" placeholder="1 a 20" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -107,6 +120,14 @@
           <label class="form-label">Enlaces y recursos</label>
           <textarea v-model="form.resources_links" rows="3" placeholder="URLs a VTT, carpetas, PDFs..." />
         </div>
+        <div class="form-group">
+          <label class="form-label">Calendario del mundo</label>
+          <textarea v-model="form.world_calendar" rows="3" placeholder="Año actual, estaciones, festividades, calendario propio..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Panteón / dioses</label>
+          <textarea v-model="form.pantheon" rows="3" placeholder="Dioses principales, dominios, relaciones, cultos prohibidos..." />
+        </div>
         </div>
 
         <div class="world-desk-side">
@@ -127,6 +148,81 @@
         <textarea v-model="form.house_rules" rows="4" placeholder="Variantes, límites de PvP, descansos, líneas y velos..." />
       </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Sesiones -->
+    <div v-show="tab === 'sessions'" class="tab-panel">
+      <div class="card">
+        <CampaignEntityList
+          v-if="loaded"
+          :schema="entitySchemas.sessions"
+          :api="dmAPI.sessions"
+          :campaign-id="cid"
+        />
+      </div>
+    </div>
+
+    <!-- Misiones -->
+    <div v-show="tab === 'quests'" class="tab-panel">
+      <div class="card">
+        <CampaignEntityList
+          v-if="loaded"
+          :schema="entitySchemas.quests"
+          :api="dmAPI.quests"
+          :campaign-id="cid"
+        />
+      </div>
+    </div>
+
+    <!-- NPCs -->
+    <div v-show="tab === 'npcs'" class="tab-panel">
+      <div class="card">
+        <CampaignEntityList
+          v-if="loaded"
+          :schema="entitySchemas.npcs"
+          :api="dmAPI.npcs"
+          :campaign-id="cid"
+        />
+      </div>
+    </div>
+
+    <!-- Lugares -->
+    <div v-show="tab === 'locations'" class="tab-panel">
+      <div class="card">
+        <CampaignEntityList
+          v-if="loaded"
+          ref="locationsList"
+          :schema="entitySchemas.locations"
+          :api="dmAPI.locations"
+          :campaign-id="cid"
+          :dynamic-options="locationDynamicOptions"
+          @changed="reloadLocationParents"
+        />
+      </div>
+    </div>
+
+    <!-- Facciones -->
+    <div v-show="tab === 'factions'" class="tab-panel">
+      <div class="card">
+        <CampaignEntityList
+          v-if="loaded"
+          :schema="entitySchemas.factions"
+          :api="dmAPI.factions"
+          :campaign-id="cid"
+        />
+      </div>
+    </div>
+
+    <!-- Botín -->
+    <div v-show="tab === 'items'" class="tab-panel">
+      <div class="card">
+        <CampaignEntityList
+          v-if="loaded"
+          :schema="entitySchemas.items"
+          :api="dmAPI.items"
+          :campaign-id="cid"
+        />
       </div>
     </div>
 
@@ -229,7 +325,9 @@ import { dmAPI } from '../services/api.js'
 import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
 import PdfFormatModal from '../components/PdfFormatModal.vue'
 import InitiativeTracker from '../components/InitiativeTracker.vue'
+import CampaignEntityList from '../components/campaign/CampaignEntityList.vue'
 import { useInitiative } from '../stores/initiative.js'
+import { CAMPAIGN_ENTITY_SCHEMAS } from '../data/campaignSchemas.js'
 
 const emptyForm = () => ({
   name: '',
@@ -249,12 +347,16 @@ const emptyForm = () => ({
   treasure_log: '',
   house_rules: '',
   dm_private_notes: '',
-  resources_links: ''
+  resources_links: '',
+  world_calendar: '',
+  pantheon: '',
+  xp_mode: 'xp',
+  current_party_level: null
 })
 
 export default {
   name: 'DmCampaignDetailView',
-  components: { PdfFormatModal, InitiativeTracker },
+  components: { PdfFormatModal, InitiativeTracker, CampaignEntityList },
   inject: ['showToast'],
   data() {
     return {
@@ -264,7 +366,13 @@ export default {
       tabs: [
         { id: 'core', label: 'Resumen' },
         { id: 'world', label: 'Mundo y trama' },
-        { id: 'session', label: 'Sesión' },
+        { id: 'sessions', label: 'Sesiones' },
+        { id: 'quests', label: 'Misiones' },
+        { id: 'npcs', label: 'NPCs' },
+        { id: 'locations', label: 'Lugares' },
+        { id: 'factions', label: 'Facciones' },
+        { id: 'items', label: 'Botín' },
+        { id: 'session', label: 'Preparación' },
         { id: 'roster', label: 'Personajes' }
       ],
       form: emptyForm(),
@@ -272,12 +380,24 @@ export default {
       roster: { active: [], pending: [] },
       pdfModalOpen: false,
       pdfCharacter: null,
-      trackerOpen: false
+      trackerOpen: false,
+      entitySchemas: CAMPAIGN_ENTITY_SCHEMAS,
+      dmAPI,
+      locationParents: []
     }
   },
   computed: {
     cid() {
       return this.$route.params.id
+    },
+    locationParentOptions() {
+      return [
+        { value: null, label: '— ninguno —' },
+        ...this.locationParents.map((l) => ({ value: l.id, label: l.name }))
+      ]
+    },
+    locationDynamicOptions() {
+      return { locationsAsParents: this.locationParentOptions }
     },
     encounter() {
       return useInitiative(this.cid).encounter
@@ -339,6 +459,15 @@ export default {
         return
       }
       this.loaded = true
+      this.reloadLocationParents()
+    },
+    async reloadLocationParents() {
+      try {
+        const { data } = await dmAPI.locations.list(this.cid)
+        this.locationParents = (Array.isArray(data) ? data : []).map((l) => ({ id: l.id, name: l.name }))
+      } catch {
+        this.locationParents = []
+      }
     },
     async saveAll() {
       if (!this.form.name || !String(this.form.name).trim()) {

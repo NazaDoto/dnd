@@ -23,6 +23,7 @@ app.use('/api/characters', require('./routes/characters'));
 app.use('/api/notes', require('./routes/notes'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/dm', require('./routes/dm'));
+app.use('/api/dm', require('./routes/dmCampaignEntities'));
 app.use('/api/campaigns', require('./routes/campaignsJoin'));
 
 // ── Health check ─────────────────────────────────────────────

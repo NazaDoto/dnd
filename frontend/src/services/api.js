@@ -80,6 +80,15 @@ export const adminAPI = {
     removeCampaignCharacter: (linkId) => api.delete(`/admin/campaign-characters/${linkId}`),
 }
 
+function entityApi(entityPath) {
+    return {
+        list: (campaignId) => api.get(`/dm/campaigns/${campaignId}/${entityPath}`),
+        create: (campaignId, payload) => api.post(`/dm/campaigns/${campaignId}/${entityPath}`, payload),
+        update: (campaignId, id, payload) => api.put(`/dm/campaigns/${campaignId}/${entityPath}/${id}`, payload),
+        remove: (campaignId, id) => api.delete(`/dm/campaigns/${campaignId}/${entityPath}/${id}`),
+    }
+}
+
 export const dmAPI = {
     getCampaigns: () => api.get('/dm/campaigns'),
     getCampaign: (id) => api.get(`/dm/campaigns/${id}`),
@@ -93,6 +102,13 @@ export const dmAPI = {
     removeRosterMember: (campaignId, linkId) => api.delete(`/dm/campaigns/${campaignId}/roster/${linkId}`),
     getCampaignCharacter: (campaignId, characterId) => api.get(`/dm/campaigns/${campaignId}/characters/${characterId}`),
     adjustCharacterHp: (campaignId, characterId, delta) => api.patch(`/dm/campaigns/${campaignId}/characters/${characterId}/hp`, { delta }),
+
+    sessions: entityApi('sessions'),
+    quests: entityApi('quests'),
+    npcs: entityApi('npcs'),
+    locations: entityApi('locations'),
+    factions: entityApi('factions'),
+    items: entityApi('items'),
 }
 
 export default api
