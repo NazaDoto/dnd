@@ -90,27 +90,33 @@
           <div
             v-for="field in schema.fields"
             :key="field.key"
-            :class="['ce-field', `ce-field-${field.col || 'full'}`]"
+            :class="['ce-field', `ce-field-${field.col || 'full'}`, { 'ce-field-invalid': invalidFields.has(field.key) }]"
           >
             <label class="form-label" :for="`fld-${schema.key}-${field.key}`">
-              {{ field.label }}<span v-if="field.required" class="ce-req">*</span>
+              {{ field.label }}<span v-if="field.required" class="ce-req" title="Obligatorio">*</span>
               <span v-if="field.dmOnly" class="ce-dmonly" title="Solo el DM ve este campo">DM</span>
             </label>
 
             <textarea
               v-if="field.type === 'textarea'"
               :id="`fld-${schema.key}-${field.key}`"
+              :ref="`field-${field.key}`"
               v-model="form[field.key]"
               :rows="field.rows || 3"
               :placeholder="field.placeholder || ''"
+              :class="{ 'ce-input-invalid': invalidFields.has(field.key) }"
+              @input="clearInvalid(field.key)"
             />
 
             <select
               v-else-if="field.type === 'select'"
               :id="`fld-${schema.key}-${field.key}`"
+              :ref="`field-${field.key}`"
               v-model="form[field.key]"
+              :class="{ 'ce-input-invalid': invalidFields.has(field.key) }"
+              @change="clearInvalid(field.key)"
             >
-              <option :value="null">— sin valor —</option>
+              <option :value="''">— sin valor —</option>
               <option
                 v-for="opt in resolveOptions(field)"
                 :key="`opt-${field.key}-${opt.value}`"
@@ -123,6 +129,7 @@
             <label v-else-if="field.type === 'checkbox'" class="check-group">
               <input
                 :id="`fld-${schema.key}-${field.key}`"
+                :ref="`field-${field.key}`"
                 v-model="form[field.key]"
                 type="checkbox"
               />
@@ -132,16 +139,22 @@
             <input
               v-else
               :id="`fld-${schema.key}-${field.key}`"
+              :ref="`field-${field.key}`"
               v-model="form[field.key]"
               :type="inputType(field.type)"
               :min="field.min"
               :max="field.max"
               :placeholder="field.placeholder || ''"
-              :required="!!field.required"
+              :class="{ 'ce-input-invalid': invalidFields.has(field.key) }"
+              @input="clearInvalid(field.key)"
             />
+
+            <p v-if="invalidFields.has(field.key)" class="ce-field-error" role="alert">
+              {{ invalidFields.get(field.key) }}
+            </p>
           </div>
 
-          <p v-if="formError" class="form-error">{{ formError }}</p>
+          <p v-if="formError" class="form-error" role="alert">{{ formError }}</p>
 
           <footer class="ce-form-actions">
             <button type="button" class="btn btn-ghost" @click="closeForm" :disabled="saving">Cancelar</button>
@@ -174,9 +187,16 @@ let formCounter = 0
 function emptyFormFromSchema(schema) {
   const f = {}
   for (const fld of schema.fields) {
-    if (fld.type === 'checkbox') f[fld.key] = false
-    else if (fld.type === 'number') f[fld.key] = null
-    else f[fld.key] = ''
+    const hasDefault = Object.prototype.hasOwnProperty.call(fld, 'default')
+    if (fld.type === 'checkbox') {
+      f[fld.key] = hasDefault ? !!fld.default : false
+    } else if (fld.type === 'number') {
+      f[fld.key] = hasDefault ? fld.default : null
+    } else if (fld.type === 'select') {
+      f[fld.key] = hasDefault ? fld.default : ''
+    } else {
+      f[fld.key] = hasDefault ? fld.default : ''
+    }
   }
   return f
 }
@@ -206,6 +226,7 @@ export default {
       formTitleId: `ce-form-title-${++formCounter}`,
       confirmingItem: null,
       deleting: false,
+      invalidFields: new Map(),
     }
   },
   computed: {
@@ -298,6 +319,7 @@ export default {
       this.editingItem = null
       this.form = emptyFormFromSchema(this.schema)
       this.formError = ''
+      this.invalidFields = new Map()
       this.formOpen = true
     },
     openEdit(item) {
@@ -312,6 +334,7 @@ export default {
       }
       this.form = base
       this.formError = ''
+      this.invalidFields = new Map()
       this.formOpen = true
     },
     closeForm() {
@@ -319,16 +342,41 @@ export default {
       this.formOpen = false
       this.editingItem = null
       this.formError = ''
+      this.invalidFields = new Map()
+    },
+    clearInvalid(key) {
+      if (!this.invalidFields.has(key)) return
+      this.invalidFields.delete(key)
+      this.invalidFields = new Map(this.invalidFields)
+      if (!this.invalidFields.size) this.formError = ''
+    },
+    focusField(key) {
+      this.$nextTick(() => {
+        const ref = this.$refs[`field-${key}`]
+        const el = Array.isArray(ref) ? ref[0] : ref
+        if (el && typeof el.focus === 'function') {
+          el.focus()
+          if (typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }
+      })
     },
     buildPayload() {
       const payload = {}
       for (const fld of this.schema.fields) {
         let v = this.form[fld.key]
-        if (fld.type === 'number') {
-          v = v === '' || v == null ? null : Number(v)
-        }
         if (fld.type === 'checkbox') {
-          v = !!v
+          payload[fld.key] = !!v
+          continue
+        }
+        if (fld.type === 'number') {
+          if (v === '' || v == null || Number.isNaN(Number(v))) {
+            payload[fld.key] = null
+          } else {
+            payload[fld.key] = Number(v)
+          }
+          continue
         }
         if (typeof v === 'string') v = v.trim()
         payload[fld.key] = v === '' ? null : v
@@ -337,13 +385,27 @@ export default {
     },
     async submit() {
       this.formError = ''
+      this.invalidFields = new Map()
       const payload = this.buildPayload()
+
+      const missing = new Map()
       for (const fld of this.schema.fields) {
-        if (fld.required && (payload[fld.key] == null || payload[fld.key] === '')) {
-          this.formError = `Falta: ${fld.label}`
-          return
-        }
+        if (!fld.required) continue
+        const v = payload[fld.key]
+        const empty = v == null || (typeof v === 'string' && v.trim() === '')
+        if (empty) missing.set(fld.key, `${fld.label} es obligatorio`)
       }
+      if (missing.size) {
+        this.invalidFields = missing
+        const firstKey = missing.keys().next().value
+        const firstLabel = (this.schema.fields.find((f) => f.key === firstKey) || {}).label || firstKey
+        this.formError = missing.size === 1
+          ? `Falta completar: ${firstLabel}`
+          : `Faltan ${missing.size} campos obligatorios`
+        this.focusField(firstKey)
+        return
+      }
+
       this.saving = true
       try {
         if (this.editingItem?.id) {
@@ -360,7 +422,13 @@ export default {
         this.editingItem = null
         this.$emit('changed')
       } catch (err) {
-        this.formError = err.response?.data?.message || 'Error al guardar'
+        const apiField = err.response?.data?.field
+        const apiMsg = err.response?.data?.message
+        this.formError = apiMsg || 'Error al guardar'
+        if (apiField) {
+          this.invalidFields = new Map([[apiField, apiMsg || 'Campo inválido']])
+          this.focusField(apiField)
+        }
       } finally {
         this.saving = false
       }
@@ -567,7 +635,27 @@ export default {
   align-items: center;
   gap: 0.35rem;
 }
-.ce-req { color: var(--red-light); }
+.ce-req {
+  color: var(--red-light);
+  font-weight: 700;
+  cursor: help;
+}
+
+.ce-input-invalid,
+.ce-input-invalid:focus {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.18);
+  outline: none;
+}
+.ce-field-invalid .form-label {
+  color: var(--red-light);
+}
+.ce-field-error {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--red-light);
+  line-height: 1.3;
+}
 .ce-dmonly {
   font-size: 0.6rem;
   letter-spacing: 0.05em;

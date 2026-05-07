@@ -33,28 +33,28 @@ const ENTITIES = {
             recap: { type: 'string' },
             dm_notes: { type: 'string' },
             attendance: { type: 'json' },
-            xp_awarded: { type: 'int', min: 0 },
+            xp_awarded: { type: 'int', min: 0, notNull: true, default: 0 },
             loot_summary: { type: 'string' },
             mvp_notes: { type: 'string' },
             next_hooks: { type: 'string' },
         },
         defaultOrder: 'COALESCE(session_date, created_at) DESC, COALESCE(session_number, 0) DESC',
-        required: [],
+        required: ['title'],
     },
     quests: {
         table: 'campaign_quests',
         path: 'quests',
         fields: {
-            title: { type: 'string', max: 200 },
-            status: { type: 'enum', values: ['activa', 'completada', 'fallida', 'pausada', 'rumor'] },
-            type: { type: 'enum', values: ['principal', 'secundaria', 'personal', 'rumor'] },
+            title: { type: 'string', max: 200, notNull: true },
+            status: { type: 'enum', values: ['activa', 'completada', 'fallida', 'pausada', 'rumor'], notNull: true, default: 'activa' },
+            type: { type: 'enum', values: ['principal', 'secundaria', 'personal', 'rumor'], notNull: true, default: 'secundaria' },
             giver: { type: 'string', max: 160 },
             location: { type: 'string', max: 200 },
             reward: { type: 'string' },
             description: { type: 'string' },
             deadline: { type: 'string', max: 80 },
             dm_notes: { type: 'string' },
-            sort_order: { type: 'int', min: 0 },
+            sort_order: { type: 'int', min: 0, notNull: true, default: 0 },
         },
         defaultOrder: `FIELD(status, 'activa','rumor','pausada','completada','fallida'), sort_order, updated_at DESC`,
         required: ['title'],
@@ -63,19 +63,19 @@ const ENTITIES = {
         table: 'campaign_npcs',
         path: 'npcs',
         fields: {
-            name: { type: 'string', max: 160 },
+            name: { type: 'string', max: 160, notNull: true },
             role: { type: 'string', max: 160 },
             race: { type: 'string', max: 80 },
             faction: { type: 'string', max: 160 },
             location: { type: 'string', max: 200 },
-            disposition: { type: 'enum', values: ['aliado', 'amistoso', 'neutral', 'desconfiado', 'hostil', 'desconocido'] },
-            status: { type: 'enum', values: ['vivo', 'desaparecido', 'muerto', 'retirado', 'desconocido'] },
+            disposition: { type: 'enum', values: ['aliado', 'amistoso', 'neutral', 'desconfiado', 'hostil', 'desconocido'], notNull: true, default: 'neutral' },
+            status: { type: 'enum', values: ['vivo', 'desaparecido', 'muerto', 'retirado', 'desconocido'], notNull: true, default: 'vivo' },
             voice_quirk: { type: 'string' },
             description: { type: 'string' },
             secret: { type: 'string' },
             dm_notes: { type: 'string' },
             portrait_url: { type: 'string', max: 500 },
-            sort_order: { type: 'int', min: 0 },
+            sort_order: { type: 'int', min: 0, notNull: true, default: 0 },
         },
         defaultOrder: `FIELD(status, 'vivo','desaparecido','retirado','muerto','desconocido'), sort_order, name`,
         required: ['name'],
@@ -84,14 +84,14 @@ const ENTITIES = {
         table: 'campaign_locations',
         path: 'locations',
         fields: {
-            name: { type: 'string', max: 200 },
-            type: { type: 'enum', values: ['region', 'ciudad', 'pueblo', 'aldea', 'mazmorra', 'templo', 'fortaleza', 'taberna', 'tienda', 'ruina', 'plano', 'otro'] },
+            name: { type: 'string', max: 200, notNull: true },
+            type: { type: 'enum', values: ['region', 'ciudad', 'pueblo', 'aldea', 'mazmorra', 'templo', 'fortaleza', 'taberna', 'tienda', 'ruina', 'plano', 'otro'], notNull: true, default: 'otro' },
             parent_id: { type: 'int', nullable: true },
             description: { type: 'string' },
             map_url: { type: 'string', max: 500 },
-            discovered: { type: 'bool' },
+            discovered: { type: 'bool', notNull: true, default: 1 },
             dm_notes: { type: 'string' },
-            sort_order: { type: 'int', min: 0 },
+            sort_order: { type: 'int', min: 0, notNull: true, default: 0 },
         },
         defaultOrder: 'sort_order, name',
         required: ['name'],
@@ -100,7 +100,7 @@ const ENTITIES = {
         table: 'campaign_factions',
         path: 'factions',
         fields: {
-            name: { type: 'string', max: 200 },
+            name: { type: 'string', max: 200, notNull: true },
             type: { type: 'string', max: 80 },
             alignment: { type: 'string', max: 40 },
             leader: { type: 'string', max: 160 },
@@ -108,10 +108,10 @@ const ENTITIES = {
             resources: { type: 'string' },
             allies: { type: 'string' },
             enemies: { type: 'string' },
-            party_reputation: { type: 'int', min: -100, max: 100 },
+            party_reputation: { type: 'int', min: -100, max: 100, notNull: true, default: 0 },
             description: { type: 'string' },
             dm_notes: { type: 'string' },
-            sort_order: { type: 'int', min: 0 },
+            sort_order: { type: 'int', min: 0, notNull: true, default: 0 },
         },
         defaultOrder: 'sort_order, name',
         required: ['name'],
@@ -120,19 +120,19 @@ const ENTITIES = {
         table: 'campaign_items',
         path: 'items',
         fields: {
-            name: { type: 'string', max: 200 },
-            rarity: { type: 'enum', values: ['comun', 'no_comun', 'raro', 'muy_raro', 'legendario', 'artefacto', 'sin_clasificar'] },
+            name: { type: 'string', max: 200, notNull: true },
+            rarity: { type: 'enum', values: ['comun', 'no_comun', 'raro', 'muy_raro', 'legendario', 'artefacto', 'sin_clasificar'], notNull: true, default: 'sin_clasificar' },
             type: { type: 'string', max: 80 },
-            attunement: { type: 'bool' },
+            attunement: { type: 'bool', notNull: true, default: 0 },
             attuned_to: { type: 'string', max: 160 },
             current_owner: { type: 'string', max: 200 },
             source: { type: 'string', max: 200 },
             awarded_at: { type: 'date' },
             value_gp: { type: 'int', min: 0, nullable: true },
-            quantity: { type: 'int', min: 0 },
+            quantity: { type: 'int', min: 0, notNull: true, default: 1 },
             description: { type: 'string' },
             dm_notes: { type: 'string' },
-            sort_order: { type: 'int', min: 0 },
+            sort_order: { type: 'int', min: 0, notNull: true, default: 0 },
         },
         defaultOrder: `FIELD(rarity, 'artefacto','legendario','muy_raro','raro','no_comun','comun','sin_clasificar'), name`,
         required: ['name'],
@@ -145,16 +145,24 @@ const ENTITIES = {
 function normalizeValue(field, value) {
     if (value === undefined) return undefined;
 
+    // Empty / null: aplicar default si la columna es NOT NULL
     if (value === null || value === '') {
+        if (field.notNull) {
+            if (field.type === 'bool') return field.default ?? 0;
+            if (field.type === 'int') return field.default ?? field.min ?? 0;
+            if (field.type === 'enum') return field.default ?? field.values[0];
+            if (field.type === 'string') return field.default ?? '';
+            if (field.type === 'json') return JSON.stringify(field.default ?? []);
+            return field.default ?? null;
+        }
         if (field.type === 'bool') return 0;
-        if (field.type === 'int') return field.nullable === false ? 0 : null;
         return null;
     }
 
     switch (field.type) {
         case 'int': {
             const n = parseInt(value, 10);
-            if (Number.isNaN(n)) return null;
+            if (Number.isNaN(n)) return field.notNull ? (field.default ?? field.min ?? 0) : null;
             if (field.min != null && n < field.min) return field.min;
             if (field.max != null && n > field.max) return field.max;
             return n;
@@ -166,7 +174,7 @@ function normalizeValue(field, value) {
             return s.match(/^\d{4}-\d{2}-\d{2}/) ? s.slice(0, 10) : null;
         }
         case 'enum':
-            return field.values.includes(value) ? value : field.values[0];
+            return field.values.includes(value) ? value : (field.default ?? field.values[0]);
         case 'json':
             if (typeof value === 'string') {
                 try {
@@ -183,6 +191,25 @@ function normalizeValue(field, value) {
             return field.max && s.length > field.max ? s.slice(0, field.max) : s;
         }
     }
+}
+
+function friendlyDbError(err) {
+    if (!err || !err.code) return null;
+    if (err.code === 'ER_BAD_NULL_ERROR') {
+        const m = err.sqlMessage && err.sqlMessage.match(/Column '([^']+)'/);
+        return m ? `El campo "${m[1]}" no puede quedar vacío` : 'Falta un campo obligatorio';
+    }
+    if (err.code === 'ER_DATA_TOO_LONG') {
+        const m = err.sqlMessage && err.sqlMessage.match(/column '([^']+)'/);
+        return m ? `El campo "${m[1]}" es demasiado largo` : 'Un campo es demasiado largo';
+    }
+    if (err.code === 'ER_TRUNCATED_WRONG_VALUE_FOR_FIELD' || err.code === 'WARN_DATA_TRUNCATED') {
+        return 'Hay un campo con un valor no permitido';
+    }
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+        return 'Una referencia (por ejemplo "lugar padre") apunta a un registro inexistente';
+    }
+    return null;
 }
 
 function parseRow(row, fields) {
@@ -266,10 +293,12 @@ Object.values(ENTITIES).forEach((entity) => {
             if (!ok) return res.status(404).json({ message: 'Campaña no encontrada' });
 
             const payload = req.body && typeof req.body === 'object' ? req.body : {};
-            for (const r of entity.required) {
-                if (!payload[r] || !String(payload[r]).trim()) {
-                    return res.status(400).json({ message: `Campo obligatorio: ${r}` });
-                }
+            const missing = entity.required.find((r) => !payload[r] || !String(payload[r]).trim());
+            if (missing) {
+                return res.status(400).json({
+                    message: `Falta el campo obligatorio: ${missing}`,
+                    field: missing,
+                });
             }
 
             const { cols, values, placeholders } = buildInsertClause(payload, entity);
@@ -285,7 +314,10 @@ Object.values(ENTITIES).forEach((entity) => {
             res.status(201).json(parseRow(rows[0], entity.fields));
         } catch (err) {
             console.error(`[${entity.table}][create]`, err);
-            res.status(500).json({ message: `Error al crear ${entity.path}`, detail: err.message });
+            res.status(500).json({
+                message: friendlyDbError(err) || `Error al crear ${entity.path}`,
+                detail: err.message
+            });
         }
     });
 
@@ -302,6 +334,14 @@ Object.values(ENTITIES).forEach((entity) => {
             if (!exists.length) return res.status(404).json({ message: 'Registro no encontrado' });
 
             const payload = req.body && typeof req.body === 'object' ? req.body : {};
+            const missing = entity.required.find((r) => Object.prototype.hasOwnProperty.call(payload, r) && (!payload[r] || !String(payload[r]).trim()));
+            if (missing) {
+                return res.status(400).json({
+                    message: `Falta el campo obligatorio: ${missing}`,
+                    field: missing,
+                });
+            }
+
             const { sql, values } = buildSetClause(payload, entity);
             if (!sql) return res.status(400).json({ message: 'Nada para actualizar' });
 
@@ -317,7 +357,10 @@ Object.values(ENTITIES).forEach((entity) => {
             res.json(parseRow(rows[0], entity.fields));
         } catch (err) {
             console.error(`[${entity.table}][update]`, err);
-            res.status(500).json({ message: `Error al actualizar ${entity.path}`, detail: err.message });
+            res.status(500).json({
+                message: friendlyDbError(err) || `Error al actualizar ${entity.path}`,
+                detail: err.message
+            });
         }
     });
 
