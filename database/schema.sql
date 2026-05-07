@@ -361,3 +361,23 @@ CREATE INDEX idx_loc_camp         ON campaign_locations(campaign_id);
 CREATE INDEX idx_loc_parent       ON campaign_locations(parent_id);
 CREATE INDEX idx_faction_camp     ON campaign_factions(campaign_id);
 CREATE INDEX idx_item_camp        ON campaign_items(campaign_id, rarity);
+
+-- ------------------------------------------------------------
+-- ILUSTRACIONES DE SESIÓN (generadas por IA)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS session_illustrations (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  session_id      INT UNSIGNED NOT NULL,
+  campaign_id     INT UNSIGNED NOT NULL,
+  image_url       VARCHAR(500) NOT NULL,
+  prompt          LONGTEXT NOT NULL,
+  model           VARCHAR(80) NOT NULL,
+  references_used JSON DEFAULT NULL,
+  intensity       ENUM('soft','medium','hard') NOT NULL DEFAULT 'medium',
+  created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_illust_session FOREIGN KEY (session_id) REFERENCES campaign_sessions(id) ON DELETE CASCADE,
+  CONSTRAINT fk_illust_campaign FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_illust_session   ON session_illustrations(session_id, created_at);
+CREATE INDEX idx_illust_campaign  ON session_illustrations(campaign_id);

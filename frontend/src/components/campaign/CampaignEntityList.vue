@@ -67,12 +67,16 @@
           </p>
         </div>
         <div class="ce-row-actions">
+          <slot name="row-actions" :item="item"></slot>
           <button type="button" class="btn btn-ghost ce-edit-btn" @click="openEdit(item)" :aria-label="`Editar ${resolveText(schema.listMain, item)}`">
             Editar
           </button>
           <button type="button" class="btn btn-ghost ce-del-btn" @click="askDelete(item)" :aria-label="`Eliminar ${resolveText(schema.listMain, item)}`">
             🗑
           </button>
+        </div>
+        <div v-if="$slots['row-extra']" class="ce-row-extra">
+          <slot name="row-extra" :item="item"></slot>
         </div>
       </li>
     </ul>
@@ -458,11 +462,18 @@ export default {
 }
 .ce-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 0.6rem;
   padding: 0.7rem 0.85rem;
 }
 .ce-row-main { flex: 1; min-width: 0; }
+.ce-row-extra {
+  flex-basis: 100%;
+  margin-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.5rem;
+}
 .ce-row-title {
   display: flex;
   align-items: center;
