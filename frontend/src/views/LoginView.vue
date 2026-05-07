@@ -135,6 +135,12 @@ export default {
   pointer-events: none;
 }
 
+@media (min-width: 1024px) {
+  .auth-page::before {
+    background-position: center top;
+  }
+}
+
 .auth-page > * {
   position: relative;
   z-index: 1;

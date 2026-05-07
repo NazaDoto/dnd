@@ -69,10 +69,32 @@ body,
   overflow: hidden;
 }
 #dnd-app {
+  position: relative;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+#dnd-app::before {
+  content: '';
+  position: fixed;
+  inset: -2rem;
+  background-image:
+    linear-gradient(180deg, rgba(8, 6, 3, 0.62) 0%, rgba(13, 10, 7, 0.9) 100%),
+    url('/bg.jpeg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(14px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  #dnd-app::before {
+    background-position: center top;
+  }
 }
 
 .main-content {
