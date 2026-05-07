@@ -1,26 +1,20 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuth, homePathForRole } from '../stores/auth.js'
+import { matches } from '../composables/useMediaQuery.js'
 
-import LoginView from '../views/LoginView.vue'
-import RegisterView from '../views/RegisterView.vue'
-import HomeView from '../views/HomeView.vue'
-import CharacterCreateView from '../views/CharacterCreateView.vue'
-import CharacterDetailView from '../views/CharacterDetailView.vue'
-import CharacterFullView from '../views/CharacterFullView.vue'
-import CharacterEditView from '../views/CharacterEditView.vue'
-import NotesView from '../views/NotesView.vue'
-import AdminPanelView from '../views/AdminPanelView.vue'
-import DmPanelView from '../views/DmPanelView.vue'
-import DmCampaignDetailView from '../views/DmCampaignDetailView.vue'
+const LoginView = () => import('../views/LoginView.vue')
+const RegisterView = () => import('../views/RegisterView.vue')
+const HomeView = () => import('../views/HomeView.vue')
+const CharacterCreateView = () => import('../views/CharacterCreateView.vue')
+const CharacterDetailView = () => import('../views/CharacterDetailView.vue')
+const CharacterFullView = () => import('../views/CharacterFullView.vue')
+const CharacterEditView = () => import('../views/CharacterEditView.vue')
+const NotesView = () => import('../views/NotesView.vue')
+const AdminPanelView = () => import('../views/AdminPanelView.vue')
+const DmPanelView = () => import('../views/DmPanelView.vue')
+const DmCampaignDetailView = () => import('../views/DmCampaignDetailView.vue')
 
-function getStoredUser() {
-    const raw = localStorage.getItem('dnd_user')
-    if (!raw) return null
-    try {
-        return JSON.parse(raw)
-    } catch {
-        return null
-    }
-}
+const DESKTOP_QUERY = '(min-width: 1024px)'
 
 const routes = [
     { path: '/', redirect: '/home' },
@@ -42,7 +36,7 @@ const routes = [
         component: CharacterDetailView,
         meta: { requiresAuth: true, roles: ['jugador'] },
         beforeEnter: (to) => {
-            if (typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches) {
+            if (matches(DESKTOP_QUERY)) {
                 return { path: `/character/${to.params.id}/full` }
             }
             return true
@@ -60,20 +54,21 @@ const router = createRouter({
     scrollBehavior: () => ({ top: 0 }),
 })
 
-router.beforeEach((to, from, next) => {
-    const token = localStorage.getItem('dnd_token')
-    const user = getStoredUser()
-    if (to.meta.requiresAuth && !token) return next('/login')
-    if (to.meta.guest && token) {
-        if (user?.role === 'administrador') return next('/admin')
-        if (user?.role === 'dm') return next('/dm')
-        return next('/home')
+router.beforeEach((to, _from, next) => {
+    const auth = useAuth()
+    const role = auth.role.value
+    const authed = auth.isAuthenticated.value
+
+    if (to.meta.requiresAuth && !authed) return next('/login')
+
+    if (to.meta.guest && authed) {
+        return next(homePathForRole(role))
     }
-    if (to.meta.roles && !to.meta.roles.includes(user?.role)) {
-        if (user?.role === 'administrador') return next('/admin')
-        if (user?.role === 'dm') return next('/dm')
-        return next('/home')
+
+    if (to.meta.roles && !to.meta.roles.includes(role)) {
+        return next(homePathForRole(role))
     }
+
     next()
 })
 

@@ -1,7 +1,7 @@
 <template>
   <div class="auth-page">
     <div class="auth-logo">
-      <h1 class="logo-title">Wachines del Dnd</h1>
+      <h1 class="logo-title">{{ APP_NAME }}</h1>
       <p class="logo-sub">Únete a la aventura</p>
     </div>
 
@@ -51,10 +51,15 @@
 
 <script>
 import { authAPI } from '../services/api.js'
+import { useAuth, homePathForRole } from '../stores/auth.js'
+import { APP_NAME } from '../constants/branding.js'
 
 export default {
   name: 'RegisterView',
   inject: ['showToast'],
+  setup() {
+    return { auth: useAuth(), APP_NAME }
+  },
   data() {
     return {
       username: '',
@@ -67,11 +72,6 @@ export default {
     }
   },
   methods: {
-    homeForRole(r) {
-      if (r === 'administrador') return '/admin'
-      if (r === 'dm') return '/dm'
-      return '/home'
-    },
     async register() {
       this.error = ''
       if (this.password !== this.confirm) {
@@ -86,11 +86,9 @@ export default {
           password: this.password,
           role: this.role
         })
-        localStorage.setItem('dnd_token', data.token)
-        localStorage.setItem('dnd_user', JSON.stringify(data.user))
-        window.dispatchEvent(new Event('dnd-auth-changed'))
+        this.auth.setSession(data.token, data.user)
         this.showToast('¡Cuenta creada!', 'success')
-        this.$router.push(this.homeForRole(data.user?.role))
+        this.$router.push(homePathForRole(data.user?.role))
       } catch (err) {
         this.error = err.response?.data?.message || 'Error al registrarse'
       } finally {

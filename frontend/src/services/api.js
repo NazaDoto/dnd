@@ -1,24 +1,36 @@
 import axios from 'axios'
+import { useAuth } from '../stores/auth.js'
 
 const api = axios.create({
     baseURL: '/api',
     timeout: 15000,
 })
 
-api.interceptors.request.use(config => {
+api.interceptors.request.use((config) => {
     const token = localStorage.getItem('dnd_token')
     if (token) config.headers.Authorization = `Bearer ${token}`
     return config
 })
 
+let routerRef = null
+export function attachRouter(router) {
+    routerRef = router
+}
+
 api.interceptors.response.use(
-    res => res,
-    err => {
+    (res) => res,
+    (err) => {
         if (err.response && err.response.status === 401) {
-            localStorage.removeItem('dnd_token')
-            localStorage.removeItem('dnd_user')
-            window.dispatchEvent(new Event('dnd-auth-changed'))
-            window.location.href = '/login'
+            const auth = useAuth()
+            auth.clearSession()
+            if (routerRef) {
+                const current = routerRef.currentRoute.value
+                if (current?.path !== '/login') {
+                    routerRef.push({ path: '/login', query: { redirect: current?.fullPath } })
+                }
+            } else if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+                window.location.href = '/login'
+            }
         }
         return Promise.reject(err)
     }

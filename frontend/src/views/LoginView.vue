@@ -1,8 +1,8 @@
 <template>
   <div class="auth-page">
     <div class="auth-logo">
-      <h1 class="logo-title">Wachines del DnD</h1>
-      <p class="logo-sub">Guardá la leyenda de tus héroes</p>
+      <h1 class="logo-title">{{ APP_NAME }}</h1>
+      <p class="logo-sub">{{ APP_TAGLINE }}</p>
     </div>
 
     <div class="card auth-card">
@@ -61,10 +61,15 @@
 
 <script>
 import { authAPI } from '../services/api.js'
+import { useAuth, homePathForRole } from '../stores/auth.js'
+import { APP_NAME, APP_TAGLINE } from '../constants/branding.js'
 
 export default {
   name: 'LoginView',
   inject: ['showToast'],
+  setup() {
+    return { auth: useAuth(), APP_NAME, APP_TAGLINE }
+  },
   data() {
     return {
       username: '',
@@ -85,14 +90,14 @@ export default {
           password: this.password
         })
 
-        localStorage.setItem('dnd_token', data.token)
-        localStorage.setItem('dnd_user', JSON.stringify(data.user))
-        window.dispatchEvent(new Event('dnd-auth-changed'))
+        this.auth.setSession(data.token, data.user)
 
-        const r = data.user?.role
-        if (r === 'administrador') this.$router.push('/admin')
-        else if (r === 'dm') this.$router.push('/dm')
-        else this.$router.push('/home')
+        const redirect = this.$route.query.redirect
+        if (redirect && typeof redirect === 'string') {
+          this.$router.push(redirect)
+        } else {
+          this.$router.push(homePathForRole(data.user?.role))
+        }
       } catch (err) {
         this.error = err.response?.data?.message || 'Error al ingresar'
       } finally {

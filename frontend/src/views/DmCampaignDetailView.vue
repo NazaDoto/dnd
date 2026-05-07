@@ -12,6 +12,15 @@
         <button type="button" class="btn btn-secondary" :disabled="saving" @click="saveAll">Guardar</button>
         <button type="button" class="btn btn-ghost" @click="rotateInvite">Nuevo código</button>
         <button type="button" class="btn btn-secondary" @click="downloadPdf">PDF</button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :title="combatActiveText"
+          aria-label="Abrir tracker de iniciativa y combate"
+          @click="trackerOpen = true"
+        >
+          ⚔ Combate<span v-if="combatBadge" class="combat-badge">{{ combatBadge }}</span>
+        </button>
       </div>
     </div>
 
@@ -207,12 +216,20 @@
     @cancel="closePdfModal"
     @choose="downloadCharacterPdfByFormat"
   />
+  <InitiativeTracker
+    v-if="trackerOpen"
+    :campaign-id="cid"
+    :roster-characters="roster.active"
+    @close="trackerOpen = false"
+  />
 </template>
 
 <script>
 import { dmAPI } from '../services/api.js'
 import { exportCampaignPdf, exportCharacterPdf } from '../services/pdfExport.js'
 import PdfFormatModal from '../components/PdfFormatModal.vue'
+import InitiativeTracker from '../components/InitiativeTracker.vue'
+import { useInitiative } from '../stores/initiative.js'
 
 const emptyForm = () => ({
   name: '',
@@ -237,7 +254,7 @@ const emptyForm = () => ({
 
 export default {
   name: 'DmCampaignDetailView',
-  components: { PdfFormatModal },
+  components: { PdfFormatModal, InitiativeTracker },
   inject: ['showToast'],
   data() {
     return {
@@ -254,12 +271,28 @@ export default {
       npcList: [],
       roster: { active: [], pending: [] },
       pdfModalOpen: false,
-      pdfCharacter: null
+      pdfCharacter: null,
+      trackerOpen: false
     }
   },
   computed: {
     cid() {
       return this.$route.params.id
+    },
+    encounter() {
+      return useInitiative(this.cid).encounter
+    },
+    combatBadge() {
+      const enc = this.encounter
+      if (enc?.active) return `R${enc.round}`
+      if (enc?.combatants?.length) return enc.combatants.length
+      return ''
+    },
+    combatActiveText() {
+      const enc = this.encounter
+      if (enc?.active) return `Combate en curso · Ronda ${enc.round}`
+      if (enc?.combatants?.length) return `${enc.combatants.length} combatiente(s) preparados`
+      return 'Abrir tracker de combate'
     }
   },
   async mounted() {
@@ -441,6 +474,21 @@ export default {
   flex-wrap: wrap;
   gap: 0.4rem;
   align-items: center;
+}
+.combat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: rgba(8, 6, 3, 0.4);
+  color: var(--gold-light);
+  font-family: var(--font-title);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0 0.4rem;
+  margin-left: 0.4rem;
 }
 .dm-split {
   display: flex;

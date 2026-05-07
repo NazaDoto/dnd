@@ -1,42 +1,28 @@
 <template>
-  <nav class="navbar">
-    <RouterLink :to="homePath" class="nav-item nav-home" active-class="active">
-      <span class="nav-label nav-label-mobile">{{ homeLabel }}</span>
-      <span class="nav-label nav-label-desktop">Wachines del DnD</span>
+  <nav class="navbar" aria-label="Navegación principal">
+    <RouterLink :to="auth.homePath.value" class="nav-item nav-home" active-class="active" :aria-label="`Inicio - ${APP_NAME}`">
+      <span class="nav-label nav-label-mobile">Inicio</span>
+      <span class="nav-label nav-label-desktop">{{ APP_NAME }}</span>
     </RouterLink>
-    <button type="button" class="nav-item nav-logout" @click="logout">
+    <button type="button" class="nav-item nav-logout" @click="logout" aria-label="Cerrar sesión">
       <span class="nav-label">Salir</span>
     </button>
   </nav>
 </template>
 
 <script>
+import { useAuth } from '../stores/auth.js'
+import { APP_NAME } from '../constants/branding.js'
+
 export default {
   name: 'NavBar',
-  props: {
-    user: {
-      type: Object,
-      default: null
-    }
-  },
-  computed: {
-    role() {
-      return this.user?.role || 'jugador'
-    },
-    homePath() {
-      if (this.role === 'administrador') return '/admin'
-      if (this.role === 'dm') return '/dm'
-      return '/home'
-    },
-    homeLabel() {
-      return 'Inicio'
-    }
+  setup() {
+    const auth = useAuth()
+    return { auth, APP_NAME }
   },
   methods: {
     logout() {
-      localStorage.removeItem('dnd_token')
-      localStorage.removeItem('dnd_user')
-      window.dispatchEvent(new Event('dnd-auth-changed'))
+      this.auth.clearSession()
       this.$router.push('/login')
     }
   }

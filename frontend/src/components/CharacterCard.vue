@@ -1,15 +1,25 @@
 <template>
-  <div class="char-card" @click="$emit('click')">
+  <div
+    class="char-card"
+    role="button"
+    tabindex="0"
+    :aria-label="`Abrir personaje ${character.name}`"
+    @click="$emit('click')"
+    @keydown.enter.prevent="$emit('click')"
+    @keydown.space.prevent="$emit('click')"
+  >
     <div class="char-avatar">
       <img
         v-if="character.photo_url"
         :src="character.photo_url"
-        :alt="character.name"
+        :alt="`Avatar de ${character.name}`"
         class="avatar-img"
+        loading="lazy"
+        decoding="async"
       />
-      <div v-else class="avatar-placeholder">{{ character.name[0] }}</div>
+      <div v-else class="avatar-placeholder" aria-hidden="true">{{ initial }}</div>
 
-      <div class="hp-badge" :class="hpClass">
+      <div class="hp-badge" :class="hpClass" :aria-label="`Puntos de vida ${character.hit_points_current} de ${character.hit_points_max}`">
         {{ character.hit_points_current }}/{{ character.hit_points_max }}
       </div>
     </div>
@@ -17,7 +27,7 @@
     <div class="char-info">
       <div class="char-name-row">
         <h3 class="char-name">{{ character.name }}</h3>
-        <span v-if="character.linked_campaign_name" class="campaign-pill">
+        <span v-if="character.linked_campaign_name" class="campaign-pill" :title="character.linked_campaign_name">
           {{ character.linked_campaign_name }}
         </span>
       </div>
@@ -35,13 +45,14 @@
         class="pdf-btn"
         type="button"
         title="Descargar PDF"
+        :aria-label="`Descargar PDF de ${character.name}`"
         :disabled="downloadingPdf"
         @click.stop="downloadPdf"
       >
         {{ downloadingPdf ? "..." : "PDF" }}
       </button>
 
-      <span class="action-arrow">›</span>
+      <span class="action-arrow" aria-hidden="true">›</span>
     </div>
   </div>
   <PdfFormatModal
@@ -56,6 +67,13 @@ import { CLASSES } from "../services/dndData.js";
 import { charactersAPI } from "../services/api.js";
 import { exportCharacterPdf } from "../services/pdfExport.js";
 import PdfFormatModal from "./PdfFormatModal.vue";
+
+const CLASSES_BY_VALUE = Object.freeze(
+  CLASSES.reduce((acc, c) => {
+    acc[c.value] = c;
+    return acc;
+  }, {})
+);
 
 export default {
   name: "CharacterCard",
@@ -72,8 +90,11 @@ export default {
     };
   },
   computed: {
+    initial() {
+      return this.character?.name?.[0] || "?";
+    },
     classLabel() {
-      const cls = CLASSES.find((c) => c.value === this.character.class);
+      const cls = CLASSES_BY_VALUE[this.character.class];
       return cls ? cls.label : this.character.class;
     },
 
