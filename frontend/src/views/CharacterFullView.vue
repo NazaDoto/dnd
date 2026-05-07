@@ -1496,7 +1496,9 @@ normalizeSpells(value) {
   padding: 0.2rem 0;
   border-bottom: 1px solid var(--bg-deep);
 }
-
+.skill-row:hover{
+  background-color:rgb(50, 36, 14);
+}
 .prof-dot {
   width: 10px;
   height: 10px;
