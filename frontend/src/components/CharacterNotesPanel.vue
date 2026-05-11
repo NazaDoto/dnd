@@ -8,6 +8,7 @@
 
     <div v-if="showForm" class="card note-form-card">
       <p class="section-title">{{ editingNote ? 'Editar Nota' : 'Nueva Nota' }}</p>
+      <p v-if="autosaveHint" class="autosave-hint">{{ autosaveHint }}</p>
       <div class="form-group mb-4" style="margin-bottom:0.5rem">
         <label class="form-label">Titulo (opcional)</label>
         <input v-model="form.title" placeholder="Sesion 1, El Encuentro en la Taberna..." />
@@ -18,7 +19,13 @@
       </div>
       <div class="form-group mb-4" style="margin-bottom:0.5rem">
         <label class="form-label">Notas *</label>
-        <textarea v-model="form.content" rows="6" placeholder="Escribi lo que paso en la sesion..." style="resize:vertical"></textarea>
+        <textarea
+          v-model="form.content"
+          rows="6"
+          placeholder="Escribi lo que paso en la sesion..."
+          style="resize:vertical"
+          @blur="flushAutosave"
+        ></textarea>
       </div>
       <div class="form-group mb-4" style="margin-bottom:0.75rem">
         <label class="form-label">Etiquetas</label>
@@ -79,6 +86,8 @@
 <script>
 import { notesAPI } from '../services/api.js'
 
+const AUTOSAVE_MS = 900
+
 export default {
   name: 'CharacterNotesPanel',
   inject: ['showToast'],
@@ -96,11 +105,45 @@ export default {
       saving: false,
       editingNote: null,
       tagInput: '',
-      form: { title: '', content: '', session_date: '', tags: [] }
+      form: { title: '', content: '', session_date: '', tags: [] },
+      autosaveTimer: null,
+      autosaveStatus: 'idle',
+      autosaveInFlight: false,
+      autosaveSavedTimer: null
+    }
+  },
+  computed: {
+    autosaveHint() {
+      if (this.autosaveStatus === 'saving') return 'Guardando automáticamente…'
+      if (this.autosaveStatus === 'saved') return 'Cambios guardados'
+      if (this.autosaveStatus === 'error') return 'No se pudo guardar automáticamente. Reintentá con el botón.'
+      return ''
+    }
+  },
+  watch: {
+    form: {
+      deep: true,
+      handler() {
+        if (!this.showForm) return
+        this.scheduleAutosave()
+      }
+    },
+    showForm(val) {
+      if (!val) this.clearAutosaveTimer()
     }
   },
   async mounted() {
     await this.loadNotes()
+    this._onVis = () => {
+      if (document.visibilityState === 'hidden') this.flushAutosave()
+    }
+    document.addEventListener('visibilitychange', this._onVis)
+  },
+  beforeUnmount() {
+    document.removeEventListener('visibilitychange', this._onVis)
+    this.clearAutosaveTimer()
+    if (this.autosaveSavedTimer) clearTimeout(this.autosaveSavedTimer)
+    this.flushAutosave()
   },
   methods: {
     onTagKeydown(event) {
@@ -109,24 +152,99 @@ export default {
         this.addTag()
       }
     },
-    async loadNotes() {
-      this.loading = true
+    clearAutosaveTimer() {
+      if (this.autosaveTimer) {
+        clearTimeout(this.autosaveTimer)
+        this.autosaveTimer = null
+      }
+    },
+    scheduleAutosave() {
+      if (!this.showForm) return
+      this.clearAutosaveTimer()
+      if (this.autosaveSavedTimer) {
+        clearTimeout(this.autosaveSavedTimer)
+        this.autosaveSavedTimer = null
+      }
+      if (this.autosaveStatus === 'saved' || this.autosaveStatus === 'error') {
+        this.autosaveStatus = 'idle'
+      }
+      this.autosaveTimer = setTimeout(() => this.runAutosave(), AUTOSAVE_MS)
+    },
+    formPayload() {
+      return {
+        title: (this.form.title || '').trim() || null,
+        content: this.form.content || '',
+        session_date: this.form.session_date || null,
+        tags: Array.isArray(this.form.tags) ? [...this.form.tags] : []
+      }
+    },
+    async runAutosave() {
+      this.autosaveTimer = null
+      if (!this.showForm) return
+      const payload = this.formPayload()
+      if (!String(payload.content || '').trim()) return
+
+      this.autosaveInFlight = true
+      this.autosaveStatus = 'saving'
+      try {
+        if (this.editingNote && this.editingNote.id) {
+          await notesAPI.update(this.editingNote.id, {
+            title: payload.title,
+            content: payload.content,
+            session_date: payload.session_date,
+            tags: payload.tags
+          })
+        } else {
+          const { data } = await notesAPI.create(this.charId, {
+            title: payload.title || undefined,
+            content: payload.content,
+            session_date: payload.session_date || undefined,
+            tags: payload.tags
+          })
+          this.editingNote = { ...(this.editingNote || {}), id: data.id }
+        }
+        this.autosaveStatus = 'saved'
+        await this.loadNotes({ silent: true })
+        if (this.autosaveSavedTimer) clearTimeout(this.autosaveSavedTimer)
+        this.autosaveSavedTimer = setTimeout(() => {
+          if (this.autosaveStatus === 'saved') this.autosaveStatus = 'idle'
+          this.autosaveSavedTimer = null
+        }, 2500)
+      } catch {
+        this.autosaveStatus = 'error'
+      } finally {
+        this.autosaveInFlight = false
+      }
+    },
+    async flushAutosave() {
+      this.clearAutosaveTimer()
+      while (this.autosaveInFlight) {
+        await new Promise(r => setTimeout(r, 40))
+      }
+      return this.runAutosave()
+    },
+    async loadNotes({ silent = false } = {}) {
+      if (!silent) this.loading = true
       try {
         const { data } = await notesAPI.getAll(this.charId)
         this.notes = data
       } catch {
-        this.showToast('Error al cargar notas', 'error')
+        if (!silent) this.showToast('Error al cargar notas', 'error')
       } finally {
-        this.loading = false
+        if (!silent) this.loading = false
       }
     },
     openNew() {
+      this.clearAutosaveTimer()
+      this.autosaveStatus = 'idle'
       this.editingNote = null
       this.form = { title: '', content: '', session_date: '', tags: [] }
       this.tagInput = ''
       this.showForm = true
     },
     editNote(note) {
+      this.clearAutosaveTimer()
+      this.autosaveStatus = 'idle'
       this.editingNote = note
       this.form = {
         title: note.title || '',
@@ -136,9 +254,11 @@ export default {
       }
       this.showForm = true
     },
-    closeForm() {
+    async closeForm() {
+      await this.flushAutosave()
       this.showForm = false
       this.editingNote = null
+      this.autosaveStatus = 'idle'
     },
     addTag() {
       const t = this.tagInput.trim().replace(/,$/, '')
@@ -149,26 +269,35 @@ export default {
       this.form.tags.splice(i, 1)
     },
     async saveNote() {
+      this.clearAutosaveTimer()
       if (!this.form.content.trim()) {
         this.showToast('El contenido es obligatorio', 'error')
         return
       }
       this.saving = true
       try {
-        if (this.editingNote) {
+        if (this.editingNote && this.editingNote.id) {
           await notesAPI.update(this.editingNote.id, this.form)
           this.showToast('Nota actualizada', 'success')
         } else {
-          await notesAPI.create(this.charId, this.form)
+          const { data } = await notesAPI.create(this.charId, this.form)
+          this.editingNote = { id: data.id, ...this.form }
           this.showToast('Nota guardada', 'success')
         }
-        this.closeForm()
+        this.autosaveStatus = 'idle'
+        this.closeFormWithoutFlush()
         await this.loadNotes()
       } catch {
         this.showToast('Error al guardar nota', 'error')
       } finally {
         this.saving = false
       }
+    },
+    closeFormWithoutFlush() {
+      this.clearAutosaveTimer()
+      this.showForm = false
+      this.editingNote = null
+      this.autosaveStatus = 'idle'
     },
     async deleteNote(id) {
       if (!confirm('¿Eliminar esta nota?')) return
@@ -190,6 +319,11 @@ export default {
 <style scoped>
 .notes-panel-top { display: flex; justify-content: flex-end; margin-bottom: 0.7rem; }
 .note-form-card { margin-bottom: 1rem; }
+.autosave-hint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: -0.35rem 0 0.5rem;
+}
 .note-form-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .tags-input {
   display: flex; flex-wrap: wrap; gap: 0.3rem; align-items: center;

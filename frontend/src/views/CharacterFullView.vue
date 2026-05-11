@@ -416,52 +416,47 @@
 
       <!-- ── PESTAÑA: Trasfondo ── -->
       <div v-if="activeTab === 'backstory'" class="tab-content">
-        <div class="card mb-4" v-if="
-          character.personality_traits ||
-          character.ideals ||
-          character.bonds ||
-          character.flaws
-        ">
+        <div class="card mb-4">
           <p class="section-title">Personalidad</p>
           <div class="trait-grid">
-            <div v-if="character.personality_traits" class="trait-box">
+            <div class="trait-box">
               <div class="trait-head"><p class="trait-lbl">Rasgos</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_traits', character.personality_traits || '')">✎</button></div>
               <div v-if="isEditing('backstory_traits')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
-              <p v-if="!isEditing('backstory_traits')" class="trait-val">{{ character.personality_traits }}</p>
+              <p v-if="!isEditing('backstory_traits')" class="trait-val">{{ character.personality_traits || "—" }}</p>
             </div>
-            <div v-if="character.ideals" class="trait-box">
+            <div class="trait-box">
               <div class="trait-head"><p class="trait-lbl">Ideales</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_ideals', character.ideals || '')">✎</button></div>
               <div v-if="isEditing('backstory_ideals')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
-              <p v-if="!isEditing('backstory_ideals')" class="trait-val">{{ character.ideals }}</p>
+              <p v-if="!isEditing('backstory_ideals')" class="trait-val">{{ character.ideals || "—" }}</p>
             </div>
-            <div v-if="character.bonds" class="trait-box">
+            <div class="trait-box">
               <div class="trait-head"><p class="trait-lbl">Vínculos</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_bonds', character.bonds || '')">✎</button></div>
               <div v-if="isEditing('backstory_bonds')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
-              <p v-if="!isEditing('backstory_bonds')" class="trait-val">{{ character.bonds }}</p>
+              <p v-if="!isEditing('backstory_bonds')" class="trait-val">{{ character.bonds || "—" }}</p>
             </div>
-            <div v-if="character.flaws" class="trait-box">
+            <div class="trait-box">
               <div class="trait-head"><p class="trait-lbl">Defectos</p><button type="button" class="icon-action edit" @click="startFieldEdit('backstory_flaws', character.flaws || '')">✎</button></div>
               <div v-if="isEditing('backstory_flaws')" class="inline-editor"><textarea v-model="fieldDraft" rows="3"></textarea><div class="mini-edit-actions"><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></div></div>
-              <p v-if="!isEditing('backstory_flaws')" class="trait-val">{{ character.flaws }}</p>
+              <p v-if="!isEditing('backstory_flaws')" class="trait-val">{{ character.flaws || "—" }}</p>
             </div>
           </div>
         </div>
-        <div class="card mb-4" v-if="character.backstory">
+        <div class="card mb-4">
           <div class="section-title-row"><p class="section-title">Historia</p><div class="mini-edit-actions"><button v-if="!isEditing('backstory_history')" type="button" class="icon-action edit" @click="startFieldEdit('backstory_history', character.backstory || '')">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
           <div v-if="isEditing('backstory_history')" class="inline-editor"><textarea v-model="fieldDraft" rows="5"></textarea></div>
-          <p v-if="!isEditing('backstory_history')" style="
+          <p v-else style="
             font-size: 0.9rem;
             line-height: 1.7;
             color: var(--text-secondary);
             white-space: pre-line;
           ">
-            {{ character.backstory }}
+            {{ character.backstory || "—" }}
           </p>
         </div>
         <div class="card mb-4">
           <div class="section-title-row"><p class="section-title">Apariencia</p></div>
           <div class="appear-grid">
-            <div v-for="f in visibleAppearanceFields" :key="f.key" class="appear-row">
+            <div v-for="f in allAppearanceFields" :key="f.key" class="appear-row">
               <span class="appear-lbl">{{ f.label }}</span>
               <span v-if="!isEditing('appearance_' + f.key)" class="appear-val">{{ character[f.key] || "—" }}</span>
               <div v-else class="appear-inline-edit">
@@ -487,16 +482,16 @@
             </div>
           </div>
           <div v-if="isEditing('backstory_appearance')" class="inline-editor"><textarea v-model="fieldDraft" rows="4"></textarea></div>
-          <p v-else-if="character.appearance_notes" style="
+          <p v-else style="
             margin-top: 0.5rem;
             font-size: 0.85rem;
             color: var(--text-secondary);
             white-space: pre-line;
           ">
-            {{ character.appearance_notes }}
+            {{ character.appearance_notes || "—" }}
           </p>
         </div>
-        <div class="card" v-if="character.allies_organizations || character.faction">
+        <div class="card">
           <p class="section-title">Alianzas & Organizaciones</p>
           <div class="trait-grid">
             <div class="trait-box">
@@ -529,9 +524,10 @@
 
       <!-- ── PESTAÑA: Rasgos ── -->
       <div v-if="activeTab === 'features'" class="tab-content">
-        <div class="card mb-4" v-if="features.length">
+        <div class="card mb-4">
           <div class="section-title-row"><p class="section-title">Rasgos & Capacidades</p><div class="mini-edit-actions"><button v-if="!isEditing('features_traits')" type="button" class="icon-action edit" @click="startFieldEdit('features_traits', (features || []).map(f => (typeof f === 'string' ? f : f?.name || '')).join('\n'))">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
           <div v-if="isEditing('features_traits')" class="inline-editor"><textarea v-model="fieldDraft" rows="5"></textarea></div>
+          <p v-if="!features.length && !isEditing('features_traits')" class="text-muted" style="font-size:0.85rem;margin:0 0 0.5rem">Sin rasgos registrados. Usá ✎ para agregar (una línea por rasgo).</p>
           <div v-for="(feat, i) in features" :key="i" class="feat-block">
             <p class="feat-name">{{ feat.name }}</p>
             <p class="feat-desc" v-if="feat.description">
@@ -539,7 +535,7 @@
             </p>
           </div>
         </div>
-        <div class="card" v-if="languages.length || otherProfs.length">
+        <div class="card">
           <div class="section-title-row"><p class="section-title">Competencias & Idiomas</p><div class="mini-edit-actions"><button v-if="!isEditing('features_competencies')" type="button" class="icon-action edit" @click="startFieldEdit('features_competencies')">✎</button><template v-else><button type="button" class="icon-action save" @click="saveFieldEdit">✓</button><button type="button" class="icon-action cancel" @click="cancelFieldEdit">✕</button></template></div></div>
           <div v-if="isEditing('features_competencies')" class="inline-editor">
             <div class="two-col">
@@ -554,71 +550,78 @@
             </div>
           </div>
           <div v-else class="lang-tags">
-            <span v-for="l in languages" :key="l" class="badge badge-blue">{{
-              l
-            }}</span>
-            <span v-for="p in otherProfs" :key="p" class="badge badge-gold">{{
-              p
-            }}</span>
+            <template v-if="languages.length || otherProfs.length">
+              <span v-for="l in languages" :key="l" class="badge badge-blue">{{
+                l
+              }}</span>
+              <span v-for="p in otherProfs" :key="p" class="badge badge-gold">{{
+                p
+              }}</span>
+            </template>
+            <span v-else class="text-muted" style="font-size:0.85rem">Sin idiomas ni competencias extra. Usá ✎ para cargarlas.</span>
           </div>
         </div>
       </div>
-      <div v-if="activeTab === 'notes'" class="tab-content">
-        <CharacterNotesPanel :char-id="id" />
+      <div v-show="activeTab === 'notes'" class="tab-content">
+        <CharacterNotesPanel :key="String(id)" :char-id="id" />
       </div>
       </section>
     </div>
 
     <div v-if="sidebarEditorOpen && !isDmCampaignReader" class="modal-backdrop" @click.self="closeSidebarEditor">
-      <div class="modal-card">
-        <div class="section-title-row">
-          <p class="section-title">Editar perfil del personaje</p>
-          <button type="button" class="icon-action cancel" @click="closeSidebarEditor">✕</button>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="sidebar-editor-title">
+        <div class="modal-card-scroll">
+          <div class="section-title-row">
+            <p id="sidebar-editor-title" class="section-title">Editar perfil del personaje</p>
+            <button type="button" class="icon-action cancel" @click="closeSidebarEditor">✕</button>
+          </div>
+          <div class="photo-picker">
+            <div class="photo-preview">
+              <img v-if="sidebarPhotoPreview" :src="sidebarPhotoPreview" alt="Preview" class="sidebar-photo" />
+              <div v-else class="sidebar-photo sidebar-photo-placeholder">{{ (sidebarForm.name || "?")[0] }}</div>
+            </div>
+            <input ref="sidebarEditorPhotoInput" type="file" accept="image/*" @change="onSidebarEditorPhotoSelected" />
+          </div>
+          <div class="inline-grid">
+            <div>
+              <label class="form-label">Nombre</label>
+              <input v-model="sidebarForm.name" />
+            </div>
+            <div>
+              <label class="form-label">Experiencia</label>
+              <input v-model.number="sidebarForm.experience_points" type="number" min="0" />
+            </div>
+            <div>
+              <label class="form-label">Raza</label>
+              <select v-model="sidebarForm.race">
+                <option value="">Elegí raza</option>
+                <option v-for="r in RACES" :key="'race-'+r.value" :value="r.label">{{ r.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Subraza</label>
+              <input v-model="sidebarForm.subrace" placeholder="Opcional" />
+            </div>
+            <div>
+              <label class="form-label">Clase</label>
+              <select v-model="sidebarForm.class">
+                <option value="">Elegí clase</option>
+                <option v-for="c in CLASSES" :key="'class-'+c.value" :value="c.value">{{ c.label }}</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Subclase</label>
+              <input v-model="sidebarForm.subclass" placeholder="Opcional" />
+            </div>
+          </div>
         </div>
-        <div class="photo-picker">
-          <div class="photo-preview">
-            <img v-if="sidebarPhotoPreview" :src="sidebarPhotoPreview" alt="Preview" class="sidebar-photo" />
-            <div v-else class="sidebar-photo sidebar-photo-placeholder">{{ (sidebarForm.name || "?")[0] }}</div>
+        <div class="modal-card-footer">
+          <div class="inline-actions modal-card-actions">
+            <button type="button" class="btn btn-ghost" @click="closeSidebarEditor">Cancelar</button>
+            <button type="button" class="btn btn-primary" :disabled="sidebarEditorSaving" @click="saveSidebarEditor">
+              {{ sidebarEditorSaving ? "Guardando..." : "Guardar cambios" }}
+            </button>
           </div>
-          <input ref="sidebarEditorPhotoInput" type="file" accept="image/*" @change="onSidebarEditorPhotoSelected" />
-        </div>
-        <div class="inline-grid">
-          <div>
-            <label class="form-label">Nombre</label>
-            <input v-model="sidebarForm.name" />
-          </div>
-          <div>
-            <label class="form-label">Experiencia</label>
-            <input v-model.number="sidebarForm.experience_points" type="number" min="0" />
-          </div>
-          <div>
-            <label class="form-label">Raza</label>
-            <select v-model="sidebarForm.race">
-              <option value="">Elegí raza</option>
-              <option v-for="r in RACES" :key="'race-'+r.value" :value="r.label">{{ r.label }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label">Subraza</label>
-            <input v-model="sidebarForm.subrace" placeholder="Opcional" />
-          </div>
-          <div>
-            <label class="form-label">Clase</label>
-            <select v-model="sidebarForm.class">
-              <option value="">Elegí clase</option>
-              <option v-for="c in CLASSES" :key="'class-'+c.value" :value="c.value">{{ c.label }}</option>
-            </select>
-          </div>
-          <div>
-            <label class="form-label">Subclase</label>
-            <input v-model="sidebarForm.subclass" placeholder="Opcional" />
-          </div>
-        </div>
-        <div class="inline-actions">
-          <button type="button" class="btn btn-ghost" @click="closeSidebarEditor">Cancelar</button>
-          <button type="button" class="btn btn-primary" :disabled="sidebarEditorSaving" @click="saveSidebarEditor">
-            {{ sidebarEditorSaving ? "Guardando..." : "Guardar cambios" }}
-          </button>
         </div>
       </div>
     </div>
@@ -715,8 +718,8 @@ export default {
     };
   },
   computed: {
-    visibleAppearanceFields() {
-      return this.appearanceFields.filter(f => this.character[f.key])
+    allAppearanceFields() {
+      return this.appearanceFields
     },
     id() {
       return this.$route.params.id;
@@ -1298,23 +1301,68 @@ normalizeSpells(value) {
   inset: 0;
   background: rgba(10, 10, 10, 0.72);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 1rem;
+  padding: 0;
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   z-index: 50;
 }
 
 .modal-card {
   width: min(760px, 100%);
-  max-height: 90vh;
-  overflow: auto;
+  max-height: min(92vh, calc(100vh - 1.25rem));
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.modal-card-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 0.9rem;
+  padding-bottom: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.modal-card-footer {
+  flex-shrink: 0;
+  padding: 0.65rem 0.9rem;
+  padding-bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.modal-card-actions {
+  width: 100%;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 640px) {
+  .modal-backdrop {
+    align-items: center;
+    padding: 1rem;
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+  .modal-card {
+    border-radius: var(--radius);
+    max-height: min(90vh, calc(100vh - 2rem));
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+  }
 }
 
 .photo-picker {
