@@ -1,7 +1,16 @@
 <template>
   <div class="notes-hub">
     <aside v-if="character" class="notes-sheet card">
-      <p class="section-title">Referencia rápida</p>
+      <button
+        type="button"
+        class="sheet-toggle"
+        :aria-expanded="sheetOpen"
+        @click="sheetOpen = !sheetOpen"
+      >
+        <span class="section-title sheet-toggle-title">Referencia rápida</span>
+        <span class="sheet-toggle-icon" aria-hidden="true">{{ sheetOpen ? '▾' : '▸' }}</span>
+      </button>
+      <div v-show="sheetOpen" class="sheet-body">
       <p class="sheet-name">{{ character.name }}</p>
       <p class="sheet-meta">
         Nv.{{ character.level }} · {{ character.race || '—' }} · {{ classLabel }}
@@ -67,6 +76,7 @@
           />
         </div>
       </div>
+      </div>
     </aside>
 
     <section class="notes-main">
@@ -119,10 +129,9 @@
       </div>
 
       <div v-else-if="notes.length" class="notes-feed">
-        <button
+        <article
           v-for="note in notes"
           :key="note.id"
-          type="button"
           class="note-card card"
           :class="{ active: editingNote?.id === note.id }"
           @click="editNote(note)"
@@ -139,7 +148,7 @@
             <button type="button" class="btn btn-ghost note-action-btn" @click="editNote(note)">Editar</button>
             <button type="button" class="btn btn-ghost note-action-btn" @click="deleteNote(note.id)">Eliminar</button>
           </div>
-        </button>
+        </article>
       </div>
 
       <div v-else class="empty-state card">
@@ -176,7 +185,8 @@ export default {
       autosaveTimer: null,
       autosaveStatus: 'idle',
       autosaveInFlight: false,
-      autosaveSavedTimer: null
+      autosaveSavedTimer: null,
+      sheetOpen: false
     }
   },
   computed: {
@@ -228,6 +238,8 @@ export default {
     }
   },
   async mounted() {
+    this.syncSheetOpen()
+    window.addEventListener('resize', this.syncSheetOpen)
     await this.loadNotes()
     this._onVis = () => {
       if (document.visibilityState === 'hidden') this.flushAutosave()
@@ -235,6 +247,7 @@ export default {
     document.addEventListener('visibilitychange', this._onVis)
   },
   beforeUnmount() {
+    window.removeEventListener('resize', this.syncSheetOpen)
     document.removeEventListener('visibilitychange', this._onVis)
     this.clearAutosaveTimer()
     if (this.autosaveSavedTimer) clearTimeout(this.autosaveSavedTimer)
@@ -242,6 +255,10 @@ export default {
   },
   methods: {
     fmtMod: formatModifier,
+    syncSheetOpen() {
+      if (typeof window === 'undefined') return
+      this.sheetOpen = window.matchMedia('(min-width: 900px)').matches
+    },
     onTagKeydown(event) {
       if (event.key === ',') {
         event.preventDefault()
@@ -392,23 +409,83 @@ export default {
 
 <style scoped>
 .notes-hub {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 0.75rem;
-  align-items: start;
+  width: 100%;
+  min-width: 0;
+  padding-bottom: 0.5rem;
 }
 @media (min-width: 900px) {
   .notes-hub {
+    display: grid;
     grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    align-items: start;
+    padding-bottom: 0;
   }
 }
 
 .notes-sheet {
-  position: sticky;
-  top: 0.5rem;
-  max-height: calc(100vh - 8rem);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+}
+.sheet-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0 0 0.35rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.sheet-toggle-title {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+.sheet-toggle-icon {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+@media (min-width: 900px) {
+  .sheet-toggle {
+    pointer-events: none;
+    cursor: default;
+    margin-bottom: 0.5rem;
+  }
+  .sheet-toggle-icon {
+    display: none;
+  }
+  .notes-sheet {
+    position: sticky;
+    top: 0.5rem;
+    max-height: calc(100vh - 9rem);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 899px) {
+  .sheet-compact-list :deep(.dnd-ref) {
+    width: 100%;
+    display: block;
+  }
+  .sheet-compact-list :deep(.dnd-ref--inline) {
+    display: block;
+    max-width: 100%;
+  }
 }
 .sheet-name {
   font-family: var(--font-title);
@@ -475,7 +552,15 @@ export default {
   gap: 0.3rem;
 }
 
-.notes-main { display: flex; flex-direction: column; gap: 0.65rem; min-width: 0; }
+.notes-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
 .notes-composer { display: flex; flex-direction: column; gap: 0.5rem; }
 .composer-head {
   display: flex;
@@ -540,6 +625,7 @@ export default {
   text-align: left;
   cursor: pointer;
   transition: border-color 0.2s;
+  position: relative;
 }
 .note-card.active {
   border-color: var(--gold);

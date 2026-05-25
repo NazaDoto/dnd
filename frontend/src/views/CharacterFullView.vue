@@ -66,7 +66,7 @@
         </div>
       </aside>
       <section class="full-content">
-      <div class="quick-states-wrap card">
+      <div v-show="activeTab !== 'notes'" class="quick-states-wrap card">
         <div class="quick-state-grid">
           <button type="button" class="state-pill" @click="startFieldEdit('state_hp', character.hit_points_current)">
             <span class="state-head"><span class="state-key">PV</span><span class="state-edit">✎</span></span>
@@ -568,7 +568,7 @@
           </div>
         </div>
       </div>
-      <div v-show="activeTab === 'notes'" class="tab-content">
+      <div v-show="activeTab === 'notes'" class="tab-content tab-content--notes">
         <CharacterNotesPanel :key="String(id)" :char-id="id" :character="character" />
       </div>
       </section>
@@ -1556,6 +1556,16 @@ normalizeSpells(value) {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+}
+.tab-content--notes {
+  min-width: 0;
+  width: 100%;
+  overflow: visible;
+}
+@media (max-width: 899px) {
+  .tab-content--notes {
+    margin-top: 0;
+  }
 }
 .inline-actions {
   display: flex;
