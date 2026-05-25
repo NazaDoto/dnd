@@ -568,8 +568,13 @@
           </div>
         </div>
       </div>
-      <div v-show="activeTab === 'notes'" class="tab-content tab-content--notes">
-        <CharacterNotesPanel :key="String(id)" :char-id="id" :character="character" />
+      <div v-if="activeTab === 'notes'" class="tab-content tab-content--notes">
+        <CharacterNotesPanel
+          ref="notesPanel"
+          :key="String(id)"
+          :char-id="id"
+          :character="character"
+        />
       </div>
       </section>
     </div>
@@ -829,6 +834,13 @@ export default {
       return sa ? sa.label.split(" ")[0] : "—";
     }
   },
+  watch: {
+    activeTab(newTab, oldTab) {
+      if (oldTab === "notes" && newTab !== "notes") {
+        this.$refs.notesPanel?.flushAutosave?.();
+      }
+    },
+  },
   async mounted() {
     try {
       if (this.isDmCampaignReader) {
@@ -840,7 +852,10 @@ export default {
       }
     } catch {
       this.showToast("Error al cargar ficha", "error");
-      this.$router.back();
+      const fallback = this.isDmCampaignReader
+        ? `/dm/campaign/${this.campaignId}`
+        : "/home";
+      this.$router.replace(fallback);
     }
   },
   methods: {
@@ -1561,10 +1576,13 @@ normalizeSpells(value) {
   min-width: 0;
   width: 100%;
   overflow: visible;
+  position: relative;
+  z-index: 0;
 }
 @media (max-width: 899px) {
   .tab-content--notes {
     margin-top: 0;
+    padding-bottom: 0.5rem;
   }
 }
 .inline-actions {

@@ -731,7 +731,7 @@ export default {
       this.loaded = true
     } catch {
       this.showToast('Error al cargar personaje', 'error')
-      this.$router.back()
+      this.$router.replace('/home')
     }
   },
   methods: {

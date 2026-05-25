@@ -62,17 +62,28 @@ export default {
 </script>
 
 <style>
-html,
+html {
+  height: 100%;
+  height: -webkit-fill-available;
+}
 body,
 #app {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: -webkit-fill-available;
+}
+body {
+  overflow-x: hidden;
 }
 #dnd-app {
   position: relative;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: -webkit-fill-available;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -98,10 +109,11 @@ body,
 }
 
 .main-content {
-  flex: 1;
+  flex: 1 1 0%;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 0.9rem;
   max-width: min(1100px, 100%);
   margin: 0 auto;
@@ -118,7 +130,7 @@ body,
 }
 .main-content.with-nav {
   padding-top: 0.9rem;
-  padding-bottom: 5rem;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
 }
 
 @media (min-width: 640px) {
