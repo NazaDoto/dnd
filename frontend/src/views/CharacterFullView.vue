@@ -48,7 +48,13 @@
               <p class="sidebar-meta">
                 {{ character.class }}<span v-if="character.subclass"> · {{ character.subclass }}</span> · Nv.{{ character.level }}
               </p>
-              <p class="sidebar-meta">XP: {{ character.experience_points || 0 }}</p>
+              <div v-if="!isDmCampaignReader" class="sidebar-level-row">
+                <span class="sidebar-meta">Nivel</span>
+                <button type="button" class="level-step" :disabled="character.level <= 1 || levelSaving" @click="adjustLevel(-1)">−</button>
+                <span class="level-num">{{ character.level }}</span>
+                <button type="button" class="level-step" :disabled="character.level >= 20 || levelSaving" @click="adjustLevel(1)">+</button>
+              </div>
+              <p v-else class="sidebar-meta">Nv.{{ character.level }}</p>
             </div>
           </div>
         </div>
@@ -89,10 +95,6 @@
           <button type="button" class="state-pill" @click="startFieldEdit('state_passive', character.passive_perception)">
             <span class="state-head"><span class="state-key">P. Pasiva</span><span class="state-edit">✎</span></span>
             <span class="state-val">{{ character.passive_perception ?? '-' }}</span>
-          </button>
-          <button type="button" class="state-pill" @click="startFieldEdit('state_xp', character.experience_points)">
-            <span class="state-head"><span class="state-key">XP</span><span class="state-edit">✎</span></span>
-            <span class="state-val">{{ character.experience_points || 0 }}</span>
           </button>
           <button type="button" class="state-pill" @click="startFieldEdit('state_alignment', character.alignment || '')">
             <span class="state-head"><span class="state-key">Alineam.</span><span class="state-edit">✎</span></span>
@@ -222,15 +224,17 @@
           <button type="button" class="btn-secondary" @click="addDraftAttack">+ Agregar ataque</button>
         </div>
         <div v-if="!isEditing('combat_attacks') && attacks.length" class="attacks-list">
-          <div v-for="(atk, i) in attacks" :key="i" class="attack-row">
-            <span class="atk-name">{{ atk.name || "Ataque " + (i + 1) }}</span>
-            <span class="atk-bonus badge badge-gold">{{
-              atk.bonus || "+0"
-            }}</span>
-            <span class="atk-dmg">{{ atk.damage || "—" }}</span>
-            <span class="atk-type text-muted" style="font-size: 0.72rem">{{
-              atk.type || ""
-            }}</span>
+          <div v-for="(atk, i) in attacks" :key="i" class="attack-row attack-row--ref">
+            <DndRefChip
+              v-if="atk.name"
+              :name="atk.name"
+              :extra="[atk.bonus, atk.damage, atk.type].filter(Boolean).join(' · ')"
+            />
+            <span v-else class="atk-name">Ataque {{ i + 1 }}</span>
+            <span v-if="atk.name" class="atk-stats">
+              <span class="atk-bonus badge badge-gold">{{ atk.bonus || "+0" }}</span>
+              <span class="atk-dmg">{{ atk.damage || "—" }}</span>
+            </span>
           </div>
         </div>
         <p v-else-if="!isEditing('combat_attacks')" class="text-muted" style="font-size: 0.85rem">
@@ -329,9 +333,12 @@
           </div>
 
           <div class="spell-tags">
-            <span v-for="sp in block.spells" :key="sp" class="spell-tag">
-              {{ sp }}
-            </span>
+            <DndRefChip
+              v-for="sp in block.spells"
+              :key="block.key + '-' + sp"
+              :name="sp"
+              class="spell-ref-chip"
+            />
           </div>
         </div>
       </div>
@@ -380,10 +387,9 @@
           <div v-if="isEditing('equipment_items')" class="inline-editor">
             <textarea v-model="fieldDraft" rows="4"></textarea>
           </div>
-          <div v-if="!isEditing('equipment_items') && equipment.length">
+          <div v-if="!isEditing('equipment_items') && equipment.length" class="equip-ref-list">
             <div v-for="(item, i) in equipment" :key="i" class="equip-row">
-              <span class="equip-name">{{ item.name || item }}</span>
-              <span v-if="item.qty" class="equip-qty">x{{ item.qty }}</span>
+              <DndRefChip :name="item.name || item" :extra="item.qty ? `x${item.qty}` : ''" />
             </div>
           </div>
           <p v-else-if="!isEditing('equipment_items')" class="text-muted" style="font-size: 0.85rem">
@@ -563,7 +569,7 @@
         </div>
       </div>
       <div v-show="activeTab === 'notes'" class="tab-content">
-        <CharacterNotesPanel :key="String(id)" :char-id="id" />
+        <CharacterNotesPanel :key="String(id)" :char-id="id" :character="character" />
       </div>
       </section>
     </div>
@@ -588,8 +594,15 @@
               <input v-model="sidebarForm.name" />
             </div>
             <div>
-              <label class="form-label">Experiencia</label>
-              <input v-model.number="sidebarForm.experience_points" type="number" min="0" />
+              <label class="form-label">Nivel (1–20)</label>
+              <input
+                v-model.number="sidebarForm.level"
+                type="number"
+                min="1"
+                max="20"
+                step="1"
+                inputmode="numeric"
+              />
             </div>
             <div>
               <label class="form-label">Raza</label>
@@ -643,19 +656,21 @@ import { charactersAPI, dmAPI } from "../services/api.js";
 import { exportCharacterPdf } from "../services/pdfExport.js";
 import CharacterNotesPanel from "../components/CharacterNotesPanel.vue";
 import PdfFormatModal from "../components/PdfFormatModal.vue";
+import DndRefChip from "../components/DndRefChip.vue";
 import {
   ATTRIBUTES,
   SKILLS,
   SPELLCASTING_ABILITIES,
   CLASSES,
   RACES,
+  PROF_BONUS_BY_LEVEL,
   getModifier,
   formatModifier,
 } from "../services/dndData.js";
 
 export default {
   name: "CharacterFullView",
-  components: { CharacterNotesPanel, PdfFormatModal },
+  components: { CharacterNotesPanel, PdfFormatModal, DndRefChip },
   inject: ["showToast"],
   data() {
     return {
@@ -670,6 +685,7 @@ export default {
       RACES,
       sidebarEditorOpen: false,
       sidebarEditorSaving: false,
+      levelSaving: false,
       pdfModalOpen: false,
       sidebarPhotoFile: null,
       sidebarPhotoPreview: "",
@@ -679,7 +695,7 @@ export default {
         subrace: "",
         class: "",
         subclass: "",
-        experience_points: 0
+        level: 1
       },
       tabs: [
         { id: "skills", label: "Habilidades" },
@@ -835,7 +851,7 @@ export default {
         subrace: this.character?.subrace || "",
         class: this.character?.class || "",
         subclass: this.character?.subclass || "",
-        experience_points: Number(this.character?.experience_points || 0)
+        level: this.clampLevel(this.character?.level)
       };
       this.sidebarPhotoFile = null;
       this.sidebarPhotoPreview = this.character?.photo_url || "";
@@ -853,6 +869,28 @@ export default {
       this.sidebarPhotoFile = file;
       this.sidebarPhotoPreview = URL.createObjectURL(file);
     },
+    clampLevel(n) {
+      const v = parseInt(n, 10)
+      if (Number.isNaN(v)) return 1
+      return Math.min(20, Math.max(1, v))
+    },
+    async adjustLevel(delta) {
+      if (this.isDmCampaignReader) return
+      const next = this.clampLevel((this.character?.level || 1) + delta)
+      if (next === this.character?.level) return
+      try {
+        this.levelSaving = true
+        await this.persistCharacterPatch({
+          level: next,
+          proficiency_bonus: PROF_BONUS_BY_LEVEL[next] ?? 2
+        })
+        this.showToast(`Nivel ${next}`, "success")
+      } catch {
+        this.showToast("No se pudo cambiar el nivel", "error")
+      } finally {
+        this.levelSaving = false
+      }
+    },
     async saveSidebarEditor() {
       try {
         this.sidebarEditorSaving = true;
@@ -862,7 +900,8 @@ export default {
           subrace: String(this.sidebarForm.subrace || "").trim(),
           class: String(this.sidebarForm.class || "").trim(),
           subclass: String(this.sidebarForm.subclass || "").trim(),
-          experience_points: Number(this.sidebarForm.experience_points || 0)
+          level: this.clampLevel(this.sidebarForm.level),
+          proficiency_bonus: PROF_BONUS_BY_LEVEL[this.clampLevel(this.sidebarForm.level)] ?? 2
         });
         if (this.sidebarPhotoFile) fd.append("photo", this.sidebarPhotoFile);
         const { data } = await charactersAPI.update(this.id, fd);
@@ -964,8 +1003,6 @@ export default {
           await this.persistCharacterPatch({ inspiration: String(value).toLowerCase() === "si" || String(value).toLowerCase() === "true" });
         } else if (key === "state_passive") {
           await this.persistCharacterPatch({ passive_perception: Number(value || 0) });
-        } else if (key === "state_xp") {
-          await this.persistCharacterPatch({ experience_points: Number(value || 0) });
         } else if (key === "state_alignment") {
           await this.persistCharacterPatch({ alignment: String(value || "").trim() || null });
         } else if (key === "skills_saves") {
@@ -1307,8 +1344,9 @@ normalizeSpells(value) {
   padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
   padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
   padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  z-index: 50;
+  /* Espacio para navbar inferior fijo (~4.5rem) + safe area */
+  padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  z-index: 250;
 }
 
 .modal-card {
@@ -1352,11 +1390,66 @@ normalizeSpells(value) {
   flex-wrap: wrap;
 }
 
+.sidebar-level-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+.level-step {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--gold-light);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0;
+}
+.level-step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.level-num {
+  font-family: var(--font-title);
+  font-size: 1rem;
+  min-width: 1.25rem;
+  text-align: center;
+  color: var(--gold-light);
+}
+.spell-ref-chip {
+  width: 100%;
+}
+.attack-row--ref {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+.atk-stats {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding-left: 0.25rem;
+}
+.equip-ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+@media (min-width: 1024px) {
+  .modal-backdrop {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (min-width: 640px) {
   .modal-backdrop {
     align-items: center;
     padding: 1rem;
-    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
   }
   .modal-card {
     border-radius: var(--radius);
@@ -1687,8 +1780,8 @@ normalizeSpells(value) {
 
 .spell-tags {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
 .spell-tag {

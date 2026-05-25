@@ -381,7 +381,7 @@ export function exportCharacterPdfPlain(character) {
     const headerLine = [
         character.alignment ? `Alineamiento: ${character.alignment}` : null,
         character.background ? `Trasfondo: ${character.background}` : null,
-        `XP: ${character.experience_points || 0}`,
+        `Nivel: ${character.level || 1}`,
     ].filter(Boolean).join('  ·  ')
     doc.text(sanitize(headerLine), t.marginX, 31)
 

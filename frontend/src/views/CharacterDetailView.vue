@@ -240,21 +240,6 @@
       </div>
     </div>
 
-    <!-- XP -->
-    <div class="card xp-section">
-      <div class="xp-header">
-        <span class="section-title" style="margin: 0; border: none; padding: 0">
-          Experiencia
-        </span>
-        <span class="badge badge-gold">{{ character.experience_points }} XP</span>
-      </div>
-
-      <div class="xp-bar-wrap">
-        <div class="xp-bar" :style="{ width: xpPct + '%' }"></div>
-      </div>
-
-      <p class="xp-hint">{{ xpLabel }}</p>
-    </div>
   </div>
 
   <div v-else class="loading-screen">
@@ -268,7 +253,6 @@ import StatsBlock from '../components/StatsBlock.vue'
 import { charactersAPI } from '../services/api.js'
 import {
   CLASSES,
-  XP_BY_LEVEL,
   SPELLCASTING_ABILITIES,
   formatModifier
 } from '../services/dndData.js'
@@ -309,28 +293,6 @@ export default {
       if (p > 50) return 'ok'
       if (p > 25) return 'warn'
       return 'danger'
-    },
-
-    xpPct() {
-      const lvl = this.character?.level || 1
-      const cur = this.character?.experience_points || 0
-      const base = XP_BY_LEVEL[lvl - 1] || 0
-      const next = XP_BY_LEVEL[lvl] || base
-
-      if (!next || next === base) return 100
-
-      return Math.min(100, ((cur - base) / (next - base)) * 100)
-    },
-
-    xpLabel() {
-      const lvl = this.character?.level || 1
-
-      if (lvl >= 20) return 'Nivel máximo alcanzado'
-
-      const next = XP_BY_LEVEL[lvl] || 0
-      const rem = next - (this.character?.experience_points || 0)
-
-      return rem > 0 ? `${rem} XP para nivel ${lvl + 1}` : '¡Listo para subir!'
     },
 
     attacks() {

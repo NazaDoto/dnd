@@ -79,6 +79,8 @@
               type="number"
               min="1"
               max="20"
+              step="1"
+              inputmode="numeric"
             />
           </label>
         </div>
@@ -100,15 +102,6 @@
           </label>
         </div>
 
-        <label class="field">
-          <span>XP</span>
-          <input
-            v-model.number="form.experience_points"
-            class="input"
-            type="number"
-            min="0"
-          />
-        </label>
       </div>
 
       <div class="card">
@@ -710,8 +703,6 @@ export default {
         level: 1,
         background: '',
         alignment: '',
-        experience_points: 0,
-
         hit_points_current: 10,
         hit_points_max: 10,
         hit_points_temp: 0,
