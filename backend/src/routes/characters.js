@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const fsp = require('fs/promises');
 const { spawn } = require('child_process');
+const { applyClassDefaults } = require('../services/classDefaults');
 
 // ── Multer config ────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -61,6 +62,8 @@ function sanitizeJsonCols(data) {
             } catch {
                 data[col] = JSON_DEFAULTS[col] || '[]';
             }
+        } else {
+            data[col] = JSON.stringify(data[col]);
         }
     });
 
@@ -85,6 +88,34 @@ function parseJsonCols(row) {
     });
 
     return row;
+}
+
+async function persistClassDefaults(row) {
+    const current = parseJsonCols(row);
+    const enhanced = applyClassDefaults(current);
+    const featuresChanged = JSON.stringify(current.features_traits || []) !== JSON.stringify(enhanced.features_traits || []);
+    const spellsChanged = JSON.stringify(current.spells || {}) !== JSON.stringify(enhanced.spells || {});
+    const abilityChanged = (current.spellcasting_ability || null) !== (enhanced.spellcasting_ability || null);
+    const dcChanged = (current.spell_save_dc ?? null) !== (enhanced.spell_save_dc ?? null);
+    const attackChanged = (current.spell_attack_bonus ?? null) !== (enhanced.spell_attack_bonus ?? null);
+
+    if (featuresChanged || spellsChanged || abilityChanged || dcChanged || attackChanged) {
+        await db.query(
+            `UPDATE characters
+             SET features_traits = ?, spells = ?, spellcasting_ability = ?,
+                 spell_save_dc = ?, spell_attack_bonus = ?
+             WHERE id = ?`,
+            [
+                JSON.stringify(enhanced.features_traits || []),
+                JSON.stringify(enhanced.spells || {}),
+                enhanced.spellcasting_ability || null,
+                enhanced.spell_save_dc ?? null,
+                enhanced.spell_attack_bonus ?? null,
+                enhanced.id
+            ]
+        );
+    }
+    return enhanced;
 }
 
 const PATCHABLE_FIELDS = new Set([
@@ -210,12 +241,26 @@ async function getTemplatePath(tempDir) {
 router.get('/', auth, async (req, res) => {
     try {
         const [rows] = await db.query(
-            `SELECT id, name, class, subclass, level, race, alignment,
-              hit_points_current, hit_points_max, armor_class, photo_url,
-              experience_points, background, created_at
-       FROM characters WHERE user_id = ? ORDER BY updated_at DESC`, [req.user.id]
+            'SELECT * FROM characters WHERE user_id = ? ORDER BY updated_at DESC',
+            [req.user.id]
         );
-        res.json(rows);
+        const enhancedRows = await Promise.all(rows.map(persistClassDefaults));
+        res.json(enhancedRows.map(row => ({
+            id: row.id,
+            name: row.name,
+            class: row.class,
+            subclass: row.subclass,
+            level: row.level,
+            race: row.race,
+            alignment: row.alignment,
+            hit_points_current: row.hit_points_current,
+            hit_points_max: row.hit_points_max,
+            armor_class: row.armor_class,
+            photo_url: row.photo_url,
+            experience_points: row.experience_points,
+            background: row.background,
+            created_at: row.created_at
+        })));
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error al obtener personajes' });
@@ -250,7 +295,7 @@ router.get('/:id', auth, async (req, res) => {
             'SELECT * FROM characters WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]
         );
         if (!rows.length) return res.status(404).json({ message: 'Personaje no encontrado' });
-        res.json(parseJsonCols(rows[0]));
+        res.json(await persistClassDefaults(rows[0]));
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error' });
@@ -260,7 +305,7 @@ router.get('/:id', auth, async (req, res) => {
 // ── POST /api/characters ─────────────────────────────────────
 router.post('/', auth, upload.single('photo'), async (req, res) => {
     try {
-        const data = req.body;
+        const data = applyClassDefaults(req.body);
         const photo_url = req.file ?
             `/uploads/${req.file.filename}` :
             null;
@@ -340,7 +385,7 @@ router.put('/:id', auth, upload.single('photo'), async (req, res) => {
         );
         if (!exists.length) return res.status(404).json({ message: 'Personaje no encontrado' });
 
-        const data = req.body;
+        const data = applyClassDefaults(req.body);
         let photo_url = exists[0].photo_url;
         sanitizeJsonCols(data);
         if (req.file) {
@@ -435,7 +480,7 @@ router.patch('/:id/fields', auth, async (req, res) => {
             'SELECT * FROM characters WHERE id = ? AND user_id = ?',
             [req.params.id, req.user.id]
         );
-        res.json({ message: 'Campos actualizados', character: parseJsonCols(rows[0]) });
+        res.json({ message: 'Campos actualizados', character: await persistClassDefaults(rows[0]) });
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Error al actualizar campos', detail: err.message });
