@@ -5,6 +5,96 @@ const SRD_DOC = 'wotc-srd'
 const API = 'https://api.open5e.com/v1'
 const cache = new Map()
 
+const SPELL_ALIASES = {
+  'animar objetos': 'Animate Objects',
+  'arma espiritual': 'Spiritual Weapon',
+  'armadura de agathys': 'Armor of Agathys',
+  'armadura de mago': 'Mage Armor',
+  'aura de pureza': 'Aura of Purity',
+  'aura sagrada': 'Holy Aura',
+  'auxilio': 'Aid',
+  'bendecir': 'Bless',
+  'bola de fuego': 'Fireball',
+  'burla dañina': 'Vicious Mockery',
+  'cambiar de forma': 'Shapechange',
+  'carcaj veloz': 'Swift Quiver',
+  'conjurar animales': 'Conjure Animals',
+  'contrahechizo': 'Counterspell',
+  'curar heridas': 'Cure Wounds',
+  'curar heridas en masa': 'Mass Cure Wounds',
+  'danza irresistible': 'Irresistible Dance',
+  'descarga de fuego': 'Fire Bolt',
+  'descarga sobrenatural': 'Eldritch Blast',
+  'deseo': 'Wish',
+  'destierro': 'Banishment',
+  'desintegrar': 'Disintegrate',
+  'detectar magia': 'Detect Magic',
+  'disipar magia': 'Dispel Magic',
+  'dormir': 'Sleep',
+  'encontrar corcel': 'Find Steed',
+  'encontrar familiar': 'Find Familiar',
+  'enmarañar': 'Entangle',
+  'escudo': 'Shield',
+  'escudo de la fe': 'Shield of Faith',
+  'espada de mordenkainen': "Mordenkainen's Sword",
+  'fuego feérico': 'Faerie Fire',
+  'formas animales': 'Animal Shapes',
+  'garrote': 'Shillelagh',
+  'golpe desterrador': 'Banishing Smite',
+  'guardián de la fe': 'Guardian of Faith',
+  'guardianes espirituales': 'Spirit Guardians',
+  'guía': 'Guidance',
+  'hablar con los animales': 'Speak with Animals',
+  'hambre de hadar': 'Hunger of Hadar',
+  'identificar': 'Identify',
+  'ilusión menor': 'Minor Illusion',
+  'imagen múltiple': 'Mirror Image',
+  'inmovilizar monstruo': 'Hold Monster',
+  'inmovilizar persona': 'Hold Person',
+  'invisibilidad': 'Invisibility',
+  'invisibilidad mayor': 'Greater Invisibility',
+  'laberinto': 'Maze',
+  'llama sagrada': 'Sacred Flame',
+  'llamar al relámpago': 'Call Lightning',
+  'libertad de movimiento': 'Freedom of Movement',
+  'luz': 'Light',
+  'mano de mago': 'Mage Hand',
+  'marca del cazador': "Hunter's Mark",
+  'mejorar característica': 'Enhance Ability',
+  'muro de espinas': 'Wall of Thorns',
+  'muro de fuerza': 'Wall of Force',
+  'ojo arcano': 'Arcane Eye',
+  'onda atronadora': 'Thunderwave',
+  'oscuridad': 'Darkness',
+  'palabra de poder: sanar': 'Power Word Heal',
+  'palabra sanadora': 'Healing Word',
+  'pasar sin rastro': 'Pass Without Trace',
+  'paso brumoso': 'Misty Step',
+  'patrón hipnótico': 'Hypnotic Pattern',
+  'polimorfar': 'Polymorph',
+  'prestidigitación': 'Prestidigitation',
+  'producir llama': 'Produce Flame',
+  'proyectil mágico': 'Magic Missile',
+  'rayo de escarcha': 'Ray of Frost',
+  'rayo de luna': 'Moonbeam',
+  'reencarnar': 'Reincarnate',
+  'reparar': 'Mending',
+  'reprensión infernal': 'Hellish Rebuke',
+  'resurrección': 'Resurrection',
+  'resurrección verdadera': 'True Resurrection',
+  'restablecimiento mayor': 'Greater Restoration',
+  'restablecimiento menor': 'Lesser Restoration',
+  'revivir': 'Revivify',
+  'sanar': 'Heal',
+  'silencio': 'Silence',
+  'sugestión': 'Suggestion',
+  'susurros disonantes': 'Dissonant Whispers',
+  'taumaturgia': 'Thaumaturgy',
+  'telequinesis': 'Telekinesis',
+  'teleportar': 'Teleport',
+  'tormenta de fuego': 'Fire Storm'
+}
+
 function cacheKey(type, query) {
   return `${type}:${query}`
 }
@@ -65,19 +155,26 @@ export async function lookupSpell(name) {
   const key = cacheKey('spell', q.toLowerCase())
   if (cache.has(key)) return cache.get(key)
 
+  const apiQuery = SPELL_ALIASES[q.toLocaleLowerCase()] || q
+
   try {
-    const data = await fetchJson(
-      `${API}/spells/?document__slug=${SRD_DOC}&search=${encodeURIComponent(q)}`
-    )
-    const hit =
-      data.results?.find(
-        (r) => r.name?.toLowerCase() === q.toLowerCase()
-      ) || data.results?.[0]
-    const picked = pickSpell(hit)
-    if (picked) {
-      picked.summary = spellSummary(picked)
-      cache.set(key, picked)
-      return picked
+    const urls = [
+      `${API}/spells/?document__slug=${SRD_DOC}&search=${encodeURIComponent(apiQuery)}`,
+      `${API}/spells/?search=${encodeURIComponent(apiQuery)}`
+    ]
+
+    for (const url of urls) {
+      const data = await fetchJson(url)
+      const hit =
+        data.results?.find(
+          (r) => r.name?.toLowerCase() === apiQuery.toLowerCase()
+        ) || data.results?.[0]
+      const picked = pickSpell(hit)
+      if (picked) {
+        picked.summary = spellSummary(picked)
+        cache.set(key, picked)
+        return picked
+      }
     }
   } catch {
     /* ignore */

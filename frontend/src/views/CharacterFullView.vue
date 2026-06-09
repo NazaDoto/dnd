@@ -309,8 +309,8 @@
           <div v-for="lvl in [1,2,3,4,5,6,7,8,9]" :key="'edit-lvl-'+lvl" class="spell-level-block">
             <p class="spell-level-name">Nivel {{ lvl }}</p>
             <div class="two-col mb-1">
-              <input v-model.number="fieldDraft['level'+lvl].slotsTotal" type="number" min="0" placeholder="Slots totales" />
-              <input v-model.number="fieldDraft['level'+lvl].slotsUsed" type="number" min="0" placeholder="Slots usados" />
+              <input v-model.number="fieldDraft['level'+lvl].slots" type="number" min="0" placeholder="Slots totales" />
+              <input v-model.number="fieldDraft['level'+lvl].slots_used" type="number" min="0" placeholder="Slots usados" />
             </div>
             <div v-for="(sp, i) in fieldDraft['level'+lvl].spells" :key="'lvl-'+lvl+'-sp-'+i" class="spell-edit-row">
               <input v-model="fieldDraft['level'+lvl].spells[i]" :placeholder="'Conjuro nivel ' + lvl" />

@@ -37,7 +37,7 @@
           <strong>A mayor nivel:</strong> {{ entry.higher_level }}
         </p>
       </template>
-      <p v-else class="dnd-ref-muted">No encontrado en SRD oficial. Podés usar nombre en inglés (ej. Fire Bolt).</p>
+      <p v-else class="dnd-ref-muted">No encontrado en Open5e. Podés usar el nombre en inglés (ej. Fire Bolt).</p>
     </div>
   </div>
 </template>

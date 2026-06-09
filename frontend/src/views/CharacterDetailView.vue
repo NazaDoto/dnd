@@ -157,13 +157,12 @@
           </div>
 
           <div class="spell-tags">
-            <span
+            <DndRefChip
               v-for="spell in block.spells"
               :key="spell"
+              :name="spell"
               class="spell-tag"
-            >
-              {{ spell }}
-            </span>
+            />
           </div>
         </div>
       </div>
@@ -250,6 +249,7 @@
 
 <script>
 import StatsBlock from '../components/StatsBlock.vue'
+import DndRefChip from '../components/DndRefChip.vue'
 import { charactersAPI } from '../services/api.js'
 import {
   CLASSES,
@@ -259,7 +259,7 @@ import {
 
 export default {
   name: 'CharacterDetailView',
-  components: { StatsBlock },
+  components: { StatsBlock, DndRefChip },
   inject: ['showToast'],
   data() {
     return {
